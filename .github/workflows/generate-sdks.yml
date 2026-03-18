@@ -1,0 +1,226 @@
+name: Generate SDKs
+
+on:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'spec/**'
+  workflow_dispatch:
+
+concurrency:
+  group: sdk-generation
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: node
+            sdk_repo: workos/workos-node
+            sdk_checkout_path: backend/workos-node
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ secrets.SDK_BOT_APP_ID }}
+          private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
+
+      - name: Checkout openapi-spec
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: openapi-spec
+
+      - name: Checkout oagen-emitters
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: workos/oagen-emitters
+          token: ${{ steps.app-token.outputs.token }}
+          path: oagen-emitters
+
+      - name: Checkout live SDK
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ matrix.sdk_repo }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: ${{ matrix.sdk_checkout_path }}
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: oagen-emitters/package-lock.json
+
+      - name: Install dependencies
+        working-directory: oagen-emitters
+        run: npm ci
+
+      - name: Extract baseline
+        working-directory: oagen-emitters
+        run: npm run sdk:extract:${{ matrix.language }}
+
+      - name: Generate
+        working-directory: oagen-emitters
+        run: npm run sdk:generate:${{ matrix.language }}
+
+      - name: Verify
+        working-directory: oagen-emitters
+        run: npm run sdk:verify:${{ matrix.language }}
+
+      - name: Diff report
+        id: diff-report
+        working-directory: oagen-emitters
+        run: |
+          # --report outputs JSON to stdout and exits with:
+          #   0 = no changes, 1 = additive/modified, 2 = breaking
+          REPORT=$(npx oagen diff \
+            --old ./sdk/spec-snapshot.yaml \
+            --new ../openapi-spec/spec/open-api-spec.yaml \
+            --report 2>&1) || true
+
+          # Save full report to file for the classify step
+          echo "$REPORT" > /tmp/diff-report.json
+
+          # Extract summary counts
+          ADDED=$(echo "$REPORT" | jq -r '.summary.added')
+          REMOVED=$(echo "$REPORT" | jq -r '.summary.removed')
+          MODIFIED=$(echo "$REPORT" | jq -r '.summary.modified')
+          BREAKING=$(echo "$REPORT" | jq -r '.summary.breaking')
+
+          {
+            echo "added=$ADDED"
+            echo "removed=$REMOVED"
+            echo "modified=$MODIFIED"
+            echo "breaking=$BREAKING"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Classify changes with Claude
+        id: classify
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          DIFF_REPORT=$(cat /tmp/diff-report.json)
+
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "content-type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "$(jq -n \
+              --arg report "$DIFF_REPORT" \
+              '{
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 256,
+                messages: [{
+                  role: "user",
+                  content: ("Given this OpenAPI spec diff report, do two things:\n1. Classify the change type: respond with ONLY one of `feat!` (breaking — has removed models/endpoints or changed types), `feat` (additive — new endpoints, new models), or `fix` (modification only — field changes, description updates).\n2. Write a short summary (under 50 chars) of what changed, suitable for a commit message scope.\n\nRespond in exactly this format, two lines:\nPREFIX: <feat!|feat|fix>\nSUMMARY: <short description>\n\nDiff report:\n" + $report)
+                }]
+              }')")
+
+          # Parse Claude response
+          CLAUDE_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          PREFIX=$(echo "$CLAUDE_TEXT" | grep '^PREFIX:' | sed 's/^PREFIX: *//')
+          SUMMARY=$(echo "$CLAUDE_TEXT" | grep '^SUMMARY:' | sed 's/^SUMMARY: *//')
+
+          # Fallback classification from diff summary counts
+          if [ -z "$PREFIX" ]; then
+            BREAKING='${{ steps.diff-report.outputs.breaking }}'
+            ADDED='${{ steps.diff-report.outputs.added }}'
+            if [ "$BREAKING" -gt 0 ] 2>/dev/null; then
+              PREFIX="feat!"
+            elif [ "$ADDED" -gt 0 ] 2>/dev/null; then
+              PREFIX="feat"
+            else
+              PREFIX="fix"
+            fi
+          fi
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="update generated SDK from spec changes"
+          fi
+
+          {
+            echo "prefix=$PREFIX"
+            echo "summary=$SUMMARY"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create PR on live SDK
+        if: success()
+        working-directory: ${{ matrix.sdk_checkout_path }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PREFIX="${{ steps.classify.outputs.prefix }}"
+          SUMMARY="${{ steps.classify.outputs.summary }}"
+          ADDED="${{ steps.diff-report.outputs.added }}"
+          REMOVED="${{ steps.diff-report.outputs.removed }}"
+          MODIFIED="${{ steps.diff-report.outputs.modified }}"
+          BREAKING="${{ steps.diff-report.outputs.breaking }}"
+          BRANCH="oagen/spec-update-${{ github.sha }}"
+
+          git config user.name "workos-sdk-automation[bot]"
+          git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add -A
+
+          # Exit early if nothing to commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "${PREFIX}(generated): ${SUMMARY}"
+          git push origin "$BRANCH"
+
+          BODY="## Summary
+          ${SUMMARY}
+
+          ## Spec Diff
+          - Added: ${ADDED} | Removed: ${REMOVED} | Modified: ${MODIFIED} | Breaking: ${BREAKING}
+
+          Triggered by openapi-spec commit: ${{ github.sha }}
+
+          🤖 Generated by [oagen](https://github.com/workos/oagen)"
+
+          gh pr create \
+            --title "${PREFIX}(generated): ${SUMMARY}" \
+            --body "$BODY"
+
+      - name: Create issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BODY="## Failure
+          - Language: ${{ matrix.language }}
+          - Triggered by: ${{ github.sha }}
+
+          ## Details
+          - Exit 1: compat violations or smoke test findings
+          - Exit 2: generated SDK failed to compile
+
+          ## Next Steps
+          - Check workflow run artifacts for smoke-diff-findings.json or smoke-compile-errors.json
+          - The emitter may need a targeted fix for a new spec pattern
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          gh issue create \
+            --repo workos/openapi-spec \
+            --title "SDK generation failed for ${{ matrix.language }}" \
+            --body "$BODY"
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oagen-diagnostics-${{ matrix.language }}
+          path: |
+            oagen-emitters/sdk/
+            oagen-emitters/sdk-*-surface.json
+            oagen-emitters/smoke-*.json
+          retention-days: 14
