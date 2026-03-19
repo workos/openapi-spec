@@ -3,5 +3,10 @@
     "language": "node",
     "sdk_repo": "workos/workos-node",
     "sdk_checkout_path": "backend/workos-node"
+  },
+  {
+    "language": "python",
+    "sdk_repo": "workos/workos-python",
+    "sdk_checkout_path": "backend/workos-python"
   }
 ]
