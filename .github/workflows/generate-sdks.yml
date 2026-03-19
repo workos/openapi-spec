@@ -12,15 +12,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  load-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          sparse-checkout: .github/sdk-matrix.json
+          sparse-checkout-cone-mode: false
+
+      - name: Load SDK matrix
+        id: set-matrix
+        run: echo "matrix=$(jq -c . .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
+
   generate:
+    needs: load-matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: node
-            sdk_repo: workos/workos-node
-            sdk_checkout_path: backend/workos-node
+        include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
 
     steps:
       - name: Generate GitHub App token
@@ -188,30 +200,6 @@ jobs:
 
           gh pr create \
             --title "${PREFIX}(generated): ${SUMMARY}" \
-            --body "$BODY"
-
-      - name: Create issue on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          BODY="## Failure
-          - Language: ${{ matrix.language }}
-          - Triggered by: ${{ github.sha }}
-
-          ## Details
-          - Exit 1: compat violations or smoke test findings
-          - Exit 2: generated SDK failed to compile
-
-          ## Next Steps
-          - Check workflow run artifacts for smoke-diff-findings.json or smoke-compile-errors.json
-          - The emitter may need a targeted fix for a new spec pattern
-
-          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          gh issue create \
-            --repo workos/openapi-spec \
-            --title "SDK generation failed for ${{ matrix.language }}" \
             --body "$BODY"
 
       - name: Upload diagnostics
