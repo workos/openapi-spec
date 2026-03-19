@@ -87,29 +87,6 @@ jobs:
         working-directory: oagen-emitters
         run: npm run sdk:verify:${{ matrix.language }}
 
-      - name: Comment on failure
-        if: failure()
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
-        with:
-          github-token: ${{ steps.app-token.outputs.token }}
-          script: |
-            const body = [
-              `## SDK build failed for \`${{ matrix.language }}\``,
-              '',
-              'The spec changes in this PR caused the **${{ matrix.language }}** SDK build to fail.',
-              '',
-              `**[View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})**`,
-              '',
-              'This check must pass before the PR can be merged.'
-            ].join('\n');
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
-
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
