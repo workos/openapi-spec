@@ -1,8 +1,9 @@
 name: Validate SDKs
 
 on:
-  pull_request:
-    branches: [main]
+  # pull_request:
+  #   branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: sdk-validation-${{ github.event.pull_request.number }}
