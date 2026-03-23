@@ -1,8 +1,9 @@
 name: Validate SDKs
 
 on:
-  pull_request:
-    branches: [main]
+  # pull_request:
+  #   branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: sdk-validation-${{ github.event.pull_request.number }}
@@ -42,7 +43,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         with:
-          app-id: ${{ secrets.SDK_BOT_APP_ID }}
+          app-id: ${{ vars.SDK_BOT_APP_ID }}
           private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
 
       - name: Checkout openapi-spec
