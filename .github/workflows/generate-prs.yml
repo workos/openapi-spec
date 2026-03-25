@@ -47,13 +47,6 @@ jobs:
         with:
           path: openapi-spec
 
-      - name: Checkout oagen-emitters
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: workos/oagen-emitters
-          token: ${{ steps.app-token.outputs.token }}
-          path: oagen-emitters
-
       - name: Checkout live SDK
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -74,15 +67,11 @@ jobs:
 
       - name: Extract baseline
         working-directory: oagen-emitters
-        run: npm run sdk:extract:${{ matrix.language }}
+        run: npx oagen extract --language ${{ matrix.language }}
 
       - name: Generate
         working-directory: oagen-emitters
-        run: npm run sdk:generate:${{ matrix.language }}
-
-      - name: Verify
-        working-directory: oagen-emitters
-        run: npm run sdk:verify:${{ matrix.language }}
+        run: npx oagen generate --language ${{ matrix.language }}
 
       - name: Diff report
         id: diff-report
