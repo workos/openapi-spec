@@ -8,6 +8,8 @@
     "generate:postman:local": "tsx scripts/postman/generate.ts --local"
   },
   "dependencies": {
+    "@workos/oagen": "^0.2.0",
+    "@workos/oagen-emitters": "^0.2.0",
     "js-yaml": "^4.1.1",
     "openapi-to-postmanv2": "^5.8.0"
   },
