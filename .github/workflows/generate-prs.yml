@@ -165,6 +165,8 @@ jobs:
           git config user.name "workos-sdk-automation[bot]"
           git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
 
+          cp ../openapi-spec/.last-synced-sha .last-synced-sha
+
           git checkout -b "$BRANCH"
           git add -A
 
