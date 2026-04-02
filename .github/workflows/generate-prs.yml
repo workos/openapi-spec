@@ -73,6 +73,84 @@ jobs:
         working-directory: oagen-emitters
         run: npx oagen generate --language ${{ matrix.language }}
 
+      - name: Check resolved operations
+        id: resolve-ops
+        working-directory: oagen-emitters
+        run: |
+          # Resolve all operations with hints applied, output as JSON
+          RESOLVED=$(npx oagen resolve \
+            --spec ../openapi-spec/spec/open-api-spec.yaml \
+            --format json 2>&1) || true
+
+          # Save full resolution for diagnostics
+          echo "$RESOLVED" > /tmp/resolved-operations.json
+
+          # Count total vs unhinted operations
+          TOTAL=$(echo "$RESOLVED" | jq 'length')
+          UNHINTED=$(echo "$RESOLVED" | jq '[.[] | select(.hintApplied == false)] | length')
+
+          # Compare against checked-in snapshot if it exists
+          SNAPSHOT="./sdk/resolved-operations.json"
+          NEW_OPS=""
+          CHANGED_OPS=""
+          if [ -f "$SNAPSHOT" ]; then
+            # Find operations in resolved but not in snapshot (by path+method key)
+            NEW_OPS=$(jq -n \
+              --slurpfile current /tmp/resolved-operations.json \
+              --slurpfile baseline "$SNAPSHOT" \
+              '[($current[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $cur |
+               ($baseline[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $base |
+               $cur | to_entries[] | select($base[.key] == null) | .value]')
+
+            # Find operations whose resolved name changed
+            CHANGED_OPS=$(jq -n \
+              --slurpfile current /tmp/resolved-operations.json \
+              --slurpfile baseline "$SNAPSHOT" \
+              '[($current[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $cur |
+               ($baseline[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $base |
+               $cur | to_entries[] | select($base[.key] != null and $base[.key].derivedName != .value.derivedName) | .value]')
+          fi
+
+          # Save snapshot for next run
+          cp /tmp/resolved-operations.json "$SNAPSHOT"
+
+          # Build markdown table of new/changed operations for PR body
+          OP_TABLE=""
+          NEW_COUNT=$(echo "$NEW_OPS" | jq 'length' 2>/dev/null || echo "0")
+          CHANGED_COUNT=$(echo "$CHANGED_OPS" | jq 'length' 2>/dev/null || echo "0")
+
+          if [ "$NEW_COUNT" -gt 0 ]; then
+            OP_TABLE="${OP_TABLE}### New operations (${NEW_COUNT})\n\n"
+            OP_TABLE="${OP_TABLE}| Method | Path | Resolved Name | Has Hint |\n"
+            OP_TABLE="${OP_TABLE}|---|---|---|---|\n"
+            OP_TABLE="${OP_TABLE}$(echo "$NEW_OPS" | jq -r '.[] | "| \(.method) | \(.path) | `\(.derivedName)` | \(if .hintApplied then "yes" else "**no**" end) |"')\n"
+          fi
+
+          if [ "$CHANGED_COUNT" -gt 0 ]; then
+            OP_TABLE="${OP_TABLE}\n### Changed operations (${CHANGED_COUNT})\n\n"
+            OP_TABLE="${OP_TABLE}| Method | Path | New Name | Has Hint |\n"
+            OP_TABLE="${OP_TABLE}|---|---|---|---|\n"
+            OP_TABLE="${OP_TABLE}$(echo "$CHANGED_OPS" | jq -r '.[] | "| \(.method) | \(.path) | `\(.derivedName)` | \(if .hintApplied then "yes" else "**no**" end) |"')\n"
+          fi
+
+          if [ "$UNHINTED" -gt 0 ] && { [ "$NEW_COUNT" -gt 0 ] || [ "$CHANGED_COUNT" -gt 0 ]; }; then
+            OP_TABLE="${OP_TABLE}\n> Operations without hints use algorithm-derived names. If names look wrong, add entries to \`operationHints\` in oagen.config.ts.\n"
+          fi
+
+          {
+            echo "total=$TOTAL"
+            echo "unhinted=$UNHINTED"
+            echo "new_count=$NEW_COUNT"
+            echo "changed_count=$CHANGED_COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+          # Write multiline output
+          {
+            echo "op_table<<OPEOF"
+            echo -e "$OP_TABLE"
+            echo "OPEOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Diff report
         id: diff-report
         working-directory: oagen-emitters
@@ -179,11 +257,18 @@ jobs:
           git commit -m "${PREFIX}(generated): ${SUMMARY}"
           git push origin "$BRANCH"
 
+          OP_TABLE="${{ steps.resolve-ops.outputs.op_table }}"
+
           BODY="## Summary
           ${SUMMARY}
 
           ## Spec Diff
           - Added: ${ADDED} | Removed: ${REMOVED} | Modified: ${MODIFIED} | Breaking: ${BREAKING}
+
+          ## Resolved Operations
+          - Total: ${{ steps.resolve-ops.outputs.total }} | Algorithm-only: ${{ steps.resolve-ops.outputs.unhinted }}
+
+          ${OP_TABLE}
 
           Triggered by openapi-spec commit: ${{ github.sha }}
 
@@ -202,4 +287,5 @@ jobs:
             oagen-emitters/sdk/
             oagen-emitters/sdk-*-surface.json
             oagen-emitters/smoke-*.json
+            /tmp/resolved-operations.json
           retention-days: 14
