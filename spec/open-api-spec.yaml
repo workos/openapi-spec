@@ -6019,6 +6019,7 @@ paths:
           required: false
           in: query
           description: Filter Directories by their associated domain.
+          deprecated: true
           schema:
             example: foo-corp.com
             type: string
@@ -18592,9 +18593,10 @@ components:
           description: External Key for the Directory.
           example: sPa12dwRQ
         type:
+          description: The type of external Directory Provider integrated with.
+          example: gsuite directory
           type: string
           enum:
-            - pending
             - azure scim v2.0
             - bamboohr
             - breathe hr
@@ -18616,23 +18618,18 @@ components:
             - sftp
             - sftp workday
             - workday
-            - gusto
-            - rippling
-          description: The type of external Directory Provider integrated with.
-          example: gsuite directory
         state:
+          description: >-
+            Describes whether the Directory has been successfully connected to
+            an external provider.
+          example: linked
           type: string
           enum:
-            - requires_type
             - linked
             - validating
             - invalid_credentials
             - unlinked
             - deleting
-          description: >-
-            Describes whether the Directory has been successfully connected to
-            an external provider.
-          example: unlinked
         name:
           type: string
           description: The name of the directory.
@@ -18884,18 +18881,21 @@ components:
                 description: The email address value.
                 example: marcelina.davis@example.com
           description: A list of email addresses for the user.
+          deprecated: true
         job_title:
           type:
             - string
             - 'null'
           description: The job title of the user.
           example: Software Engineer
+          deprecated: true
         username:
           type:
             - string
             - 'null'
           description: The username of the user.
           example: mdavis
+          deprecated: true
         state:
           type: string
           enum:
@@ -18908,6 +18908,7 @@ components:
           type: object
           additionalProperties: {}
           description: The raw attributes received from the directory provider.
+          deprecated: true
         custom_attributes:
           type: object
           additionalProperties: {}
@@ -24092,18 +24093,21 @@ components:
                                 description: The email address value.
                                 example: marcelina.davis@example.com
                           description: A list of email addresses for the user.
+                          deprecated: true
                         job_title:
                           type:
                             - string
                             - 'null'
                           description: The job title of the user.
                           example: Software Engineer
+                          deprecated: true
                         username:
                           type:
                             - string
                             - 'null'
                           description: The username of the user.
                           example: mdavis
+                          deprecated: true
                         state:
                           type: string
                           enum:
@@ -24118,6 +24122,7 @@ components:
                           description: >-
                             The raw attributes received from the directory
                             provider.
+                          deprecated: true
                         custom_attributes:
                           type: object
                           additionalProperties: {}
@@ -24394,18 +24399,21 @@ components:
                             description: The email address value.
                             example: marcelina.davis@example.com
                       description: A list of email addresses for the user.
+                      deprecated: true
                     job_title:
                       type:
                         - string
                         - 'null'
                       description: The job title of the user.
                       example: Software Engineer
+                      deprecated: true
                     username:
                       type:
                         - string
                         - 'null'
                       description: The username of the user.
                       example: mdavis
+                      deprecated: true
                     state:
                       type: string
                       enum:
@@ -24418,6 +24426,7 @@ components:
                       type: object
                       additionalProperties: {}
                       description: The raw attributes received from the directory provider.
+                      deprecated: true
                     custom_attributes:
                       type: object
                       additionalProperties: {}
@@ -24627,18 +24636,21 @@ components:
                             description: The email address value.
                             example: marcelina.davis@example.com
                       description: A list of email addresses for the user.
+                      deprecated: true
                     job_title:
                       type:
                         - string
                         - 'null'
                       description: The job title of the user.
                       example: Software Engineer
+                      deprecated: true
                     username:
                       type:
                         - string
                         - 'null'
                       description: The username of the user.
                       example: mdavis
+                      deprecated: true
                     state:
                       type: string
                       enum:
@@ -24651,6 +24663,7 @@ components:
                       type: object
                       additionalProperties: {}
                       description: The raw attributes received from the directory provider.
+                      deprecated: true
                     custom_attributes:
                       type: object
                       additionalProperties: {}
@@ -24867,18 +24880,21 @@ components:
                                 description: The email address value.
                                 example: marcelina.davis@example.com
                           description: A list of email addresses for the user.
+                          deprecated: true
                         job_title:
                           type:
                             - string
                             - 'null'
                           description: The job title of the user.
                           example: Software Engineer
+                          deprecated: true
                         username:
                           type:
                             - string
                             - 'null'
                           description: The username of the user.
                           example: mdavis
+                          deprecated: true
                         state:
                           type: string
                           enum:
@@ -24893,6 +24909,7 @@ components:
                           description: >-
                             The raw attributes received from the directory
                             provider.
+                          deprecated: true
                         custom_attributes:
                           type: object
                           additionalProperties: {}
@@ -25167,18 +25184,21 @@ components:
                             description: The email address value.
                             example: marcelina.davis@example.com
                       description: A list of email addresses for the user.
+                      deprecated: true
                     job_title:
                       type:
                         - string
                         - 'null'
                       description: The job title of the user.
                       example: Software Engineer
+                      deprecated: true
                     username:
                       type:
                         - string
                         - 'null'
                       description: The username of the user.
                       example: mdavis
+                      deprecated: true
                     state:
                       type: string
                       enum:
@@ -25191,6 +25211,7 @@ components:
                       type: object
                       additionalProperties: {}
                       description: The raw attributes received from the directory provider.
+                      deprecated: true
                     custom_attributes:
                       type: object
                       additionalProperties: {}
@@ -33110,6 +33131,7 @@ components:
             Whether the Organization allows profiles outside of its managed
             domains.
           example: false
+          deprecated: true
       required:
         - object
         - id
