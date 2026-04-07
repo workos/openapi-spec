@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: sdk-validation-${{ github.event.pull_request.number }}
+  group: sdk-validation-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      spec-changed: ${{ steps.filter.outputs.spec }}
+      spec-changed: ${{ steps.detect.outputs.spec_changed }}
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -24,6 +24,15 @@ jobs:
           filters: |
             spec:
               - 'spec/**'
+
+      - name: Decide whether to validate
+        id: detect
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "spec_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "spec_changed=${{ steps.filter.outputs.spec }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Load SDK matrix
         id: set-matrix
@@ -63,36 +72,142 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: oagen-emitters/package-lock.json
+          cache-dependency-path: openapi-spec/package-lock.json
 
       - name: Install dependencies
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: npm ci
 
       - name: Extract baseline
-        working-directory: oagen-emitters
-        run: npx oagen extract --lang ${{ matrix.language }} --sdk-path ../backend/workos-${{ matrix.language }} --output ./sdk-${{ matrix.language }}-surface.json
+        id: extract
+        continue-on-error: true
+        working-directory: openapi-spec
+        run: |
+          set -o pipefail
+          npm run sdk:extract -- --lang ${{ matrix.language }} --sdk-path ../${{ matrix.sdk_checkout_path }} --output ./sdk-${{ matrix.language }}-surface.json 2>&1 | tee ../extract-${{ matrix.language }}.log
 
       - name: Generate
-        working-directory: oagen-emitters
-        run: npx oagen generate --lang ${{ matrix.language }} --output ./sdk-${{ matrix.language }} --namespace workos --api-surface ./sdk-${{ matrix.language }}-surface.json
+        id: generate
+        continue-on-error: true
+        working-directory: openapi-spec
+        run: |
+          set -o pipefail
+          npm run sdk:generate -- --lang ${{ matrix.language }} --output ./sdk-${{ matrix.language }} --namespace workos --spec ./spec/open-api-spec.yaml --api-surface ./sdk-${{ matrix.language }}-surface.json --target ../${{ matrix.sdk_checkout_path }} 2>&1 | tee ../generate-${{ matrix.language }}.log
+
+      - name: Report added SDK operations
+        id: additions
+        if: steps.extract.outcome == 'success' && steps.generate.outcome == 'success'
+        continue-on-error: true
+        working-directory: openapi-spec
+        run: |
+          set -o pipefail
+          npm run sdk:report:additions -- \
+            --language ${{ matrix.language }} \
+            --spec ./spec/open-api-spec.yaml \
+            --baseline ./sdk-${{ matrix.language }}-surface.json \
+            --candidate-dir ./sdk-${{ matrix.language }} \
+            --output ../sdk-additions-${{ matrix.language }}.md 2>&1 | tee ../report-${{ matrix.language }}.log
+
+      - name: Build validation report
+        if: always()
+        run: |
+          REPORT="sdk-validation-${{ matrix.language }}.md"
+          ADDITIONS_REPORT="sdk-additions-${{ matrix.language }}.md"
+          ADDITIONS_STATUS="${{ steps.additions.outcome }}"
+
+          if [[ -z "$ADDITIONS_STATUS" ]]; then
+            ADDITIONS_STATUS="skipped"
+          fi
+
+          {
+            echo "## SDK validation (${{ matrix.language }})"
+            echo
+            echo "| Step | Status |"
+            echo "|---|---|"
+            echo "| Extract baseline | ${{ steps.extract.outcome }} |"
+            echo "| Generate SDK | ${{ steps.generate.outcome }} |"
+            echo "| Report additions | ${ADDITIONS_STATUS} |"
+            echo
+          } > "$REPORT"
+
+          if [[ "${{ steps.extract.outcome }}" != "success" || "${{ steps.generate.outcome }}" != "success" ]]; then
+            {
+              echo "Generation did not complete successfully for \`${{ matrix.language }}\`."
+              echo
+              echo "Inspect the attached logs for the failing step."
+              echo
+            } >> "$REPORT"
+          fi
+
+          if [[ -f "$ADDITIONS_REPORT" ]]; then
+            cat "$ADDITIONS_REPORT" >> "$REPORT"
+          fi
 
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: oagen-diagnostics-${{ matrix.language }}
+          name: sdk-validation-${{ matrix.language }}
           path: |
-            oagen-emitters/sdk/
-            oagen-emitters/sdk-*-surface.json
-            oagen-emitters/smoke-*.json
+            sdk-validation-${{ matrix.language }}.md
+            sdk-additions-${{ matrix.language }}.md
+            extract-${{ matrix.language }}.log
+            generate-${{ matrix.language }}.log
+            report-${{ matrix.language }}.log
+            openapi-spec/sdk-${{ matrix.language }}/
+            openapi-spec/sdk-${{ matrix.language }}-surface.json
+            openapi-spec/smoke-*.json
           retention-days: 14
+
+      - name: Fail job if validation steps failed
+        if: always()
+        run: |
+          ADDITIONS_STATUS="${{ steps.additions.outcome }}"
+
+          if [[ "${{ steps.extract.outcome }}" != "success" ]]; then
+            echo "SDK baseline extraction failed"
+            exit 1
+          fi
+
+          if [[ "${{ steps.generate.outcome }}" != "success" ]]; then
+            echo "SDK generation failed"
+            exit 1
+          fi
+
+          if [[ -n "$ADDITIONS_STATUS" && "$ADDITIONS_STATUS" != "success" ]]; then
+            echo "SDK additions reporting failed"
+            exit 1
+          fi
 
   sdk-validation:
     runs-on: ubuntu-latest
     needs: [detect-changes, sdk_build]
     if: always()
     steps:
+      - name: Download validation reports
+        if: needs.detect-changes.outputs.spec-changed == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sdk-validation-*
+          path: sdk-validation-artifacts
+
+      - name: Publish validation summary
+        if: needs.detect-changes.outputs.spec-changed == 'true'
+        run: |
+          shopt -s nullglob
+          REPORTS=(sdk-validation-artifacts/*/sdk-validation-*.md)
+
+          if [[ ${#REPORTS[@]} -eq 0 ]]; then
+            echo "No SDK validation reports were produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          for report in "${REPORTS[@]}"; do
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+          done
+
       - name: Check result
         run: |
           if [[ "${{ needs.detect-changes.outputs.spec-changed }}" != "true" ]]; then

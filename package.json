@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "generate:postman": "tsx scripts/postman/generate.ts",
-    "generate:postman:local": "tsx scripts/postman/generate.ts --local"
+    "generate:postman:local": "tsx scripts/postman/generate.ts --local",
+    "sdk:diff": "oagen diff",
+    "sdk:extract": "oagen extract",
+    "sdk:generate": "oagen generate",
+    "sdk:report:additions": "tsx scripts/report-sdk-additions.ts",
+    "sdk:resolve": "oagen resolve"
   },
   "dependencies": {
     "@workos/oagen": "^0.2.0",

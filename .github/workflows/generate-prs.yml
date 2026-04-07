@@ -59,27 +59,27 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: oagen-emitters/package-lock.json
+          cache-dependency-path: openapi-spec/package-lock.json
 
       - name: Install dependencies
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: npm ci
 
       - name: Extract baseline
-        working-directory: oagen-emitters
-        run: npx oagen extract --language ${{ matrix.language }}
+        working-directory: openapi-spec
+        run: npm run sdk:extract -- --lang ${{ matrix.language }} --sdk-path ../${{ matrix.sdk_checkout_path }} --output ./sdk-${{ matrix.language }}-surface.json
 
       - name: Generate
-        working-directory: oagen-emitters
-        run: npx oagen generate --language ${{ matrix.language }}
+        working-directory: openapi-spec
+        run: npm run sdk:generate -- --lang ${{ matrix.language }} --output ./sdk-${{ matrix.language }} --namespace workos --spec ./spec/open-api-spec.yaml --api-surface ./sdk-${{ matrix.language }}-surface.json --target ../${{ matrix.sdk_checkout_path }}
 
       - name: Check resolved operations
         id: resolve-ops
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: |
           # Resolve all operations with hints applied, output as JSON
-          RESOLVED=$(npx oagen resolve \
-            --spec ../openapi-spec/spec/open-api-spec.yaml \
+          RESOLVED=$(npm run --silent sdk:resolve -- \
+            --spec ./spec/open-api-spec.yaml \
             --format json 2>&1) || true
 
           # Save full resolution for diagnostics
@@ -90,7 +90,7 @@ jobs:
           UNHINTED=$(echo "$RESOLVED" | jq '[.[] | select(.hintApplied == false)] | length')
 
           # Compare against checked-in snapshot if it exists
-          SNAPSHOT="./sdk/resolved-operations.json"
+          SNAPSHOT="./sdk-${{ matrix.language }}/resolved-operations.json"
           NEW_OPS=""
           CHANGED_OPS=""
           if [ -f "$SNAPSHOT" ]; then
@@ -153,13 +153,13 @@ jobs:
 
       - name: Diff report
         id: diff-report
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: |
           # --report outputs JSON to stdout and exits with:
           #   0 = no changes, 1 = additive/modified, 2 = breaking
-          REPORT=$(npx oagen diff \
-            --old ./sdk/spec-snapshot.yaml \
-            --new ../openapi-spec/spec/open-api-spec.yaml \
+          REPORT=$(npm run --silent sdk:diff -- \
+            --old ./sdk-${{ matrix.language }}/spec-snapshot.yaml \
+            --new ./spec/open-api-spec.yaml \
             --report 2>&1) || true
 
           # Save full report to file for the classify step
@@ -284,8 +284,8 @@ jobs:
         with:
           name: oagen-diagnostics-${{ matrix.language }}
           path: |
-            oagen-emitters/sdk/
-            oagen-emitters/sdk-*-surface.json
-            oagen-emitters/smoke-*.json
+            openapi-spec/sdk-${{ matrix.language }}/
+            openapi-spec/sdk-*-surface.json
+            openapi-spec/smoke-*.json
             /tmp/resolved-operations.json
           retention-days: 14
