@@ -15578,6 +15578,7 @@ components:
           type: string
           description: ISO-8601 value of when the action occurred.
           example: '2026-02-02T16:35:39.317Z'
+          format: date-time
         actor:
           description: The entity that performed the action.
           $ref: '#/components/schemas/AuditLogEventActorDto'
@@ -16285,6 +16286,16 @@ components:
         intent_options:
           description: Options to configure the Admin Portal based on the intent.
           $ref: '#/components/schemas/IntentOptions'
+        admin_emails:
+          description: >-
+            The email addresses of the IT admins to grant access to the Admin
+            Portal for the given organization. Accepts up to 20 emails.
+          example:
+            - admin@example.com
+          maxItems: 20
+          items:
+            type: string
+          type: array
       required:
         - organization
     CreateRedirectUriDto:
@@ -17040,6 +17051,7 @@ components:
           type:
             - string
             - 'null'
+          format: date-time
           description: Timestamp of when the API Key was last used.
           example: null
         permissions:
@@ -27051,6 +27063,7 @@ components:
           type:
             - string
             - 'null'
+          format: date-time
           description: Timestamp of when the API Key was last used.
           example: null
         permissions:
