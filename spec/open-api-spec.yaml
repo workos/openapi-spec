@@ -1683,7 +1683,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -1908,7 +1908,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -2037,7 +2037,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -2300,7 +2300,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -2444,7 +2444,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -4385,7 +4385,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -4631,7 +4631,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -4784,7 +4784,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -4940,7 +4940,7 @@ paths:
                   resource_type_slug:
                     type: string
                     description: The slug of the resource type the role is scoped to.
-                    example: default
+                    example: organization
                   permissions:
                     type: array
                     items:
@@ -15861,6 +15861,11 @@ components:
           maxLength: 150
           description: An optional description of the role's purpose.
           example: Can manage billing and invoices
+        resource_type_slug:
+          type: string
+          maxLength: 48
+          description: The slug of the resource type the role is scoped to.
+          example: organization
       required:
         - name
     UpdateOrganizationRoleDto:
@@ -15948,7 +15953,7 @@ components:
           type: string
           maxLength: 48
           description: The slug of the resource type the role is scoped to.
-          example: default
+          example: organization
       required:
         - slug
         - name
@@ -18014,7 +18019,7 @@ components:
         resource_type_slug:
           type: string
           description: The slug of the resource type the role is scoped to.
-          example: default
+          example: organization
         permissions:
           type: array
           items:
