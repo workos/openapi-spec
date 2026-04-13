@@ -29,7 +29,7 @@ POSTMAN_API_KEY=your_key POSTMAN_COLLECTION_UID=your_uid npm run generate:postma
 
 ```
 scripts/postman/
-├── generate-and-upload.ts   # Entry point
+├── generate.ts              # Entry point
 ├── lib/
 │   ├── convert.ts           # openapi-to-postmanv2 wrapper
 │   ├── post-process.ts      # All post-processing transforms

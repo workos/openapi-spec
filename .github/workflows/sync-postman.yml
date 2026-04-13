@@ -26,7 +26,7 @@ jobs:
       - run: npm ci
 
       - name: Generate and upload Postman collection
-        run: npx tsx scripts/postman/generate-and-upload.ts
+        run: npx tsx scripts/postman/generate.ts
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
           POSTMAN_COLLECTION_UID: ${{ secrets.POSTMAN_COLLECTION_UID }}
