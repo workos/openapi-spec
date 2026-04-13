@@ -1,8 +1,8 @@
 name: Validate SDKs
 
 on:
-  # pull_request:
-  #   branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  detect-changes:
+  load-matrix:
     runs-on: ubuntu-latest
     outputs:
       spec-changed: ${{ steps.filter.outputs.spec }}
@@ -30,13 +30,13 @@ jobs:
         run: echo "matrix=$(jq -c . .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
 
   sdk_build:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.spec-changed == 'true'
+    needs: load-matrix
+    if: needs.load-matrix.outputs.spec-changed == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+        include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
 
     steps:
       - name: Generate GitHub App token
@@ -63,19 +63,168 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: oagen-emitters/package-lock.json
+          cache-dependency-path: openapi-spec/package-lock.json
 
       - name: Install dependencies
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: npm ci
 
       - name: Extract baseline
-        working-directory: oagen-emitters
-        run: npx oagen extract --lang ${{ matrix.language }} --sdk-path ../backend/workos-${{ matrix.language }} --output ./sdk-${{ matrix.language }}-surface.json
+        working-directory: openapi-spec
+        run: |
+          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
+          SDK_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+
+          mkdir -p "$(dirname "$API_SURFACE_PATH")"
+          cd node_modules/@workos/oagen-emitters
+
+          npx oagen extract \
+            --lang "${{ matrix.language }}" \
+            --sdk-path "$SDK_PATH" \
+            --output "$API_SURFACE_PATH"
 
       - name: Generate
-        working-directory: oagen-emitters
-        run: npx oagen generate --lang ${{ matrix.language }} --output ./sdk-${{ matrix.language }} --namespace workos --api-surface ./sdk-${{ matrix.language }}-surface.json
+        working-directory: openapi-spec
+        run: |
+          SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
+          OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk"
+          TARGET_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
+
+          mkdir -p "$OUTPUT_DIR"
+          cd node_modules/@workos/oagen-emitters
+
+          npx oagen generate \
+            --lang "${{ matrix.language }}" \
+            --spec "$SPEC_PATH" \
+            --output "$OUTPUT_DIR" \
+            --target "$TARGET_PATH" \
+            --namespace workos \
+            --api-surface "$API_SURFACE_PATH"
+
+      - name: Export previous spec snapshot
+        working-directory: openapi-spec
+        run: |
+          BASE_SHA="$(cat .last-synced-sha)"
+          git show "${BASE_SHA}:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
+
+      - name: Generate baseline manifest
+        working-directory: openapi-spec
+        run: |
+          BASELINE_OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/baseline-sdk"
+          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
+
+          rm -rf "$BASELINE_OUTPUT_DIR"
+          mkdir -p "$BASELINE_OUTPUT_DIR"
+          cd node_modules/@workos/oagen-emitters
+
+          npx oagen generate \
+            --lang "${{ matrix.language }}" \
+            --spec /tmp/previous-open-api-spec.yaml \
+            --output "$BASELINE_OUTPUT_DIR" \
+            --namespace workos \
+            --api-surface "$API_SURFACE_PATH"
+
+      - name: Check resolved operations
+        id: resolve-ops
+        working-directory: openapi-spec
+        run: |
+          CURRENT_MANIFEST="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk/smoke-manifest.json"
+          BASELINE_MANIFEST="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/baseline-sdk/smoke-manifest.json"
+          DIFF_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/resolved-ops"
+
+          mkdir -p "$DIFF_DIR"
+
+          if [ ! -f "$CURRENT_MANIFEST" ]; then
+            echo "::error::Missing current smoke-manifest.json at $CURRENT_MANIFEST"
+            exit 1
+          fi
+
+          if [ ! -f "$BASELINE_MANIFEST" ]; then
+            echo "::error::Missing baseline smoke-manifest.json at $BASELINE_MANIFEST"
+            exit 1
+          fi
+
+          jq -n \
+            --slurpfile current "$CURRENT_MANIFEST" \
+            --slurpfile baseline "$BASELINE_MANIFEST" \
+            '[($current[0]) as $cur |
+              ($baseline[0]) as $base |
+              $cur | to_entries[] | select($base[.key] == null) |
+              {
+                operation: .key,
+                sdkMethod: .value.sdkMethod,
+                service: .value.service
+              }]' > "$DIFF_DIR/new-operations.json"
+
+          jq -n \
+            --slurpfile current "$CURRENT_MANIFEST" \
+            --slurpfile baseline "$BASELINE_MANIFEST" \
+            '[($current[0]) as $cur |
+              ($baseline[0]) as $base |
+              $cur | to_entries[] |
+              select($base[.key] != null and (
+                $base[.key].sdkMethod != .value.sdkMethod or
+                $base[.key].service != .value.service
+              )) |
+              {
+                operation: .key,
+                oldSdkMethod: $base[.key].sdkMethod,
+                newSdkMethod: .value.sdkMethod,
+                oldService: $base[.key].service,
+                newService: .value.service
+              }]' > "$DIFF_DIR/changed-operations.json"
+
+          jq -n \
+            --slurpfile current "$CURRENT_MANIFEST" \
+            --slurpfile baseline "$BASELINE_MANIFEST" \
+            '[($current[0]) as $cur |
+              ($baseline[0]) as $base |
+              $base | to_entries[] | select($cur[.key] == null) |
+              {
+                operation: .key,
+                sdkMethod: .value.sdkMethod,
+                service: .value.service
+              }]' > "$DIFF_DIR/removed-operations.json"
+
+          NEW_COUNT=$(jq 'length' "$DIFF_DIR/new-operations.json")
+          CHANGED_COUNT=$(jq 'length' "$DIFF_DIR/changed-operations.json")
+          REMOVED_COUNT=$(jq 'length' "$DIFF_DIR/removed-operations.json")
+
+          {
+            echo "new_count=$NEW_COUNT"
+            echo "changed_count=$CHANGED_COUNT"
+            echo "removed_count=$REMOVED_COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Resolved Operations (${{ matrix.language }})"
+            echo
+            echo "- New operations: $NEW_COUNT"
+            echo "- Changed mappings: $CHANGED_COUNT"
+            echo "- Removed operations: $REMOVED_COUNT"
+            echo
+            if [ "$NEW_COUNT" -gt 0 ]; then
+              echo "### New operations"
+              jq -r '.[] | "- `\(.operation)` -> `\(.service).\(.sdkMethod)`"' "$DIFF_DIR/new-operations.json"
+              echo
+            fi
+            if [ "$CHANGED_COUNT" -gt 0 ]; then
+              echo "### Changed mappings"
+              jq -r '.[] | "- `\(.operation)`: `\(.oldService).\(.oldSdkMethod)` -> `\(.newService).\(.newSdkMethod)`"' "$DIFF_DIR/changed-operations.json"
+              echo
+            fi
+            if [ "$REMOVED_COUNT" -gt 0 ]; then
+              echo "### Removed operations"
+              jq -r '.[] | "- `\(.operation)` (was `\(.service).\(.sdkMethod)`) "' "$DIFF_DIR/removed-operations.json" | sed 's/[[:space:]]*$//'
+              echo
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$CHANGED_COUNT" -gt 0 ]; then
+            echo "::error::Resolved SDK mappings changed for existing operations. See resolved-ops artifacts."
+            exit 1
+          fi
 
       - name: Upload diagnostics
         if: always()
@@ -83,19 +232,17 @@ jobs:
         with:
           name: oagen-diagnostics-${{ matrix.language }}
           path: |
-            oagen-emitters/sdk/
-            oagen-emitters/sdk-*-surface.json
-            oagen-emitters/smoke-*.json
+            openapi-spec/.oagen/${{ matrix.language }}/
           retention-days: 14
 
   sdk-validation:
     runs-on: ubuntu-latest
-    needs: [detect-changes, sdk_build]
+    needs: [load-matrix, sdk_build]
     if: always()
     steps:
       - name: Check result
         run: |
-          if [[ "${{ needs.detect-changes.outputs.spec-changed }}" != "true" ]]; then
+          if [[ "${{ needs.load-matrix.outputs.spec-changed }}" != "true" ]]; then
             echo "No spec changes, skipping SDK validation"
             exit 0
           fi

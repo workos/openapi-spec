@@ -1,10 +1,10 @@
 name: Generate PRs
 
 on:
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - 'spec/**'
+  push:
+    branches: [main]
+    paths:
+      - 'spec/**'
   workflow_dispatch:
 
 concurrency:
@@ -59,113 +59,85 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: oagen-emitters/package-lock.json
+          cache-dependency-path: openapi-spec/package-lock.json
 
       - name: Install dependencies
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: npm ci
 
+      - name: Validate published emitter support
+        working-directory: openapi-spec
+        run: |
+          OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk"
+          SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
+
+          mkdir -p "$OUTPUT_DIR"
+          cd node_modules/@workos/oagen-emitters
+
+          if ! OUTPUT=$(npx oagen generate \
+            --lang "${{ matrix.language }}" \
+            --spec "$SPEC_PATH" \
+            --output "$OUTPUT_DIR" \
+            --dry-run 2>&1); then
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q '^Unknown language:'; then
+              echo "::error::Published @workos/oagen-emitters does not provide an emitter for '${{ matrix.language }}'."
+            fi
+            exit 1
+          fi
+
       - name: Extract baseline
-        working-directory: oagen-emitters
-        run: npx oagen extract --language ${{ matrix.language }}
+        working-directory: openapi-spec
+        run: |
+          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
+          SDK_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+
+          mkdir -p "$(dirname "$API_SURFACE_PATH")"
+          cd node_modules/@workos/oagen-emitters
+
+          npx oagen extract \
+            --lang "${{ matrix.language }}" \
+            --sdk-path "$SDK_PATH" \
+            --output "$API_SURFACE_PATH"
 
       - name: Generate
-        working-directory: oagen-emitters
-        run: npx oagen generate --language ${{ matrix.language }}
-
-      - name: Check resolved operations
-        id: resolve-ops
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: |
-          # Resolve all operations with hints applied, output as JSON
-          RESOLVED=$(npx oagen resolve \
-            --spec ../openapi-spec/spec/open-api-spec.yaml \
-            --format json 2>&1) || true
+          SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
+          OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk"
+          TARGET_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
 
-          # Save full resolution for diagnostics
-          echo "$RESOLVED" > /tmp/resolved-operations.json
+          mkdir -p "$OUTPUT_DIR"
+          cd node_modules/@workos/oagen-emitters
 
-          # Count total vs unhinted operations
-          TOTAL=$(echo "$RESOLVED" | jq 'length')
-          UNHINTED=$(echo "$RESOLVED" | jq '[.[] | select(.hintApplied == false)] | length')
+          npx oagen generate \
+            --lang "${{ matrix.language }}" \
+            --spec "$SPEC_PATH" \
+            --output "$OUTPUT_DIR" \
+            --target "$TARGET_PATH" \
+            --namespace workos \
+            --api-surface "$API_SURFACE_PATH"
 
-          # Compare against checked-in snapshot if it exists
-          SNAPSHOT="./sdk/resolved-operations.json"
-          NEW_OPS=""
-          CHANGED_OPS=""
-          if [ -f "$SNAPSHOT" ]; then
-            # Find operations in resolved but not in snapshot (by path+method key)
-            NEW_OPS=$(jq -n \
-              --slurpfile current /tmp/resolved-operations.json \
-              --slurpfile baseline "$SNAPSHOT" \
-              '[($current[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $cur |
-               ($baseline[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $base |
-               $cur | to_entries[] | select($base[.key] == null) | .value]')
-
-            # Find operations whose resolved name changed
-            CHANGED_OPS=$(jq -n \
-              --slurpfile current /tmp/resolved-operations.json \
-              --slurpfile baseline "$SNAPSHOT" \
-              '[($current[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $cur |
-               ($baseline[0] | map({key: (.method + " " + .path), value: .}) | from_entries) as $base |
-               $cur | to_entries[] | select($base[.key] != null and $base[.key].derivedName != .value.derivedName) | .value]')
-          fi
-
-          # Save snapshot for next run
-          cp /tmp/resolved-operations.json "$SNAPSHOT"
-
-          # Build markdown table of new/changed operations for PR body
-          OP_TABLE=""
-          NEW_COUNT=$(echo "$NEW_OPS" | jq 'length' 2>/dev/null || echo "0")
-          CHANGED_COUNT=$(echo "$CHANGED_OPS" | jq 'length' 2>/dev/null || echo "0")
-
-          if [ "$NEW_COUNT" -gt 0 ]; then
-            OP_TABLE="${OP_TABLE}### New operations (${NEW_COUNT})\n\n"
-            OP_TABLE="${OP_TABLE}| Method | Path | Resolved Name | Has Hint |\n"
-            OP_TABLE="${OP_TABLE}|---|---|---|---|\n"
-            OP_TABLE="${OP_TABLE}$(echo "$NEW_OPS" | jq -r '.[] | "| \(.method) | \(.path) | `\(.derivedName)` | \(if .hintApplied then "yes" else "**no**" end) |"')\n"
-          fi
-
-          if [ "$CHANGED_COUNT" -gt 0 ]; then
-            OP_TABLE="${OP_TABLE}\n### Changed operations (${CHANGED_COUNT})\n\n"
-            OP_TABLE="${OP_TABLE}| Method | Path | New Name | Has Hint |\n"
-            OP_TABLE="${OP_TABLE}|---|---|---|---|\n"
-            OP_TABLE="${OP_TABLE}$(echo "$CHANGED_OPS" | jq -r '.[] | "| \(.method) | \(.path) | `\(.derivedName)` | \(if .hintApplied then "yes" else "**no**" end) |"')\n"
-          fi
-
-          if [ "$UNHINTED" -gt 0 ] && { [ "$NEW_COUNT" -gt 0 ] || [ "$CHANGED_COUNT" -gt 0 ]; }; then
-            OP_TABLE="${OP_TABLE}\n> Operations without hints use algorithm-derived names. If names look wrong, add entries to \`operationHints\` in oagen.config.ts.\n"
-          fi
-
-          {
-            echo "total=$TOTAL"
-            echo "unhinted=$UNHINTED"
-            echo "new_count=$NEW_COUNT"
-            echo "changed_count=$CHANGED_COUNT"
-          } >> "$GITHUB_OUTPUT"
-
-          # Write multiline output
-          {
-            echo "op_table<<OPEOF"
-            echo -e "$OP_TABLE"
-            echo "OPEOF"
-          } >> "$GITHUB_OUTPUT"
+      - name: Export previous spec snapshot
+        working-directory: openapi-spec
+        run: |
+          BASE_SHA="$(cat .last-synced-sha)"
+          git show "${BASE_SHA}:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
 
       - name: Diff report
         id: diff-report
-        working-directory: oagen-emitters
+        working-directory: openapi-spec
         run: |
-          # --report outputs JSON to stdout and exits with:
-          #   0 = no changes, 1 = additive/modified, 2 = breaking
-          REPORT=$(npx oagen diff \
-            --old ./sdk/spec-snapshot.yaml \
-            --new ../openapi-spec/spec/open-api-spec.yaml \
-            --report 2>&1) || true
+          CURRENT_SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
+          cd node_modules/@workos/oagen-emitters
 
-          # Save full report to file for the classify step
+          REPORT=$(npx oagen diff \
+            --old /tmp/previous-open-api-spec.yaml \
+            --new "$CURRENT_SPEC_PATH")
+
           echo "$REPORT" > /tmp/diff-report.json
 
-          # Extract summary counts
           ADDED=$(echo "$REPORT" | jq -r '.summary.added')
           REMOVED=$(echo "$REPORT" | jq -r '.summary.removed')
           MODIFIED=$(echo "$REPORT" | jq -r '.summary.modified')
@@ -185,27 +157,27 @@ jobs:
         run: |
           DIFF_REPORT=$(cat /tmp/diff-report.json)
 
-          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
-            -H "content-type: application/json" \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -d "$(jq -n \
-              --arg report "$DIFF_REPORT" \
-              '{
-                model: "claude-haiku-4-5-20251001",
-                max_tokens: 256,
-                messages: [{
-                  role: "user",
-                  content: ("Given this OpenAPI spec diff report, do two things:\n1. Classify the change type: respond with ONLY one of `feat!` (breaking — has removed models/endpoints or changed types), `feat` (additive — new endpoints, new models), or `fix` (modification only — field changes, description updates).\n2. Write a short summary (under 50 chars) of what changed, suitable for a commit message scope.\n\nRespond in exactly this format, two lines:\nPREFIX: <feat!|feat|fix>\nSUMMARY: <short description>\n\nDiff report:\n" + $report)
-                }]
-              }')")
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+              -H "content-type: application/json" \
+              -H "x-api-key: $ANTHROPIC_API_KEY" \
+              -H "anthropic-version: 2023-06-01" \
+              -d "$(jq -n \
+                --arg report "$DIFF_REPORT" \
+                '{
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 256,
+                  messages: [{
+                    role: "user",
+                    content: ("Given this OpenAPI spec diff report, do two things:\n1. Classify the change type: respond with ONLY one of `feat!` (breaking changes), `feat` (additive changes), or `fix` (modifications only).\n2. Write a short summary (under 50 chars) suitable for a commit message.\n\nRespond in exactly this format, two lines:\nPREFIX: <feat!|feat|fix>\nSUMMARY: <short description>\n\nDiff report:\n" + $report)
+                  }]
+                }')") || true
+          fi
 
-          # Parse Claude response
-          CLAUDE_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          CLAUDE_TEXT=$(echo "${RESPONSE:-}" | jq -r '.content[0].text // empty')
           PREFIX=$(echo "$CLAUDE_TEXT" | grep '^PREFIX:' | sed 's/^PREFIX: *//')
           SUMMARY=$(echo "$CLAUDE_TEXT" | grep '^SUMMARY:' | sed 's/^SUMMARY: *//')
 
-          # Fallback classification from diff summary counts
           if [ -z "$PREFIX" ]; then
             BREAKING='${{ steps.diff-report.outputs.breaking }}'
             ADDED='${{ steps.diff-report.outputs.added }}'
@@ -217,6 +189,7 @@ jobs:
               PREFIX="fix"
             fi
           fi
+
           if [ -z "$SUMMARY" ]; then
             SUMMARY="update generated SDK from spec changes"
           fi
@@ -248,7 +221,6 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
 
-          # Exit early if nothing to commit
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
@@ -257,22 +229,15 @@ jobs:
           git commit -m "${PREFIX}(generated): ${SUMMARY}"
           git push origin "$BRANCH"
 
-          OP_TABLE="${{ steps.resolve-ops.outputs.op_table }}"
-
           BODY="## Summary
           ${SUMMARY}
 
           ## Spec Diff
           - Added: ${ADDED} | Removed: ${REMOVED} | Modified: ${MODIFIED} | Breaking: ${BREAKING}
 
-          ## Resolved Operations
-          - Total: ${{ steps.resolve-ops.outputs.total }} | Algorithm-only: ${{ steps.resolve-ops.outputs.unhinted }}
-
-          ${OP_TABLE}
-
           Triggered by openapi-spec commit: ${{ github.sha }}
 
-          🤖 Generated by [oagen](https://github.com/workos/oagen)"
+          Generated with the published @workos/oagen-emitters package."
 
           gh pr create \
             --title "${PREFIX}(generated): ${SUMMARY}" \
@@ -284,8 +249,6 @@ jobs:
         with:
           name: oagen-diagnostics-${{ matrix.language }}
           path: |
-            oagen-emitters/sdk/
-            oagen-emitters/sdk-*-surface.json
-            oagen-emitters/smoke-*.json
-            /tmp/resolved-operations.json
+            openapi-spec/.oagen/${{ matrix.language }}/
+            /tmp/diff-report.json
           retention-days: 14
