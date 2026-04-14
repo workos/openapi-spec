@@ -1622,10 +1622,8 @@ paths:
   /authorization/organizations/{organizationId}/roles:
     post:
       operationId: AuthorizationOrganizationRolesController_create
-      summary: Create a custom organization role
-      description: >-
-        Create a new custom organization role. When slug is omitted, it is
-        auto-generated from the role name.
+      summary: Create a custom role
+      description: Create a new custom role for this organization.
       parameters:
         - name: organizationId
           required: true
@@ -1678,7 +1676,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -1795,11 +1793,10 @@ paths:
         - authorization
     get:
       operationId: AuthorizationOrganizationRolesController_list
-      summary: List organization roles
+      summary: List custom roles
       description: >-
         Get a list of all roles that apply to an organization. This includes
-        both environment roles and organization-specific roles, returned in
-        priority order.
+        both environment roles and custom roles, returned in priority order.
       parameters:
         - name: organizationId
           required: true
@@ -1846,10 +1843,10 @@ paths:
   /authorization/organizations/{organizationId}/roles/{slug}:
     get:
       operationId: AuthorizationOrganizationRolesController_get
-      summary: Get an organization role
+      summary: Get a custom role
       description: >-
         Retrieve a role that applies to an organization by its slug. This can
-        return either an environment role or an organization-specific role.
+        return either an environment role or a custom role.
       parameters:
         - name: organizationId
           required: true
@@ -1903,7 +1900,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -1969,10 +1966,10 @@ paths:
         - authorization
     patch:
       operationId: AuthorizationOrganizationRolesController_update
-      summary: Update an organization role
+      summary: Update a custom role
       description: >-
-        Update an existing custom organization role. Only the fields provided in
-        the request body will be updated.
+        Update an existing custom role. Only the fields provided in the request
+        body will be updated.
       parameters:
         - name: organizationId
           required: true
@@ -2032,7 +2029,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -2130,8 +2127,8 @@ paths:
         - authorization
     delete:
       operationId: AuthorizationOrganizationRolesController_delete
-      summary: Delete a custom organization role
-      description: Delete an existing custom organization role.
+      summary: Delete a custom role
+      description: Delete an existing custom role.
       parameters:
         - name: organizationId
           required: true
@@ -2234,8 +2231,8 @@ paths:
   /authorization/organizations/{organizationId}/roles/{slug}/permissions:
     put:
       operationId: AuthorizationOrganizationRolePermissionsController_setPermissions
-      summary: Set permissions for a role
-      description: Replace all permissions on a role with the provided list.
+      summary: Set permissions for a custom role
+      description: Replace all permissions on a custom role with the provided list.
       parameters:
         - name: organizationId
           required: true
@@ -2295,7 +2292,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -2376,10 +2373,10 @@ paths:
         - authorization
     post:
       operationId: AuthorizationOrganizationRolePermissionsController_addPermission
-      summary: Add a permission to an organization role
+      summary: Add a permission to a custom role
       description: >-
-        Add a single permission to an organization role. If the permission is
-        already assigned to the role, this operation has no effect.
+        Add a single permission to a custom role. If the permission is already
+        assigned to the role, this operation has no effect.
       parameters:
         - name: organizationId
           required: true
@@ -2439,7 +2436,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -2537,8 +2534,8 @@ paths:
   /authorization/organizations/{organizationId}/roles/{slug}/permissions/{permissionSlug}:
     delete:
       operationId: AuthorizationOrganizationRolePermissionsController_removePermission
-      summary: Remove a permission from an organization role
-      description: Remove a single permission from an organization role by its slug.
+      summary: Remove a permission from a custom role
+      description: Remove a single permission from a custom role by its slug.
       parameters:
         - name: organizationId
           required: true
@@ -3222,7 +3219,7 @@ paths:
       summary: Create a permission
       description: >-
         Create a new permission in your WorkOS environment. The permission can
-        then be assigned to environment roles and organization roles.
+        then be assigned to environment roles and custom roles.
       parameters: []
       requestBody:
         required: true
@@ -4380,7 +4377,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -4626,7 +4623,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -4779,7 +4776,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -4935,7 +4932,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -8515,8 +8512,8 @@ paths:
           required: false
           in: query
           description: >-
-            Additional OAuth scopes to request from the identity provider. Only
-            applicable when using OAuth connections.
+            Additional scopes to request from the identity provider. Applicable
+            when using OAuth or OpenID Connect connections.
           style: form
           explode: false
           schema:
@@ -17316,6 +17313,12 @@ components:
                   - openid
                   - profile
                   - email
+              oauth_resource:
+                type: string
+                description: >-
+                  The OAuth resource associated with the authorized connect
+                  application, if one was requested.
+                example: https://api.example.com/resource
               application:
                 $ref: '#/components/schemas/ConnectApplication'
             required:
@@ -18026,7 +18029,9 @@ components:
           enum:
             - EnvironmentRole
             - OrganizationRole
-          description: Whether the role is scoped to the environment or an organization.
+          description: >-
+            Whether the role is scoped to the environment or an organization
+            (custom role).
           example: EnvironmentRole
         resource_type_slug:
           type: string
