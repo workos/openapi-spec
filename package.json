@@ -5,13 +5,25 @@
   "type": "module",
   "scripts": {
     "generate:postman": "tsx scripts/postman/generate.ts",
-    "generate:postman:local": "tsx scripts/postman/generate.ts --local"
+    "generate:postman:local": "tsx scripts/postman/generate.ts --local",
+    "sdk:resolve": "npx oagen resolve --spec spec/open-api-spec.yaml",
+    "sdk:generate": "bash scripts/sdk-generate.sh",
+    "sdk:diff": "bash scripts/sdk-diff.sh",
+    "sdk:verify": "bash scripts/sdk-verify.sh",
+    "sdk:extract": "bash scripts/sdk-extract.sh",
+    "sdk:compat-extract": "bash scripts/sdk-compat-extract.sh",
+    "sdk:compat-diff": "bash scripts/sdk-compat-diff.sh",
+    "sdk:compat-summary": "bash scripts/sdk-compat-summary.sh",
+    "sdk:check": "npx oagen resolve --spec spec/open-api-spec.yaml --format json > /dev/null && echo 'Config loaded successfully'",
+    "dev:link": "npm link @workos/oagen @workos/oagen-emitters",
+    "dev:unlink": "npm install",
+    "prepare": "husky"
   },
   "dependencies": {
-    "@workos/oagen": "^0.2.0",
-    "@workos/oagen-emitters": "^0.2.0",
+    "@workos/oagen": "^0.9.0",
+    "@workos/oagen-emitters": "^0.6.0",
     "js-yaml": "^4.1.1",
-    "openapi-to-postmanv2": "^5.8.0"
+    "openapi-to-postmanv2": "^6.0.1"
   },
   "overrides": {
     "js-yaml": "^4.1.1",
@@ -19,8 +31,9 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.6.0",
+    "husky": "^9.1.7",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
