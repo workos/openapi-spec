@@ -1148,6 +1148,15 @@ paths:
                   - message
       tags:
         - authorization
+      x-mutually-exclusive-body-groups: &ref_3
+        resource_target:
+          optional: false
+          variants:
+            by_id:
+              - resource_id
+            by_external_id:
+              - resource_external_id
+              - resource_type_slug
   /authorization/organization_memberships/{organization_membership_id}/resources:
     get:
       operationId: AuthorizationController_listResourcesForMembership
@@ -1237,7 +1246,8 @@ paths:
           description: >-
             The WorkOS ID of the parent resource. Provide this or both
             `parent_resource_external_id` and `parent_resource_type_slug`, but
-            not both.
+            not both. Mutually exclusive with `parent_resource_type_slug` and
+            `parent_resource_external_id`.
           schema:
             type: string
             example: authz_resource_01XYZ789
@@ -1246,7 +1256,9 @@ paths:
           in: query
           description: >-
             The slug of the parent resource type. Must be provided together with
-            `parent_resource_external_id`.
+            `parent_resource_external_id`. Required with
+            `parent_resource_external_id`. Mutually exclusive with
+            `parent_resource_id`.
           schema:
             type: string
             example: project
@@ -1255,7 +1267,9 @@ paths:
           in: query
           description: >-
             The application-specific external identifier of the parent resource.
-            Must be provided together with `parent_resource_type_slug`.
+            Must be provided together with `parent_resource_type_slug`. Required
+            with `parent_resource_type_slug`. Mutually exclusive with
+            `parent_resource_id`.
           schema:
             type: string
             example: external_project_123
@@ -1285,6 +1299,270 @@ paths:
                 required:
                   - code
                   - message
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - authorization
+      x-mutually-exclusive-parameter-groups:
+        parent_resource:
+          optional: false
+          variants:
+            by_id:
+              - parent_resource_id
+            by_external_id:
+              - parent_resource_type_slug
+              - parent_resource_external_id
+  /authorization/organization_memberships/{organization_membership_id}/resources/{resource_id}/permissions:
+    get:
+      operationId: AuthorizationController_listEffectivePermissions
+      summary: List effective permissions for an organization membership on a resource
+      description: >-
+        Returns all permissions the organization membership effectively has on a
+        resource, including permissions inherited through roles assigned to
+        ancestor resources.
+      parameters:
+        - name: organization_membership_id
+          required: true
+          in: path
+          description: The ID of the organization membership.
+          schema:
+            type: string
+            example: om_01HXYZ123456789ABCDEFGHIJ
+        - name: resource_id
+          required: true
+          in: path
+          description: The ID of the authorization resource.
+          schema:
+            type: string
+            example: authz_resource_01HXYZ123456789ABCDEFGHIJ
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to descending.
+          schema:
+            default: desc
+            example: desc
+            enum:
+              - normal
+              - desc
+              - asc
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationPermissionList'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - authorization
+  /authorization/organization_memberships/{organization_membership_id}/resources/{resource_type_slug}/{external_id}/permissions:
+    get:
+      operationId: AuthorizationController_listEffectivePermissionsByExternalId
+      summary: >-
+        List effective permissions for an organization membership on a resource
+        by external ID
+      description: >-
+        Returns all permissions the organization membership effectively has on a
+        resource identified by its external ID, including permissions inherited
+        through roles assigned to ancestor resources.
+      parameters:
+        - name: organization_membership_id
+          required: true
+          in: path
+          description: The ID of the organization membership.
+          schema:
+            type: string
+            example: om_01HXYZ123456789ABCDEFGHIJ
+        - name: resource_type_slug
+          required: true
+          in: path
+          description: The slug of the resource type.
+          schema:
+            type: string
+            example: document
+        - name: external_id
+          required: true
+          in: path
+          description: An identifier you provide to reference the resource in your system.
+          schema:
+            type: string
+            example: doc-456
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to descending.
+          schema:
+            default: desc
+            example: desc
+            enum:
+              - normal
+              - desc
+              - asc
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationPermissionList'
         '403':
           description: Forbidden
           content:
@@ -1506,6 +1784,15 @@ paths:
                   - message
       tags:
         - authorization
+      x-mutually-exclusive-body-groups: &ref_4
+        resource_target:
+          optional: false
+          variants:
+            by_id:
+              - resource_id
+            by_external_id:
+              - resource_external_id
+              - resource_type_slug
     delete:
       operationId: AuthorizationRoleAssignmentsController_removeRoleByCriteria
       summary: Remove a role assignment
@@ -1568,6 +1855,15 @@ paths:
                   - message
       tags:
         - authorization
+      x-mutually-exclusive-body-groups: &ref_5
+        resource_target:
+          optional: false
+          variants:
+            by_id:
+              - resource_id
+            by_external_id:
+              - resource_external_id
+              - resource_type_slug
   /authorization/organization_memberships/{organization_membership_id}/role_assignments/{role_assignment_id}:
     delete:
       operationId: AuthorizationRoleAssignmentsController_removeRoleById
@@ -1622,10 +1918,8 @@ paths:
   /authorization/organizations/{organizationId}/roles:
     post:
       operationId: AuthorizationOrganizationRolesController_create
-      summary: Create a custom organization role
-      description: >-
-        Create a new custom organization role. When slug is omitted, it is
-        auto-generated from the role name.
+      summary: Create a custom role
+      description: Create a new custom role for this organization.
       parameters:
         - name: organizationId
           required: true
@@ -1678,7 +1972,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -1795,11 +2089,10 @@ paths:
         - authorization
     get:
       operationId: AuthorizationOrganizationRolesController_list
-      summary: List organization roles
+      summary: List custom roles
       description: >-
         Get a list of all roles that apply to an organization. This includes
-        both environment roles and organization-specific roles, returned in
-        priority order.
+        both environment roles and custom roles, returned in priority order.
       parameters:
         - name: organizationId
           required: true
@@ -1846,10 +2139,10 @@ paths:
   /authorization/organizations/{organizationId}/roles/{slug}:
     get:
       operationId: AuthorizationOrganizationRolesController_get
-      summary: Get an organization role
+      summary: Get a custom role
       description: >-
         Retrieve a role that applies to an organization by its slug. This can
-        return either an environment role or an organization-specific role.
+        return either an environment role or a custom role.
       parameters:
         - name: organizationId
           required: true
@@ -1903,7 +2196,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -1969,10 +2262,10 @@ paths:
         - authorization
     patch:
       operationId: AuthorizationOrganizationRolesController_update
-      summary: Update an organization role
+      summary: Update a custom role
       description: >-
-        Update an existing custom organization role. Only the fields provided in
-        the request body will be updated.
+        Update an existing custom role. Only the fields provided in the request
+        body will be updated.
       parameters:
         - name: organizationId
           required: true
@@ -2032,7 +2325,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -2130,8 +2423,8 @@ paths:
         - authorization
     delete:
       operationId: AuthorizationOrganizationRolesController_delete
-      summary: Delete a custom organization role
-      description: Delete an existing custom organization role.
+      summary: Delete a custom role
+      description: Delete an existing custom role.
       parameters:
         - name: organizationId
           required: true
@@ -2234,8 +2527,8 @@ paths:
   /authorization/organizations/{organizationId}/roles/{slug}/permissions:
     put:
       operationId: AuthorizationOrganizationRolePermissionsController_setPermissions
-      summary: Set permissions for a role
-      description: Replace all permissions on a role with the provided list.
+      summary: Set permissions for a custom role
+      description: Replace all permissions on a custom role with the provided list.
       parameters:
         - name: organizationId
           required: true
@@ -2295,7 +2588,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -2376,10 +2669,10 @@ paths:
         - authorization
     post:
       operationId: AuthorizationOrganizationRolePermissionsController_addPermission
-      summary: Add a permission to an organization role
+      summary: Add a permission to a custom role
       description: >-
-        Add a single permission to an organization role. If the permission is
-        already assigned to the role, this operation has no effect.
+        Add a single permission to a custom role. If the permission is already
+        assigned to the role, this operation has no effect.
       parameters:
         - name: organizationId
           required: true
@@ -2439,7 +2732,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: OrganizationRole
                   resource_type_slug:
                     type: string
@@ -2537,8 +2830,8 @@ paths:
   /authorization/organizations/{organizationId}/roles/{slug}/permissions/{permissionSlug}:
     delete:
       operationId: AuthorizationOrganizationRolePermissionsController_removePermission
-      summary: Remove a permission from an organization role
-      description: Remove a single permission from an organization role by its slug.
+      summary: Remove a permission from a custom role
+      description: Remove a single permission from a custom role by its slug.
       parameters:
         - name: organizationId
           required: true
@@ -2841,6 +3134,15 @@ paths:
                   - message
       tags:
         - authorization
+      x-mutually-exclusive-body-groups: &ref_0
+        parent_resource:
+          optional: true
+          variants:
+            by_id:
+              - parent_resource_id
+            by_external_id:
+              - parent_resource_external_id
+              - parent_resource_type_slug
     delete:
       operationId: AuthorizationResourcesByExternalIdController_deleteByExternalId
       summary: Delete an authorization resource by external ID
@@ -3222,7 +3524,7 @@ paths:
       summary: Create a permission
       description: >-
         Create a new permission in your WorkOS environment. The permission can
-        then be assigned to environment roles and organization roles.
+        then be assigned to environment roles and custom roles.
       parameters: []
       requestBody:
         required: true
@@ -3589,24 +3891,38 @@ paths:
           schema:
             type: string
             example: project
+        - name: resource_external_id
+          required: false
+          in: query
+          description: Filter resources by external ID.
+          schema:
+            type: string
+            example: my-project-123
         - name: parent_resource_id
           required: false
           in: query
-          description: Filter resources by parent resource ID.
+          description: >-
+            Filter resources by parent resource ID. Mutually exclusive with
+            `parent_resource_type_slug` and `parent_external_id`.
           schema:
             type: string
             example: authz_resource_01HXYZ123456789ABCDEFGHIJ
         - name: parent_resource_type_slug
           required: false
           in: query
-          description: Filter resources by parent resource type slug.
+          description: >-
+            Filter resources by parent resource type slug. Required with
+            `parent_external_id`. Mutually exclusive with `parent_resource_id`.
           schema:
             type: string
             example: workspace
         - name: parent_external_id
           required: false
           in: query
-          description: Filter resources by parent external ID.
+          description: >-
+            Filter resources by parent external ID. Required with
+            `parent_resource_type_slug`. Mutually exclusive with
+            `parent_resource_id`.
           schema:
             type: string
             example: ext-workspace-123
@@ -3652,6 +3968,15 @@ paths:
                   - message
       tags:
         - authorization
+      x-mutually-exclusive-parameter-groups:
+        parent:
+          optional: true
+          variants:
+            by_id:
+              - parent_resource_id
+            by_external_id:
+              - parent_resource_type_slug
+              - parent_external_id
     post:
       operationId: AuthorizationResourcesController_create
       summary: Create an authorization resource
@@ -3840,6 +4165,15 @@ paths:
                   - message
       tags:
         - authorization
+      x-mutually-exclusive-body-groups: &ref_6
+        parent_resource:
+          optional: true
+          variants:
+            by_id:
+              - parent_resource_id
+            by_external_id:
+              - parent_resource_external_id
+              - parent_resource_type_slug
   /authorization/resources/{resource_id}:
     get:
       operationId: AuthorizationResourcesController_findById
@@ -4066,6 +4400,7 @@ paths:
                   - message
       tags:
         - authorization
+      x-mutually-exclusive-body-groups: *ref_0
     delete:
       operationId: AuthorizationResourcesController_delete
       summary: Delete an authorization resource
@@ -4380,7 +4715,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -4626,7 +4961,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -4779,7 +5114,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -4935,7 +5270,7 @@ paths:
                       - OrganizationRole
                     description: >-
                       Whether the role is scoped to the environment or an
-                      organization.
+                      organization (custom role).
                     example: EnvironmentRole
                   resource_type_slug:
                     type: string
@@ -8124,6 +8459,637 @@ paths:
                   - message
       tags:
         - organizations.feature-flags
+  /organizations/{organizationId}/groups:
+    post:
+      operationId: GroupsController_create
+      summary: Create a group
+      description: Create a new group within an organization.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: bad_request
+                    const: bad_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
+    get:
+      operationId: GroupsController_list
+      summary: List groups
+      description: Get a paginated list of groups within an organization.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to descending.
+          schema:
+            default: desc
+            example: desc
+            enum:
+              - normal
+              - desc
+              - asc
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupList'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
+  /organizations/{organizationId}/groups/{groupId}:
+    get:
+      operationId: GroupsController_get
+      summary: Get a group
+      description: Retrieve a group by its ID within an organization.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: groupId
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
+    patch:
+      operationId: GroupsController_update
+      summary: Update a group
+      description: >-
+        Update an existing group. Only the fields provided in the request body
+        will be updated.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: groupId
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupDto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: bad_request
+                    const: bad_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
+    delete:
+      operationId: GroupsController_delete
+      summary: Delete a group
+      description: Delete a group from an organization.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: groupId
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      responses:
+        '204':
+          description: No Content
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
+  /organizations/{organizationId}/groups/{groupId}/organization-memberships:
+    post:
+      operationId: GroupMembershipsController_addMember
+      summary: Add a member to a Group
+      description: Add an organization membership to a group.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: Unique identifier of the Organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: groupId
+          required: true
+          in: path
+          description: Unique identifier of the Group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupMembershipDto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
+    get:
+      operationId: GroupMembershipsController_listMembers
+      summary: List Group members
+      description: Get a list of organization memberships in a group.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: Unique identifier of the Organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: groupId
+          required: true
+          in: path
+          description: Unique identifier of the Group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to descending.
+          schema:
+            default: desc
+            example: desc
+            enum:
+              - normal
+              - desc
+              - asc
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  #/components/schemas/UserlandUserOrganizationMembershipBaseList
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
+  /organizations/{organizationId}/groups/{groupId}/organization-memberships/{omId}:
+    delete:
+      operationId: GroupMembershipsController_removeMember
+      summary: Remove a member from a Group
+      description: Remove an organization membership from a group.
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: Unique identifier of the Organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: groupId
+          required: true
+          in: path
+          description: Unique identifier of the Group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+        - name: omId
+          required: true
+          in: path
+          description: Unique identifier of the Organization Membership.
+          schema:
+            type: string
+            example: om_01HXYZ123456789ABCDEFGHIJ
+      responses:
+        '204':
+          description: No Content
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - groups
+      x-feature-flag: user-groups-enabled
   /portal/generate_link:
     post:
       operationId: PortalSessionsController_create
@@ -8515,8 +9481,8 @@ paths:
           required: false
           in: query
           description: >-
-            Additional OAuth scopes to request from the identity provider. Only
-            applicable when using OAuth connections.
+            Additional scopes to request from the identity provider. Applicable
+            when using OAuth or OpenID Connect connections.
           style: form
           explode: false
           schema:
@@ -8565,13 +9531,20 @@ paths:
             type: string
             enum:
               - AppleOAuth
+              - BitbucketOAuth
               - GitHubOAuth
+              - GitLabOAuth
               - GoogleOAuth
+              - IntuitOAuth
+              - LinkedInOAuth
               - MicrosoftOAuth
+              - SalesforceOAuth
+              - SlackOAuth
+              - VercelMarketplaceOAuth
+              - VercelOAuth
+              - XeroOAuth
             example: GoogleOAuth
-          description: >-
-            Used to initiate OAuth authentication with Google, Microsoft,
-            GitHub, or Apple.
+          description: Used to initiate OAuth authentication with various providers.
         - name: redirect_uri
           required: true
           in: query
@@ -9075,6 +10048,16 @@ paths:
                       type: string
                       description: The authorization code received from the redirect.
                       example: vBqZKaPpsnJlPfXiDqN7b6VTz
+                    code_verifier:
+                      type: string
+                      description: >-
+                        The PKCE code verifier used to derive the code challenge
+                        passed to the authorization URL.
+                      example: dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+                    invitation_token:
+                      type: string
+                      description: An invitation token to accept during authentication.
+                      example: inv_tok_01HXYZ123456789ABCDEFGHIJ
                     ip_address:
                       type: string
                       description: The IP address of the user's request.
@@ -10177,9 +11160,18 @@ paths:
             enum:
               - authkit
               - AppleOAuth
+              - BitbucketOAuth
               - GitHubOAuth
+              - GitLabOAuth
               - GoogleOAuth
+              - IntuitOAuth
+              - LinkedInOAuth
               - MicrosoftOAuth
+              - SalesforceOAuth
+              - SlackOAuth
+              - VercelMarketplaceOAuth
+              - VercelOAuth
+              - XeroOAuth
             example: GoogleOAuth
           description: >-
             The OAuth provider to authenticate with (e.g., GoogleOAuth,
@@ -10875,6 +11867,16 @@ paths:
                       The ID of the user who accepted the invitation, once
                       accepted.
                     example: user_01E4ZCR3C56J083X43JQXF3JK5
+                  role_slug:
+                    type:
+                      - string
+                      - 'null'
+                    description: >-
+                      Slug of the role the invitee will be assigned on
+                      acceptance. Reflects the current role on the invitee's
+                      organization membership. null when the invitation has no
+                      associated organization.
+                    example: admin
                   created_at:
                     format: date-time
                     type: string
@@ -10905,6 +11907,7 @@ paths:
                   - organization_id
                   - inviter_user_id
                   - accepted_user_id
+                  - role_slug
                   - created_at
                   - updated_at
                   - token
@@ -11137,6 +12140,16 @@ paths:
                       The ID of the user who accepted the invitation, once
                       accepted.
                     example: null
+                  role_slug:
+                    type:
+                      - string
+                      - 'null'
+                    description: >-
+                      Slug of the role the invitee will be assigned on
+                      acceptance. Reflects the current role on the invitee's
+                      organization membership. null when the invitation has no
+                      associated organization.
+                    example: admin
                   created_at:
                     format: date-time
                     type: string
@@ -11167,6 +12180,7 @@ paths:
                   - organization_id
                   - inviter_user_id
                   - accepted_user_id
+                  - role_slug
                   - created_at
                   - updated_at
                   - token
@@ -11791,6 +12805,14 @@ paths:
                       - role_slug
       tags:
         - user-management.organization-membership
+      x-mutually-exclusive-body-groups: &ref_9
+        role:
+          optional: true
+          variants:
+            single:
+              - role_slug
+            multiple:
+              - role_slugs
   /user_management/organization_memberships/{id}:
     get:
       operationId: UserlandUserOrganizationMembershipsController_get
@@ -11967,6 +12989,14 @@ paths:
                       - role_slug
       tags:
         - user-management.organization-membership
+      x-mutually-exclusive-body-groups: &ref_10
+        role:
+          optional: true
+          variants:
+            single:
+              - role_slug
+            multiple:
+              - role_slugs
   /user_management/organization_memberships/{id}/deactivate:
     put:
       operationId: UserlandUserOrganizationMembershipsController_deactivate
@@ -12225,6 +13255,94 @@ paths:
                   - message
       tags:
         - user-management.organization-membership
+  /user_management/organization_memberships/{omId}/groups:
+    get:
+      operationId: OrganizationMembershipGroupsController_listGroups
+      summary: List groups
+      description: Get a list of groups that an organization membership belongs to.
+      parameters:
+        - name: omId
+          required: true
+          in: path
+          description: Unique identifier of the Organization Membership.
+          schema:
+            type: string
+            example: om_01HXYZ123456789ABCDEFGHIJ
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to descending.
+          schema:
+            default: desc
+            example: desc
+            enum:
+              - normal
+              - desc
+              - asc
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupList'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - user-management.organization-membership.groups
+      x-feature-flag: user-groups-enabled
   /user_management/password_reset:
     post:
       operationId: UserlandUsersController_createPasswordResetToken
@@ -12927,6 +14045,15 @@ paths:
                   - message
       tags:
         - user-management.users
+      x-mutually-exclusive-body-groups: &ref_11
+        password:
+          optional: true
+          variants:
+            plaintext:
+              - password
+            hashed:
+              - password_hash
+              - password_hash_type
   /user_management/users/external_id/{external_id}:
     get:
       operationId: UserlandUsersController_getByExternalId
@@ -13193,6 +14320,15 @@ paths:
                   - message
       tags:
         - user-management.users
+      x-mutually-exclusive-body-groups: &ref_14
+        password:
+          optional: true
+          variants:
+            plaintext:
+              - password
+            hashed:
+              - password_hash
+              - password_hash_type
     get:
       operationId: UserlandUsersController_get
       summary: Get a user
@@ -15171,6 +16307,8 @@ tags:
     description: Manage feature flags.
   - name: feature-flags.targets
     description: Manage feature flag targets.
+  - name: groups
+    description: Organize and manage user groups within organizations.
   - name: multi-factor-auth
     description: Multi-factor authentication factor management.
   - name: multi-factor-auth.challenges
@@ -15207,6 +16345,8 @@ tags:
     description: Multi-factor authentication endpoints.
   - name: user-management.organization-membership
     description: Manage user organization memberships.
+  - name: user-management.organization-membership.groups
+    description: Manage groups for a user organization membership.
   - name: user-management.redirect-uris
     description: Manage redirect URIs.
   - name: user-management.session-tokens
@@ -15383,7 +16523,7 @@ components:
           example: An application for managing user access
         scopes:
           description: The OAuth scopes granted to the application.
-          example: &ref_0
+          example: &ref_1
             - openid
             - profile
             - email
@@ -15445,7 +16585,7 @@ components:
           example: An application for managing user access
         scopes:
           description: The OAuth scopes granted to the application.
-          example: *ref_0
+          example: *ref_1
           type:
             - array
             - 'null'
@@ -15518,7 +16658,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: &ref_1
+          patternProperties: &ref_2
             ^[a-zA-Z0-9_-]{0,40}$:
               anyOf:
                 - type: string
@@ -15550,7 +16690,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: *ref_1
+          patternProperties: *ref_2
       required:
         - id
         - type
@@ -15597,7 +16737,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: *ref_1
+          patternProperties: *ref_2
         version:
           type: integer
           description: What schema version the event is associated with.
@@ -15748,72 +16888,182 @@ components:
             to include the verification code.
           example: Your verification code is {{code}}.
     CheckAuthorizationDto:
-      type: object
-      properties:
-        permission_slug:
-          type: string
-          description: The slug of the permission to check.
-          example: posts:create
-        resource_id:
-          type: string
-          description: The ID of the resource.
-          example: resource_01HXYZ123456789ABCDEFGHIJ
-        resource_external_id:
-          type: string
-          description: The external ID of the resource.
-          example: my-custom-id
-        resource_type_slug:
-          type: string
-          description: The slug of the resource type.
-          example: document
-      required:
-        - permission_slug
+      allOf:
+        - type: object
+          properties:
+            permission_slug:
+              type: string
+              description: The slug of the permission to check.
+              example: posts:create
+          required:
+            - permission_slug
+        - oneOf:
+            - type: object
+              properties:
+                resource_id:
+                  type: string
+                  description: >-
+                    The ID of the resource. Mutually exclusive with
+                    `resource_external_id` and `resource_type_slug`.
+                  example: resource_01HXYZ123456789ABCDEFGHIJ
+              required:
+                - resource_id
+              not:
+                anyOf:
+                  - properties:
+                      resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_external_id
+                  - properties:
+                      resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_type_slug
+            - type: object
+              properties:
+                resource_external_id:
+                  type: string
+                  description: >-
+                    The external ID of the resource. Required with
+                    `resource_type_slug`. Mutually exclusive with `resource_id`.
+                  example: my-custom-id
+                resource_type_slug:
+                  type: string
+                  description: >-
+                    The slug of the resource type. Required with
+                    `resource_external_id`. Mutually exclusive with
+                    `resource_id`.
+                  example: document
+              required:
+                - resource_external_id
+                - resource_type_slug
+              not:
+                anyOf:
+                  - properties:
+                      resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_id
+      x-mutually-exclusive-body-groups: *ref_3
     AssignRoleDto:
-      type: object
-      properties:
-        role_slug:
-          type: string
-          description: The slug of the role to assign.
-          example: editor
-        resource_id:
-          type: string
-          description: >-
-            The ID of the resource. Use either this or `resource_external_id`
-            and `resource_type_slug`.
-          example: authz_resource_01HXYZ123456789ABCDEFGH
-        resource_external_id:
-          type: string
-          description: The external ID of the resource. Requires `resource_type_slug`.
-          example: project-ext-456
-        resource_type_slug:
-          type: string
-          description: The resource type slug. Required with `resource_external_id`.
-          example: project
-      required:
-        - role_slug
+      allOf:
+        - type: object
+          properties:
+            role_slug:
+              type: string
+              description: The slug of the role to assign.
+              example: editor
+          required:
+            - role_slug
+        - oneOf:
+            - type: object
+              properties:
+                resource_id:
+                  type: string
+                  description: >-
+                    The ID of the resource. Mutually exclusive with
+                    `resource_external_id` and `resource_type_slug`.
+                  example: authz_resource_01HXYZ123456789ABCDEFGH
+              required:
+                - resource_id
+              not:
+                anyOf:
+                  - properties:
+                      resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_external_id
+                  - properties:
+                      resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_type_slug
+            - type: object
+              properties:
+                resource_external_id:
+                  type: string
+                  description: >-
+                    The external ID of the resource. Required with
+                    `resource_type_slug`. Mutually exclusive with `resource_id`.
+                  example: project-ext-456
+                resource_type_slug:
+                  type: string
+                  description: >-
+                    The resource type slug. Required with
+                    `resource_external_id`. Mutually exclusive with
+                    `resource_id`.
+                  example: project
+              required:
+                - resource_external_id
+                - resource_type_slug
+              not:
+                anyOf:
+                  - properties:
+                      resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_id
+      x-mutually-exclusive-body-groups: *ref_4
     RemoveRoleDto:
-      type: object
-      properties:
-        role_slug:
-          type: string
-          description: The slug of the role to remove.
-          example: editor
-        resource_id:
-          type: string
-          description: >-
-            The ID of the resource. Use either this or `resource_external_id`
-            and `resource_type_slug`.
-          example: authz_resource_01HXYZ123456789ABCDEFGH
-        resource_external_id:
-          type: string
-          description: The external ID of the resource. Requires `resource_type_slug`.
-          example: external_01HXYZ123456789ABCDEFGH
-        resource_type_slug:
-          type: string
-          description: The resource type slug. Required with `resource_external_id`.
-          example: project
-      required:
-        - role_slug
+      allOf:
+        - type: object
+          properties:
+            role_slug:
+              type: string
+              description: The slug of the role to remove.
+              example: editor
+          required:
+            - role_slug
+        - oneOf:
+            - type: object
+              properties:
+                resource_id:
+                  type: string
+                  description: >-
+                    The ID of the resource. Mutually exclusive with
+                    `resource_external_id` and `resource_type_slug`.
+                  example: authz_resource_01HXYZ123456789ABCDEFGH
+              required:
+                - resource_id
+              not:
+                anyOf:
+                  - properties:
+                      resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_external_id
+                  - properties:
+                      resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_type_slug
+            - type: object
+              properties:
+                resource_external_id:
+                  type: string
+                  description: >-
+                    The external ID of the resource. Required with
+                    `resource_type_slug`. Mutually exclusive with `resource_id`.
+                  example: external_01HXYZ123456789ABCDEFGH
+                resource_type_slug:
+                  type: string
+                  description: >-
+                    The resource type slug. Required with
+                    `resource_external_id`. Mutually exclusive with
+                    `resource_id`.
+                  example: project
+              required:
+                - resource_external_id
+                - resource_type_slug
+              not:
+                anyOf:
+                  - properties:
+                      resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_id
+      x-mutually-exclusive-body-groups: *ref_5
     SetRolePermissionsDto:
       type: object
       properties:
@@ -15974,79 +17224,195 @@ components:
           description: An optional description of the role.
           example: Full administrative access to all resources
     UpdateAuthorizationResourceDto:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 48
-          description: A display name for the resource.
-          example: Updated Name
-        description:
-          type:
-            - string
-            - 'null'
-          maxLength: 150
-          description: An optional description of the resource.
-          example: Updated description
-        parent_resource_id:
-          type: string
-          description: The ID of the parent resource.
-          example: authz_resource_01HXYZ123456789ABCDEFGHIJ
-        parent_resource_external_id:
-          type: string
-          description: The external ID of the parent resource.
-          example: parent-workspace-01
-        parent_resource_type_slug:
-          type: string
-          description: The resource type slug of the parent resource.
-          example: workspace
+      allOf:
+        - type: object
+          properties:
+            name:
+              type: string
+              maxLength: 48
+              description: A display name for the resource.
+              example: Updated Name
+            description:
+              type:
+                - string
+                - 'null'
+              maxLength: 150
+              description: An optional description of the resource.
+              example: Updated description
+        - oneOf:
+            - type: object
+              not:
+                anyOf:
+                  - properties:
+                      parent_resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_id
+                  - properties:
+                      parent_resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_external_id
+                  - properties:
+                      parent_resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_type_slug
+            - type: object
+              properties:
+                parent_resource_id:
+                  type: string
+                  description: >-
+                    The ID of the parent resource. Mutually exclusive with
+                    `parent_resource_external_id` and
+                    `parent_resource_type_slug`.
+                  example: authz_resource_01HXYZ123456789ABCDEFGHIJ
+              required:
+                - parent_resource_id
+              not:
+                anyOf:
+                  - properties:
+                      parent_resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_external_id
+                  - properties:
+                      parent_resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_type_slug
+            - type: object
+              properties:
+                parent_resource_external_id:
+                  type: string
+                  description: >-
+                    The external ID of the parent resource. Required with
+                    `parent_resource_type_slug`. Mutually exclusive with
+                    `parent_resource_id`.
+                  example: parent-workspace-01
+                parent_resource_type_slug:
+                  type: string
+                  description: >-
+                    The resource type slug of the parent resource. Required with
+                    `parent_resource_external_id`. Mutually exclusive with
+                    `parent_resource_id`.
+                  example: workspace
+              required:
+                - parent_resource_external_id
+                - parent_resource_type_slug
+              not:
+                anyOf:
+                  - properties:
+                      parent_resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_id
+      x-mutually-exclusive-body-groups: *ref_0
     CreateAuthorizationResourceDto:
-      type: object
-      properties:
-        external_id:
-          type: string
-          maxLength: 128
-          description: An external identifier for the resource.
-          example: my-workspace-01
-        name:
-          type: string
-          maxLength: 48
-          description: A display name for the resource.
-          example: Acme Workspace
-        description:
-          type:
-            - string
-            - 'null'
-          maxLength: 150
-          description: An optional description of the resource.
-          example: Primary workspace for the Acme team
-        resource_type_slug:
-          type: string
-          description: The slug of the resource type.
-          example: workspace
-        organization_id:
-          type: string
-          description: The ID of the organization this resource belongs to.
-          example: org_01EHQMYV6MBK39QC5PZXHY59C3
-        parent_resource_id:
-          type:
-            - string
-            - 'null'
-          description: The ID of the parent resource.
-          example: authz_resource_01HXYZ123456789ABCDEFGHIJ
-        parent_resource_external_id:
-          type: string
-          description: The external ID of the parent resource.
-          example: parent-workspace-01
-        parent_resource_type_slug:
-          type: string
-          description: The resource type slug of the parent resource.
-          example: workspace
-      required:
-        - external_id
-        - name
-        - resource_type_slug
-        - organization_id
+      allOf:
+        - type: object
+          properties:
+            external_id:
+              type: string
+              maxLength: 128
+              description: An external identifier for the resource.
+              example: my-workspace-01
+            name:
+              type: string
+              maxLength: 48
+              description: A display name for the resource.
+              example: Acme Workspace
+            description:
+              type:
+                - string
+                - 'null'
+              maxLength: 150
+              description: An optional description of the resource.
+              example: Primary workspace for the Acme team
+            resource_type_slug:
+              type: string
+              description: The slug of the resource type.
+              example: workspace
+            organization_id:
+              type: string
+              description: The ID of the organization this resource belongs to.
+              example: org_01EHQMYV6MBK39QC5PZXHY59C3
+          required:
+            - external_id
+            - name
+            - resource_type_slug
+            - organization_id
+        - oneOf:
+            - type: object
+              not:
+                anyOf:
+                  - properties:
+                      parent_resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_id
+                  - properties:
+                      parent_resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_external_id
+                  - properties:
+                      parent_resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_type_slug
+            - type: object
+              properties:
+                parent_resource_id:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The ID of the parent resource. Mutually exclusive with
+                    `parent_resource_external_id` and
+                    `parent_resource_type_slug`.
+                  example: authz_resource_01HXYZ123456789ABCDEFGHIJ
+              required:
+                - parent_resource_id
+              not:
+                anyOf:
+                  - properties:
+                      parent_resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_external_id
+                  - properties:
+                      parent_resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_type_slug
+            - type: object
+              properties:
+                parent_resource_external_id:
+                  type: string
+                  description: >-
+                    The external ID of the parent resource. Required with
+                    `parent_resource_type_slug`. Mutually exclusive with
+                    `parent_resource_id`.
+                  example: parent-workspace-01
+                parent_resource_type_slug:
+                  type: string
+                  description: >-
+                    The resource type slug of the parent resource. Required with
+                    `parent_resource_external_id`. Mutually exclusive with
+                    `parent_resource_id`.
+                  example: workspace
+              required:
+                - parent_resource_external_id
+                - parent_resource_type_slug
+              not:
+                anyOf:
+                  - properties:
+                      parent_resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - parent_resource_id
+      x-mutually-exclusive-body-groups: *ref_6
     CreateCorsOriginDto:
       type: object
       properties:
@@ -16056,6 +17422,47 @@ components:
           example: https://example.com
       required:
         - origin
+    CreateGroupMembershipDto:
+      type: object
+      properties:
+        organization_membership_id:
+          type: string
+          description: The ID of the Organization Membership to add to the group.
+          example: om_01HXYZ123456789ABCDEFGHIJ
+      required:
+        - organization_membership_id
+    CreateGroupDto:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 256
+          description: The name of the Group.
+          example: Engineering
+        description:
+          type:
+            - string
+            - 'null'
+          maxLength: 150
+          description: An optional description of the Group.
+          example: The engineering team
+      required:
+        - name
+    UpdateGroupDto:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 256
+          description: The name of the Group.
+          example: Engineering
+        description:
+          type:
+            - string
+            - 'null'
+          maxLength: 150
+          description: An optional description of the Group.
+          example: The engineering team
     UpdateJwtTemplateDto:
       type: object
       properties:
@@ -16146,11 +17553,11 @@ components:
           type:
             - object
             - 'null'
-          additionalProperties: &ref_2
+          additionalProperties: &ref_7
             type: string
             maxLength: 600
           maxProperties: 50
-          example: &ref_3
+          example: &ref_8
             tier: diamond
           description: >-
             Object containing [metadata](/authkit/metadata) key/value pairs
@@ -16204,9 +17611,9 @@ components:
           type:
             - object
             - 'null'
-          additionalProperties: *ref_2
+          additionalProperties: *ref_7
           maxProperties: 50
-          example: *ref_3
+          example: *ref_8
           description: >-
             Object containing [metadata](/authkit/metadata) key/value pairs
             associated with the Organization.
@@ -16231,14 +17638,25 @@ components:
           description: The SSO provider type to configure.
           example: GoogleSAML
           const: GoogleSAML
+    DomainVerificationIntentOptions:
+      type: object
+      properties:
+        domain_name:
+          type: string
+          description: >-
+            The domain name to verify. When provided, the domain verification
+            flow will skip the domain entry form and go directly to the
+            verification step.
+          example: example.com
     IntentOptions:
       type: object
       properties:
         sso:
           description: SSO-specific options for the Admin Portal.
           $ref: '#/components/schemas/SsoIntentOptions'
-      required:
-        - sso
+        domain_verification:
+          description: Domain verification-specific options for the Admin Portal.
+          $ref: '#/components/schemas/DomainVerificationIntentOptions'
     GenerateLinkDto:
       type: object
       properties:
@@ -16286,12 +17704,12 @@ components:
         intent_options:
           description: Options to configure the Admin Portal based on the intent.
           $ref: '#/components/schemas/IntentOptions'
-        admin_emails:
+        it_contact_emails:
           description: >-
-            The email addresses of the IT admins to grant access to the Admin
+            The email addresses of the IT contacts to grant access to the Admin
             Portal for the given organization. Accepts up to 20 emails.
           example:
-            - admin@example.com
+            - it-contact@example.com
           maxItems: 20
           items:
             type: string
@@ -16580,200 +17998,365 @@ components:
             [supported locales](/authkit/hosted-ui/localization).
           example: en
     CreateUserlandUserOrganizationMembershipDto:
-      type: object
-      properties:
-        user_id:
-          type: string
-          description: The ID of the [user](/reference/authkit/user).
-          example: user_01E4ZCR3C5A4QZ2Z2JQXGKZJ9E
-        organization_id:
-          type: string
-          description: >-
-            The ID of the [organization](/reference/organization) which the user
-            belongs to.
-          example: org_01E4ZCR3C56J083X43JQXF3JK5
-        role_slug:
-          type: string
-          description: >-
-            A single role identifier. Defaults to `member` or the explicit
-            default role. Mutually exclusive with `role_slugs`.
-          example: admin
-          x-mutually-exclusive-with:
-            - role_slugs
-        role_slugs:
-          description: >-
-            An array of role identifiers. Limited to one role when Multiple
-            Roles is disabled. Mutually exclusive with `role_slug`.
-          example:
-            - admin
-          x-mutually-exclusive-with:
-            - role_slug
-          type: array
-          items:
-            type: string
-      required:
-        - user_id
-        - organization_id
+      allOf:
+        - type: object
+          properties:
+            user_id:
+              type: string
+              description: The ID of the [user](/reference/authkit/user).
+              example: user_01E4ZCR3C5A4QZ2Z2JQXGKZJ9E
+            organization_id:
+              type: string
+              description: >-
+                The ID of the [organization](/reference/organization) which the
+                user belongs to.
+              example: org_01E4ZCR3C56J083X43JQXF3JK5
+          required:
+            - user_id
+            - organization_id
+        - oneOf:
+            - type: object
+              not:
+                anyOf:
+                  - properties:
+                      role_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - role_slug
+                  - properties:
+                      role_slugs:
+                        x-exclude-from-lint: true
+                    required:
+                      - role_slugs
+            - type: object
+              properties:
+                role_slug:
+                  type: string
+                  description: >-
+                    A single role identifier. Defaults to `member` or the
+                    explicit default role. Mutually exclusive with `role_slugs`.
+                  example: admin
+              required:
+                - role_slug
+              not:
+                anyOf:
+                  - properties:
+                      role_slugs:
+                        x-exclude-from-lint: true
+                    required:
+                      - role_slugs
+            - type: object
+              properties:
+                role_slugs:
+                  description: >-
+                    An array of role identifiers. Limited to one role when
+                    Multiple Roles is disabled. Mutually exclusive with
+                    `role_slug`.
+                  example:
+                    - admin
+                  type: array
+                  items:
+                    type: string
+              required:
+                - role_slugs
+              not:
+                anyOf:
+                  - properties:
+                      role_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - role_slug
+      x-mutually-exclusive-body-groups: *ref_9
     UpdateUserlandUserOrganizationMembershipDto:
-      type: object
-      properties:
-        role_slug:
-          type: string
-          description: >-
-            A single role identifier. Defaults to `member` or the explicit
-            default role. Mutually exclusive with `role_slugs`.
-          example: admin
-          x-mutually-exclusive-with:
-            - role_slugs
-        role_slugs:
-          description: >-
-            An array of role identifiers. Limited to one role when Multiple
-            Roles is disabled. Mutually exclusive with `role_slug`.
-          example:
-            - admin
-          x-mutually-exclusive-with:
+      x-mutually-exclusive-body-groups: *ref_10
+      oneOf:
+        - type: object
+          not:
+            anyOf:
+              - properties:
+                  role_slug:
+                    x-exclude-from-lint: true
+                required:
+                  - role_slug
+              - properties:
+                  role_slugs:
+                    x-exclude-from-lint: true
+                required:
+                  - role_slugs
+        - type: object
+          properties:
+            role_slug:
+              type: string
+              description: >-
+                A single role identifier. Defaults to `member` or the explicit
+                default role. Mutually exclusive with `role_slugs`.
+              example: admin
+          required:
             - role_slug
-          type: array
-          items:
-            type: string
+          not:
+            anyOf:
+              - properties:
+                  role_slugs:
+                    x-exclude-from-lint: true
+                required:
+                  - role_slugs
+        - type: object
+          properties:
+            role_slugs:
+              description: >-
+                An array of role identifiers. Limited to one role when Multiple
+                Roles is disabled. Mutually exclusive with `role_slug`.
+              example:
+                - admin
+              type: array
+              items:
+                type: string
+          required:
+            - role_slugs
+          not:
+            anyOf:
+              - properties:
+                  role_slug:
+                    x-exclude-from-lint: true
+                required:
+                  - role_slug
     CreateUserlandUserDto:
-      type: object
-      properties:
-        email:
-          type: string
-          description: The email address of the user.
-          example: marcelina.davis@example.com
-        password:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The password to set for the user. Mutually exclusive with
-            `password_hash` and `password_hash_type`.
-          example: strong_password_123!
-          x-mutually-exclusive-with:
-            - password_hash
-            - password_hash_type
-        password_hash:
-          type: string
-          description: >-
-            The hashed password to set for the user. Mutually exclusive with
-            `password`.
-          example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
-          x-mutually-exclusive-with:
-            - password
-        password_hash_type:
-          type: string
-          enum: &ref_4
-            - bcrypt
-            - firebase-scrypt
-            - ssha
-            - scrypt
-            - pbkdf2
-            - argon2
-          description: >-
-            The algorithm originally used to hash the password, used when
-            providing a `password_hash`.
-          example: bcrypt
-        first_name:
-          type:
-            - string
-            - 'null'
-          description: The first name of the user.
-          example: Marcelina
-        last_name:
-          type:
-            - string
-            - 'null'
-          description: The last name of the user.
-          example: Davis
-        email_verified:
-          type:
-            - boolean
-            - 'null'
-          description: Whether the user's email has been verified.
-          example: true
-        metadata:
-          type:
-            - object
-            - 'null'
-          additionalProperties: *ref_2
-          maxProperties: 50
-          example: &ref_5
-            timezone: America/New_York
-          description: Object containing metadata key/value pairs associated with the user.
-          propertyNames:
-            maxLength: 40
-        external_id:
-          type:
-            - string
-            - 'null'
-          maxLength: 128
-          description: The external ID of the user.
-          example: f1ffa2b2-c20b-4d39-be5c-212726e11222
-      required:
-        - email
+      allOf:
+        - type: object
+          properties:
+            email:
+              type: string
+              description: The email address of the user.
+              example: marcelina.davis@example.com
+            first_name:
+              type:
+                - string
+                - 'null'
+              description: The first name of the user.
+              example: Marcelina
+            last_name:
+              type:
+                - string
+                - 'null'
+              description: The last name of the user.
+              example: Davis
+            email_verified:
+              type:
+                - boolean
+                - 'null'
+              description: Whether the user's email has been verified.
+              example: true
+            metadata:
+              type:
+                - object
+                - 'null'
+              additionalProperties: *ref_7
+              maxProperties: 50
+              example: &ref_12
+                timezone: America/New_York
+              description: >-
+                Object containing metadata key/value pairs associated with the
+                user.
+              propertyNames:
+                maxLength: 40
+            external_id:
+              type:
+                - string
+                - 'null'
+              maxLength: 128
+              description: The external ID of the user.
+              example: f1ffa2b2-c20b-4d39-be5c-212726e11222
+          required:
+            - email
+        - oneOf:
+            - type: object
+              not:
+                anyOf:
+                  - properties:
+                      password:
+                        x-exclude-from-lint: true
+                    required:
+                      - password
+                  - properties:
+                      password_hash:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash
+                  - properties:
+                      password_hash_type:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash_type
+            - type: object
+              properties:
+                password:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The password to set for the user. Mutually exclusive with
+                    `password_hash` and `password_hash_type`.
+                  example: strong_password_123!
+              required:
+                - password
+              not:
+                anyOf:
+                  - properties:
+                      password_hash:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash
+                  - properties:
+                      password_hash_type:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash_type
+            - type: object
+              properties:
+                password_hash:
+                  type: string
+                  description: >-
+                    The hashed password to set for the user. Required with
+                    `password_hash_type`. Mutually exclusive with `password`.
+                  example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+                password_hash_type:
+                  type: string
+                  enum: &ref_13
+                    - bcrypt
+                    - firebase-scrypt
+                    - ssha
+                    - scrypt
+                    - pbkdf2
+                    - argon2
+                  description: >-
+                    The algorithm originally used to hash the password, used
+                    when providing a `password_hash`. Required with
+                    `password_hash`. Mutually exclusive with `password`.
+                  example: bcrypt
+              required:
+                - password_hash
+                - password_hash_type
+              not:
+                anyOf:
+                  - properties:
+                      password:
+                        x-exclude-from-lint: true
+                    required:
+                      - password
+      x-mutually-exclusive-body-groups: *ref_11
     UpdateUserlandUserDto:
-      type: object
-      properties:
-        email:
-          type: string
-          description: The email address of the user.
-          example: marcelina.davis@example.com
-        first_name:
-          type: string
-          description: The first name of the user.
-          example: Marcelina
-        last_name:
-          type: string
-          description: The last name of the user.
-          example: Davis
-        email_verified:
-          type: boolean
-          description: Whether the user's email has been verified.
-          example: true
-        password:
-          type: string
-          description: The password to set for the user.
-          example: strong_password_123!
-        password_hash:
-          type: string
-          description: >-
-            The hashed password to set for the user. Mutually exclusive with
-            `password`.
-          example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
-          x-mutually-exclusive-with:
-            - password
-        password_hash_type:
-          type: string
-          enum: *ref_4
-          description: >-
-            The algorithm originally used to hash the password, used when
-            providing a `password_hash`.
-          example: bcrypt
-        metadata:
-          type:
-            - object
-            - 'null'
-          additionalProperties: *ref_2
-          maxProperties: 50
-          example: *ref_5
-          description: Object containing metadata key/value pairs associated with the user.
-          propertyNames:
-            maxLength: 40
-        external_id:
-          type:
-            - string
-            - 'null'
-          maxLength: 128
-          description: The external ID of the user.
-          example: f1ffa2b2-c20b-4d39-be5c-212726e11222
-        locale:
-          type:
-            - string
-            - 'null'
-          description: The user's preferred locale.
-          example: en-US
+      allOf:
+        - type: object
+          properties:
+            email:
+              type: string
+              description: The email address of the user.
+              example: marcelina.davis@example.com
+            first_name:
+              type: string
+              description: The first name of the user.
+              example: Marcelina
+            last_name:
+              type: string
+              description: The last name of the user.
+              example: Davis
+            email_verified:
+              type: boolean
+              description: Whether the user's email has been verified.
+              example: true
+            metadata:
+              type:
+                - object
+                - 'null'
+              additionalProperties: *ref_7
+              maxProperties: 50
+              example: *ref_12
+              description: >-
+                Object containing metadata key/value pairs associated with the
+                user.
+              propertyNames:
+                maxLength: 40
+            external_id:
+              type:
+                - string
+                - 'null'
+              maxLength: 128
+              description: The external ID of the user.
+              example: f1ffa2b2-c20b-4d39-be5c-212726e11222
+            locale:
+              type:
+                - string
+                - 'null'
+              description: The user's preferred locale.
+              example: en-US
+        - oneOf:
+            - type: object
+              not:
+                anyOf:
+                  - properties:
+                      password:
+                        x-exclude-from-lint: true
+                    required:
+                      - password
+                  - properties:
+                      password_hash:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash
+                  - properties:
+                      password_hash_type:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash_type
+            - type: object
+              properties:
+                password:
+                  type: string
+                  description: >-
+                    The password to set for the user. Mutually exclusive with
+                    `password_hash` and `password_hash_type`.
+                  example: strong_password_123!
+              required:
+                - password
+              not:
+                anyOf:
+                  - properties:
+                      password_hash:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash
+                  - properties:
+                      password_hash_type:
+                        x-exclude-from-lint: true
+                    required:
+                      - password_hash_type
+            - type: object
+              properties:
+                password_hash:
+                  type: string
+                  description: >-
+                    The hashed password to set for the user. Required with
+                    `password_hash_type`. Mutually exclusive with `password`.
+                  example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+                password_hash_type:
+                  type: string
+                  enum: *ref_13
+                  description: >-
+                    The algorithm originally used to hash the password, used
+                    when providing a `password_hash`. Required with
+                    `password_hash`. Mutually exclusive with `password`.
+                  example: bcrypt
+              required:
+                - password_hash
+                - password_hash_type
+              not:
+                anyOf:
+                  - properties:
+                      password:
+                        x-exclude-from-lint: true
+                    required:
+                      - password
+      x-mutually-exclusive-body-groups: *ref_14
     VerifyEmailAddressDto:
       type: object
       properties:
@@ -16851,7 +18434,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: &ref_6
+            enum: &ref_15
               - authentication.email_verification_succeeded
               - authentication.magic_auth_failed
               - authentication.magic_auth_succeeded
@@ -16885,6 +18468,11 @@ components:
               - dsync.user.deleted
               - dsync.user.updated
               - email_verification.created
+              - group.created
+              - group.deleted
+              - group.member_added
+              - group.member_removed
+              - group.updated
               - flag.created
               - flag.deleted
               - flag.updated
@@ -16921,6 +18509,9 @@ components:
               - permission.updated
               - session.created
               - session.revoked
+              - waitlist_user.approved
+              - waitlist_user.created
+              - waitlist_user.denied
           example:
             - user.created
             - dsync.user.created
@@ -16946,7 +18537,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: *ref_6
+            enum: *ref_15
           example:
             - user.created
             - dsync.user.created
@@ -17316,6 +18907,12 @@ components:
                   - openid
                   - profile
                   - email
+              oauth_resource:
+                type: string
+                description: >-
+                  The OAuth resource associated with the authorized connect
+                  application, if one was requested.
+                example: https://api.example.com/resource
               application:
                 $ref: '#/components/schemas/ConnectApplication'
             required:
@@ -17893,6 +19490,103 @@ components:
         - object
         - data
         - list_metadata
+    AuthorizationPermission:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Permission object.
+          const: permission
+        id:
+          type: string
+          description: Unique identifier of the Permission.
+          example: perm_01HXYZ123456789ABCDEFGHIJ
+        slug:
+          type: string
+          description: >-
+            A unique key to reference the permission. Must be lowercase and
+            contain only letters, numbers, hyphens, underscores, colons,
+            periods, and asterisks.
+          example: documents:read
+        name:
+          type: string
+          description: A descriptive name for the Permission.
+          example: View Documents
+        description:
+          type:
+            - string
+            - 'null'
+          description: An optional description of the Permission.
+          example: Allows viewing document contents
+        system:
+          type: boolean
+          description: >-
+            Whether the permission is a system permission. System permissions
+            are managed by WorkOS and cannot be deleted.
+          example: false
+        resource_type_slug:
+          type: string
+          description: The slug of the resource type associated with the permission.
+          example: workspace
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - slug
+        - name
+        - description
+        - system
+        - resource_type_slug
+        - created_at
+        - updated_at
+    AuthorizationPermissionList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorizationPermission'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: perm_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: perm_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     SlimRole:
       type: object
       properties:
@@ -18026,7 +19720,9 @@ components:
           enum:
             - EnvironmentRole
             - OrganizationRole
-          description: Whether the role is scoped to the environment or an organization.
+          description: >-
+            Whether the role is scoped to the environment or an organization
+            (custom role).
           example: EnvironmentRole
         resource_type_slug:
           type: string
@@ -18076,103 +19772,6 @@ components:
       required:
         - object
         - data
-    AuthorizationPermission:
-      type: object
-      properties:
-        object:
-          type: string
-          description: Distinguishes the Permission object.
-          const: permission
-        id:
-          type: string
-          description: Unique identifier of the Permission.
-          example: perm_01HXYZ123456789ABCDEFGHIJ
-        slug:
-          type: string
-          description: >-
-            A unique key to reference the permission. Must be lowercase and
-            contain only letters, numbers, hyphens, underscores, colons,
-            periods, and asterisks.
-          example: documents:read
-        name:
-          type: string
-          description: A descriptive name for the Permission.
-          example: View Documents
-        description:
-          type:
-            - string
-            - 'null'
-          description: An optional description of the Permission.
-          example: Allows viewing document contents
-        system:
-          type: boolean
-          description: >-
-            Whether the permission is a system permission. System permissions
-            are managed by WorkOS and cannot be deleted.
-          example: false
-        resource_type_slug:
-          type: string
-          description: The slug of the resource type associated with the permission.
-          example: workspace
-        created_at:
-          format: date-time
-          type: string
-          description: An ISO 8601 timestamp.
-          example: '2026-01-15T12:00:00.000Z'
-        updated_at:
-          format: date-time
-          type: string
-          description: An ISO 8601 timestamp.
-          example: '2026-01-15T12:00:00.000Z'
-      required:
-        - object
-        - id
-        - slug
-        - name
-        - description
-        - system
-        - resource_type_slug
-        - created_at
-        - updated_at
-    AuthorizationPermissionList:
-      type: object
-      properties:
-        object:
-          type: string
-          description: Indicates this is a list response.
-          const: list
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuthorizationPermission'
-          description: The list of records for the current page.
-        list_metadata:
-          type: object
-          properties:
-            before:
-              type:
-                - string
-                - 'null'
-              description: >-
-                An object ID that defines your place in the list. When the ID is
-                not present, you are at the start of the list.
-              example: perm_01HXYZ123456789ABCDEFGHIJ
-            after:
-              type:
-                - string
-                - 'null'
-              description: >-
-                An object ID that defines your place in the list. When the ID is
-                not present, you are at the end of the list.
-              example: perm_01HXYZ987654321KJIHGFEDCBA
-          required:
-            - before
-            - after
-          description: Pagination cursors for navigating between pages of results.
-      required:
-        - object
-        - data
-        - list_metadata
     UserlandUserOrganizationMembershipBaseList:
       type: object
       properties:
@@ -18876,7 +20475,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DirectoryGroup'
-          description: The directory groups the user belongs to.
+          description: >-
+            The directory groups the user belongs to. Use the List Directory
+            Groups endpoint with a user filter instead.
+          deprecated: true
       required:
         - object
         - id
@@ -18929,6 +20531,89 @@ components:
         - object
         - data
         - list_metadata
+        - list_metadata
+    Group:
+      type: object
+      properties:
+        object:
+          type: string
+          description: The Group object.
+          example: group
+          const: group
+        id:
+          type: string
+          description: The unique ID of the Group.
+          example: group_01HXYZ123456789ABCDEFGHIJ
+        organization_id:
+          type: string
+          description: The ID of the Organization the Group belongs to.
+          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        name:
+          type: string
+          description: The name of the Group.
+          example: Engineering
+        description:
+          type:
+            - string
+            - 'null'
+          description: An optional description of the Group.
+          example: The engineering team
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - organization_id
+        - name
+        - description
+        - created_at
+        - updated_at
+    GroupList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: group_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: group_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
         - list_metadata
     EventContextActorDto:
       type: object
@@ -19094,7 +20779,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_9
+          example: &ref_18
             department: Engineering
             job_title: Software Engineer
         role:
@@ -19216,6 +20901,56 @@ components:
         - created_at
         - updated_at
       description: The user object.
+    WaitlistUser:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Waitlist User object.
+          const: waitlist_user
+        id:
+          type: string
+          description: The unique ID of the Waitlist User.
+          example: wl_user_01E4ZCR3C56J083X43JQXF3JK5
+        email:
+          type: string
+          description: The email address of the Waitlist User.
+          example: marcelina.davis@example.com
+        state:
+          type: string
+          enum:
+            - pending
+            - approved
+            - denied
+          description: The state of the Waitlist User.
+          example: pending
+        approved_at:
+          format: date-time
+          type:
+            - string
+            - 'null'
+          description: >-
+            The timestamp when the Waitlist User was approved, or null if not
+            yet approved.
+          example: null
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - email
+        - state
+        - approved_at
+        - created_at
+        - updated_at
     EventSchema:
       allOf:
         - type: object
@@ -19236,7 +20971,7 @@ components:
               type: object
               additionalProperties: {}
               description: The event payload.
-              example: &ref_7
+              example: &ref_16
                 id: directory_user_01E1JG7J09H96KYP8HM9B0G5SJ
                 directory_id: directory_01ECAZ4NV9QMV47GW873HDCX74
                 organization_id: org_01EZTR6WYX1A0DSE2CYMGXQ24Y
@@ -19271,11 +21006,11 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_14
+          example: &ref_23
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
-            data: *ref_7
+            data: *ref_16
             created_at: '2021-06-25T19:07:33.155Z'
             context: {}
         - oneOf:
@@ -19492,7 +21227,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_8
+                      example: &ref_17
                         - users:read
                         - users:write
                     created_at:
@@ -19585,7 +21320,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_8
+                      example: *ref_17
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -22363,7 +24098,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_9
+                      example: *ref_18
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -22553,7 +24288,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_10
+                      example: &ref_19
                         - reports
                     enabled:
                       type: boolean
@@ -22713,7 +24448,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_10
+                      example: *ref_19
                     enabled:
                       type: boolean
                       description: >-
@@ -22872,7 +24607,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_10
+                      example: *ref_19
                     enabled:
                       type: boolean
                       description: >-
@@ -23151,7 +24886,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_10
+                      example: *ref_19
                     enabled:
                       type: boolean
                       description: >-
@@ -23282,6 +25017,175 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: group.created
+                data:
+                  $ref: '#/components/schemas/Group'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: group.deleted
+                data:
+                  $ref: '#/components/schemas/Group'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: group.member_added
+                data:
+                  type: object
+                  properties:
+                    group_id:
+                      type: string
+                      description: The ID of the Group.
+                      example: group_01HXYZ123456789ABCDEFGHIJ
+                    organization_membership_id:
+                      type: string
+                      description: The ID of the OrganizationMembership.
+                      example: om_01EHWNCE74X7JSDV0X3SZ3KJNY
+                  required:
+                    - group_id
+                    - organization_membership_id
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: group.member_removed
+                data:
+                  type: object
+                  properties:
+                    group_id:
+                      type: string
+                      description: The ID of the Group.
+                      example: group_01HXYZ123456789ABCDEFGHIJ
+                    organization_membership_id:
+                      type: string
+                      description: The ID of the OrganizationMembership.
+                      example: om_01EHWNCE74X7JSDV0X3SZ3KJNY
+                  required:
+                    - group_id
+                    - organization_membership_id
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: group.updated
+                data:
+                  $ref: '#/components/schemas/Group'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: invitation.accepted
                 data:
                   type: object
@@ -23354,6 +25258,16 @@ components:
                         The ID of the user who accepted the invitation, once
                         accepted.
                       example: null
+                    role_slug:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        Slug of the role the invitee will be assigned on
+                        acceptance. Reflects the current role on the invitee's
+                        organization membership. null when the invitation has no
+                        associated organization.
+                      example: admin
                     created_at:
                       format: date-time
                       type: string
@@ -23375,6 +25289,7 @@ components:
                     - organization_id
                     - inviter_user_id
                     - accepted_user_id
+                    - role_slug
                     - created_at
                     - updated_at
                   description: The event payload.
@@ -23475,6 +25390,16 @@ components:
                         The ID of the user who accepted the invitation, once
                         accepted.
                       example: null
+                    role_slug:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        Slug of the role the invitee will be assigned on
+                        acceptance. Reflects the current role on the invitee's
+                        organization membership. null when the invitation has no
+                        associated organization.
+                      example: admin
                     created_at:
                       format: date-time
                       type: string
@@ -23496,6 +25421,7 @@ components:
                     - organization_id
                     - inviter_user_id
                     - accepted_user_id
+                    - role_slug
                     - created_at
                     - updated_at
                   description: The event payload.
@@ -23596,6 +25522,16 @@ components:
                         The ID of the user who accepted the invitation, once
                         accepted.
                       example: null
+                    role_slug:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        Slug of the role the invitee will be assigned on
+                        acceptance. Reflects the current role on the invitee's
+                        organization membership. null when the invitation has no
+                        associated organization.
+                      example: admin
                     created_at:
                       format: date-time
                       type: string
@@ -23617,6 +25553,7 @@ components:
                     - organization_id
                     - inviter_user_id
                     - accepted_user_id
+                    - role_slug
                     - created_at
                     - updated_at
                   description: The event payload.
@@ -23717,6 +25654,16 @@ components:
                         The ID of the user who accepted the invitation, once
                         accepted.
                       example: null
+                    role_slug:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        Slug of the role the invitee will be assigned on
+                        acceptance. Reflects the current role on the invitee's
+                        organization membership. null when the invitation has no
+                        associated organization.
+                      example: admin
                     created_at:
                       format: date-time
                       type: string
@@ -23738,6 +25685,7 @@ components:
                     - organization_id
                     - inviter_user_id
                     - accepted_user_id
+                    - role_slug
                     - created_at
                     - updated_at
                   description: The event payload.
@@ -23925,7 +25873,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_11
+                      example: &ref_20
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -24075,7 +26023,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_11
+                      example: *ref_20
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -24902,7 +26850,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_12
+                      example: &ref_21
                         - users:read
                         - users:write
                     created_at:
@@ -24986,7 +26934,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_12
+                      example: *ref_21
                     created_at:
                       format: date-time
                       type: string
@@ -25068,7 +27016,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_12
+                      example: *ref_21
                     created_at:
                       format: date-time
                       type: string
@@ -25205,7 +27153,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_11
+                      example: *ref_20
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -25636,7 +27584,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_13
+                      example: &ref_22
                         - users:read
                         - users:write
                     created_at:
@@ -25702,7 +27650,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_13
+                      example: *ref_22
                     created_at:
                       format: date-time
                       type: string
@@ -25766,7 +27714,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_13
+                      example: *ref_22
                     created_at:
                       format: date-time
                       type: string
@@ -26729,7 +28677,94 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_14
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: waitlist_user.approved
+                data:
+                  $ref: '#/components/schemas/WaitlistUser'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: waitlist_user.created
+                data:
+                  $ref: '#/components/schemas/WaitlistUser'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: waitlist_user.denied
+                data:
+                  $ref: '#/components/schemas/WaitlistUser'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+      example: *ref_23
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -26764,7 +28799,7 @@ components:
       example:
         object: list
         data:
-          - *ref_14
+          - *ref_23
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplateResponse:
@@ -27996,6 +30031,15 @@ components:
             - 'null'
           description: The ID of the user who accepted the invitation, once accepted.
           example: null
+        role_slug:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Slug of the role the invitee will be assigned on acceptance.
+            Reflects the current role on the invitee's organization membership.
+            null when the invitation has no associated organization.
+          example: admin
         created_at:
           format: date-time
           type: string
@@ -28026,6 +30070,7 @@ components:
         - organization_id
         - inviter_user_id
         - accepted_user_id
+        - role_slug
         - created_at
         - updated_at
         - token
