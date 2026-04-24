@@ -27,6 +27,7 @@ jobs:
         run: echo "matrix=$(jq -c . .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
 
   generate_pr:
+    name: generate_pr (${{ matrix.language }})
     needs: load-matrix
     runs-on: ubuntu-latest
     strategy:

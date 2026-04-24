@@ -35,6 +35,7 @@ jobs:
         run: echo "matrix=$(jq -c . .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
 
   sdk_build:
+    name: sdk_build (${{ matrix.language }})
     needs: load-matrix
     if: needs.load-matrix.outputs.spec-changed == 'true'
     runs-on: ubuntu-latest
