@@ -28,4 +28,5 @@ if [[ -z "$OUTPUT" ]]; then
   OUTPUT=".oagen/${LANG}"
 fi
 
+mkdir -p "$OUTPUT"
 exec npx oagen compat-extract --lang "$LANG" --sdk-path "$SDK_ROOT" --output "$OUTPUT" --spec "$SPEC"
