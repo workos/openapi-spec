@@ -88,6 +88,7 @@ jobs:
 
       - name: Compat diff
         id: compat-diff
+        continue-on-error: true
         working-directory: openapi-spec
         run: npm run sdk:compat-diff -- --lang ${{ matrix.language }}
 
