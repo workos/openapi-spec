@@ -1,12 +1,27 @@
 [
   {
-    "language": "python",
-    "sdk_repo": "workos/workos-python",
-    "sdk_checkout_path": "backend/workos-python"
+    "language": "dotnet",
+    "sdk_repo": "workos/workos-dotnet",
+    "sdk_checkout_path": "backend/workos-dotnet"
+  },
+  {
+    "language": "go",
+    "sdk_repo": "workos/workos-go",
+    "sdk_checkout_path": "backend/workos-go"
   },
   {
     "language": "php",
     "sdk_repo": "workos/workos-php",
     "sdk_checkout_path": "backend/workos-php"
+  },
+  {
+    "language": "python",
+    "sdk_repo": "workos/workos-python",
+    "sdk_checkout_path": "backend/workos-python"
+  },
+  {
+    "language": "ruby",
+    "sdk_repo": "workos/workos-ruby",
+    "sdk_checkout_path": "backend/workos-ruby"
   }
 ]

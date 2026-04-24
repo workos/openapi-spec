@@ -17,7 +17,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: .github/sdk-matrix.json
           sparse-checkout-cone-mode: false
@@ -37,25 +37,25 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
-          app-id: ${{ vars.SDK_BOT_APP_ID }}
+          client-id: ${{ vars.SDK_BOT_APP_ID }}
           private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
 
       - name: Checkout openapi-spec
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           path: openapi-spec
 
       - name: Checkout live SDK
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ matrix.sdk_repo }}
           token: ${{ steps.app-token.outputs.token }}
           path: ${{ matrix.sdk_checkout_path }}
 
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '24'
           cache: 'npm'
@@ -65,59 +65,12 @@ jobs:
         working-directory: openapi-spec
         run: npm ci
 
-      - name: Validate published emitter support
+      - name: Generate SDK
         working-directory: openapi-spec
         run: |
-          OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk"
-          SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
-
-          mkdir -p "$OUTPUT_DIR"
-          cd node_modules/@workos/oagen-emitters
-
-          if ! OUTPUT=$(npx oagen generate \
-            --lang "${{ matrix.language }}" \
-            --spec "$SPEC_PATH" \
-            --output "$OUTPUT_DIR" \
-            --dry-run 2>&1); then
-            echo "$OUTPUT"
-            if echo "$OUTPUT" | grep -q '^Unknown language:'; then
-              echo "::error::Published @workos/oagen-emitters does not provide an emitter for '${{ matrix.language }}'."
-            fi
-            exit 1
-          fi
-
-      - name: Extract baseline
-        working-directory: openapi-spec
-        run: |
-          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
-          SDK_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
-
-          mkdir -p "$(dirname "$API_SURFACE_PATH")"
-          cd node_modules/@workos/oagen-emitters
-
-          npx oagen extract \
-            --lang "${{ matrix.language }}" \
-            --sdk-path "$SDK_PATH" \
-            --output "$API_SURFACE_PATH"
-
-      - name: Generate
-        working-directory: openapi-spec
-        run: |
-          SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
-          OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk"
-          TARGET_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
-          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
-
-          mkdir -p "$OUTPUT_DIR"
-          cd node_modules/@workos/oagen-emitters
-
-          npx oagen generate \
-            --lang "${{ matrix.language }}" \
-            --spec "$SPEC_PATH" \
-            --output "$OUTPUT_DIR" \
-            --target "$TARGET_PATH" \
-            --namespace workos \
-            --api-surface "$API_SURFACE_PATH"
+          npm run sdk:generate -- \
+            --lang ${{ matrix.language }} \
+            --output "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
 
       - name: Export previous spec snapshot
         working-directory: openapi-spec
@@ -129,12 +82,9 @@ jobs:
         id: diff-report
         working-directory: openapi-spec
         run: |
-          CURRENT_SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
-          cd node_modules/@workos/oagen-emitters
-
           REPORT=$(npx oagen diff \
             --old /tmp/previous-open-api-spec.yaml \
-            --new "$CURRENT_SPEC_PATH")
+            --new spec/open-api-spec.yaml) || true
 
           echo "$REPORT" > /tmp/diff-report.json
 
@@ -226,26 +176,28 @@ jobs:
             exit 0
           fi
 
+          mapfile -t CHANGED_FILES < <(git diff --cached --name-only)
+          if [ "${#CHANGED_FILES[@]}" -eq 1 ] && [ "${CHANGED_FILES[0]}" = ".oagen-manifest.json" ]; then
+            echo "Only .oagen-manifest.json changed; skipping PR creation"
+            exit 0
+          fi
+
           git commit -m "${PREFIX}(generated): ${SUMMARY}"
           git push origin "$BRANCH"
 
-          BODY="## Summary
+          gh pr create \
+            --title "${PREFIX}(generated): ${SUMMARY}" \
+            --body "## Summary
           ${SUMMARY}
 
           ## Spec Diff
           - Added: ${ADDED} | Removed: ${REMOVED} | Modified: ${MODIFIED} | Breaking: ${BREAKING}
 
-          Triggered by openapi-spec commit: ${{ github.sha }}
-
-          Generated with the published @workos/oagen-emitters package."
-
-          gh pr create \
-            --title "${PREFIX}(generated): ${SUMMARY}" \
-            --body "$BODY"
+          Triggered by openapi-spec commit: ${{ github.sha }}"
 
       - name: Upload diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: oagen-diagnostics-${{ matrix.language }}
           path: |

@@ -1,5 +1,10 @@
 name: Validate SDKs
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 on:
   pull_request:
     branches: [main]
@@ -16,9 +21,9 @@ jobs:
       spec-changed: ${{ steps.filter.outputs.spec }}
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
           filters: |
@@ -39,200 +44,67 @@ jobs:
         include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
 
     steps:
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
-        with:
-          app-id: ${{ vars.SDK_BOT_APP_ID }}
-          private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
-
-      - name: Checkout openapi-spec
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          path: openapi-spec
-
-      - name: Checkout live SDK
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ matrix.sdk_repo }}
-          token: ${{ steps.app-token.outputs.token }}
-          path: ${{ matrix.sdk_checkout_path }}
-
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '24'
           cache: 'npm'
           cache-dependency-path: openapi-spec/package-lock.json
 
+      - name: Checkout openapi-spec
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: openapi-spec
+
+      - name: Checkout live SDK
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ matrix.sdk_repo }}
+          path: ${{ matrix.sdk_checkout_path }}
+
       - name: Install dependencies
         working-directory: openapi-spec
         run: npm ci
 
-      - name: Extract baseline
+      - name: Extract baseline snapshot
         working-directory: openapi-spec
         run: |
-          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
-          SDK_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+          npm run sdk:compat-extract -- \
+            --lang ${{ matrix.language }} \
+            --sdk-root "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
 
-          mkdir -p "$(dirname "$API_SURFACE_PATH")"
-          cd node_modules/@workos/oagen-emitters
+      - name: Generate SDK
+        working-directory: openapi-spec
+        run: npm run sdk:generate -- --lang ${{ matrix.language }}  --output ".oagen/${{ matrix.language }}/sdk"
 
-          npx oagen extract \
-            --lang "${{ matrix.language }}" \
-            --sdk-path "$SDK_PATH" \
-            --output "$API_SURFACE_PATH"
-
-      - name: Generate
+      - name: Extract candidate snapshot
         working-directory: openapi-spec
         run: |
-          SPEC_PATH="$GITHUB_WORKSPACE/openapi-spec/spec/open-api-spec.yaml"
-          OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk"
-          TARGET_PATH="$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
-          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
+          npm run sdk:compat-extract -- \
+            --lang ${{ matrix.language }} \
+            --sdk-root .oagen/${{ matrix.language }}/sdk \
+            --output .oagen/${{ matrix.language }}/sdk
 
-          mkdir -p "$OUTPUT_DIR"
-          cd node_modules/@workos/oagen-emitters
+      - name: Compat diff
+        id: compat-diff
+        working-directory: openapi-spec
+        run: npm run sdk:compat-diff -- --lang ${{ matrix.language }}
 
-          npx oagen generate \
-            --lang "${{ matrix.language }}" \
-            --spec "$SPEC_PATH" \
-            --output "$OUTPUT_DIR" \
-            --target "$TARGET_PATH" \
-            --namespace workos \
-            --api-surface "$API_SURFACE_PATH"
-
-      - name: Export previous spec snapshot
+      - name: Compat summary
+        if: always() && steps.compat-diff.outcome != 'skipped'
         working-directory: openapi-spec
         run: |
-          BASE_SHA="$(cat .last-synced-sha)"
-          git show "${BASE_SHA}:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
-
-      - name: Generate baseline manifest
-        working-directory: openapi-spec
-        run: |
-          BASELINE_OUTPUT_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/baseline-sdk"
-          API_SURFACE_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-surface.json"
-
-          rm -rf "$BASELINE_OUTPUT_DIR"
-          mkdir -p "$BASELINE_OUTPUT_DIR"
-          cd node_modules/@workos/oagen-emitters
-
-          npx oagen generate \
-            --lang "${{ matrix.language }}" \
-            --spec /tmp/previous-open-api-spec.yaml \
-            --output "$BASELINE_OUTPUT_DIR" \
-            --namespace workos \
-            --api-surface "$API_SURFACE_PATH"
-
-      - name: Check resolved operations
-        id: resolve-ops
-        working-directory: openapi-spec
-        run: |
-          CURRENT_MANIFEST="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk/smoke-manifest.json"
-          BASELINE_MANIFEST="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/baseline-sdk/smoke-manifest.json"
-          DIFF_DIR="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/resolved-ops"
-
-          mkdir -p "$DIFF_DIR"
-
-          if [ ! -f "$CURRENT_MANIFEST" ]; then
-            echo "::error::Missing current smoke-manifest.json at $CURRENT_MANIFEST"
-            exit 1
-          fi
-
-          if [ ! -f "$BASELINE_MANIFEST" ]; then
-            echo "::error::Missing baseline smoke-manifest.json at $BASELINE_MANIFEST"
-            exit 1
-          fi
-
-          jq -n \
-            --slurpfile current "$CURRENT_MANIFEST" \
-            --slurpfile baseline "$BASELINE_MANIFEST" \
-            '[($current[0]) as $cur |
-              ($baseline[0]) as $base |
-              $cur | to_entries[] | select($base[.key] == null) |
-              {
-                operation: .key,
-                sdkMethod: .value.sdkMethod,
-                service: .value.service
-              }]' > "$DIFF_DIR/new-operations.json"
-
-          jq -n \
-            --slurpfile current "$CURRENT_MANIFEST" \
-            --slurpfile baseline "$BASELINE_MANIFEST" \
-            '[($current[0]) as $cur |
-              ($baseline[0]) as $base |
-              $cur | to_entries[] |
-              select($base[.key] != null and (
-                $base[.key].sdkMethod != .value.sdkMethod or
-                $base[.key].service != .value.service
-              )) |
-              {
-                operation: .key,
-                oldSdkMethod: $base[.key].sdkMethod,
-                newSdkMethod: .value.sdkMethod,
-                oldService: $base[.key].service,
-                newService: .value.service
-              }]' > "$DIFF_DIR/changed-operations.json"
-
-          jq -n \
-            --slurpfile current "$CURRENT_MANIFEST" \
-            --slurpfile baseline "$BASELINE_MANIFEST" \
-            '[($current[0]) as $cur |
-              ($baseline[0]) as $base |
-              $base | to_entries[] | select($cur[.key] == null) |
-              {
-                operation: .key,
-                sdkMethod: .value.sdkMethod,
-                service: .value.service
-              }]' > "$DIFF_DIR/removed-operations.json"
-
-          NEW_COUNT=$(jq 'length' "$DIFF_DIR/new-operations.json")
-          CHANGED_COUNT=$(jq 'length' "$DIFF_DIR/changed-operations.json")
-          REMOVED_COUNT=$(jq 'length' "$DIFF_DIR/removed-operations.json")
-
-          {
-            echo "new_count=$NEW_COUNT"
-            echo "changed_count=$CHANGED_COUNT"
-            echo "removed_count=$REMOVED_COUNT"
-          } >> "$GITHUB_OUTPUT"
-
-          {
-            echo "## Resolved Operations (${{ matrix.language }})"
-            echo
-            echo "- New operations: $NEW_COUNT"
-            echo "- Changed mappings: $CHANGED_COUNT"
-            echo "- Removed operations: $REMOVED_COUNT"
-            echo
-            if [ "$NEW_COUNT" -gt 0 ]; then
-              echo "### New operations"
-              jq -r '.[] | "- `\(.operation)` -> `\(.service).\(.sdkMethod)`"' "$DIFF_DIR/new-operations.json"
-              echo
-            fi
-            if [ "$CHANGED_COUNT" -gt 0 ]; then
-              echo "### Changed mappings"
-              jq -r '.[] | "- `\(.operation)`: `\(.oldService).\(.oldSdkMethod)` -> `\(.newService).\(.newSdkMethod)`"' "$DIFF_DIR/changed-operations.json"
-              echo
-            fi
-            if [ "$REMOVED_COUNT" -gt 0 ]; then
-              echo "### Removed operations"
-              jq -r '.[] | "- `\(.operation)` (was `\(.service).\(.sdkMethod)`) "' "$DIFF_DIR/removed-operations.json" | sed 's/[[:space:]]*$//'
-              echo
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$CHANGED_COUNT" -gt 0 ]; then
-            echo "::error::Resolved SDK mappings changed for existing operations. See resolved-ops artifacts."
-            exit 1
+          REPORT=".oagen/${{ matrix.language }}/compat-report.json"
+          if [ -f "$REPORT" ]; then
+            npm run sdk:compat-summary -- --report "$REPORT" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: oagen-diagnostics-${{ matrix.language }}
-          path: |
-            openapi-spec/.oagen/${{ matrix.language }}/
+          path: openapi-spec/.oagen/${{ matrix.language }}/
           retention-days: 14
 
   sdk-validation:
@@ -240,6 +112,56 @@ jobs:
     needs: [load-matrix, sdk_build]
     if: always()
     steps:
+      - name: Checkout openapi-spec
+        if: needs.load-matrix.outputs.spec-changed == 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        if: needs.load-matrix.outputs.spec-changed == 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Download diagnostics
+        if: needs.load-matrix.outputs.spec-changed == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: oagen-diagnostics-*
+          path: sdk-diagnostics
+
+      - name: Render PR comment
+        if: needs.load-matrix.outputs.spec-changed == 'true'
+        run: |
+          node scripts/sdk-compat-pr-comment.mjs \
+            --artifacts-root sdk-diagnostics \
+            --build-result "${{ needs.sdk_build.result }}" \
+            --output /tmp/sdk-compat-comment.md
+
+      - name: Upsert PR comment
+        if: github.event_name == 'pull_request' && needs.load-matrix.outputs.spec-changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          jq -n --rawfile body /tmp/sdk-compat-comment.md '{body: $body}' > /tmp/sdk-compat-comment.json
+
+          COMMENT_ID="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("<!-- sdk-validation-comment -->")) | .id' \
+            | head -n 1)"
+
+          if [[ -n "$COMMENT_ID" ]]; then
+            gh api \
+              --method PATCH \
+              "repos/$REPO/issues/comments/$COMMENT_ID" \
+              --input /tmp/sdk-compat-comment.json
+          else
+            gh api \
+              --method POST \
+              "repos/$REPO/issues/$PR_NUMBER/comments" \
+              --input /tmp/sdk-compat-comment.json
+          fi
+
       - name: Check result
         run: |
           if [[ "${{ needs.load-matrix.outputs.spec-changed }}" != "true" ]]; then
