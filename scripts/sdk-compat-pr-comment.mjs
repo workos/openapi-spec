@@ -262,39 +262,36 @@ function mergeRelatedRows(rows) {
       continue;
     }
 
-    // Check for overlapping languages — if the same language appears in
-    // multiple rows, these are genuinely distinct changes, not duplicates.
-    const allLanguages = new Set();
-    let overlap = false;
+    // Greedy merge: try to fold each row into an existing bucket whose
+    // language set doesn't overlap.  Rows that can't merge into any
+    // bucket start a new one (they represent genuinely distinct changes
+    // that happen to share a local name, e.g. admin_emails on two
+    // different models).
+    const buckets = [];
     for (const row of group) {
-      for (const lang of Object.keys(row.perLanguage)) {
-        if (allLanguages.has(lang)) {
-          overlap = true;
+      const rowLangs = new Set(Object.keys(row.perLanguage));
+      let target = null;
+      for (const bucket of buckets) {
+        const hasOverlap = [...rowLangs].some((lang) => bucket.perLanguage[lang]);
+        if (!hasOverlap) {
+          target = bucket;
           break;
         }
-        allLanguages.add(lang);
       }
-      if (overlap) break;
-    }
 
-    if (overlap) {
-      result.push(...group);
-      continue;
-    }
-
-    // Merge all rows into the first one
-    const merged = group[0];
-    for (let i = 1; i < group.length; i++) {
-      const donor = group[i];
-      for (const [lang, entry] of Object.entries(donor.perLanguage)) {
-        merged.perLanguage[lang] = entry;
+      if (target) {
+        for (const [lang, entry] of Object.entries(row.perLanguage)) {
+          target.perLanguage[lang] = entry;
+        }
+        target.severity = highestSeverity(target.severity, row.severity);
+        if (!target.routeKey && row.routeKey) target.routeKey = row.routeKey;
+        if (!target.operationId && row.operationId) target.operationId = row.operationId;
+        if (!target.detail && row.detail) target.detail = row.detail;
+      } else {
+        buckets.push(row);
       }
-      merged.severity = highestSeverity(merged.severity, donor.severity);
-      if (!merged.routeKey && donor.routeKey) merged.routeKey = donor.routeKey;
-      if (!merged.operationId && donor.operationId) merged.operationId = donor.operationId;
-      if (!merged.detail && donor.detail) merged.detail = donor.detail;
     }
-    result.push(merged);
+    result.push(...buckets);
   }
 
   return result;
@@ -422,7 +419,10 @@ function renderMarkdown(languageData, buildResult) {
   lines.push('');
 
   for (const [category, rows] of groupedRows) {
-    lines.push(`### ${titleCaseCategory(category)}`);
+    const title = titleCaseCategory(category);
+    const isBreaking = category === 'symbol_removed' || category.includes('breaking');
+    lines.push(`<details${isBreaking ? ' open' : ''}>`);
+    lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
     lines.push('');
 
     for (const row of rows) {
@@ -448,6 +448,9 @@ function renderMarkdown(languageData, buildResult) {
       }
       lines.push('');
     }
+
+    lines.push('</details>');
+    lines.push('');
   }
 
   return lines.join('\n') + '\n';
