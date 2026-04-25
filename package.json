@@ -14,6 +14,7 @@
     "sdk:compat-extract": "bash scripts/sdk-compat-extract.sh",
     "sdk:compat-diff": "bash scripts/sdk-compat-diff.sh",
     "sdk:compat-summary": "bash scripts/sdk-compat-summary.sh",
+    "sdk:languages": "node -e \"console.log(JSON.parse(require('fs').readFileSync('.github/sdk-matrix.json','utf8')).map(e=>e.language).join('\\n'))\"",
     "sdk:check": "npx oagen resolve --spec spec/open-api-spec.yaml --format json > /dev/null && echo 'Config loaded successfully'",
     "dev:link": "npm link @workos/oagen @workos/oagen-emitters",
     "dev:unlink": "npm install",
