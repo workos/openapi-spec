@@ -111,41 +111,6 @@ function pickSymbolMeta(change, baselineIndex, candidateIndex) {
   };
 }
 
-/**
- * Normalize a conceptualChangeId so that the same underlying spec entity
- * collapses into a single row regardless of language-specific naming.
- *
- * conceptualChangeId has the shape:
- *   chg_<category>_<symbol_parts>
- *
- * Language SDKs may render the symbol differently:
- *   - dotnet PascalCase: AdminPortalGenerateLinkOptions.AdminEmails
- *   - go snake_case:     AdminPortalGenerateLinkParams.admin_emails
- *   - ruby snake_case:   admin_portal_generate_link_params.admin_emails
- *
- * The IDs derived from these look like:
- *   chg_symbol_added_adminportalgeneratelinkoptions.adminemails
- *   chg_symbol_added_adminportalgeneratelinkparams.admin_emails
- *
- * Strategy: split on '_', rejoin without separators, then lowercase.
- * This makes both map to the same normalized key.  We preserve the
- * category prefix so that genuinely different change categories still
- * produce distinct rows.
- */
-function normalizeConceptualId(id) {
-  // conceptualChangeId format: "chg_<category>_<symbolParts>"
-  // e.g. "chg_symbol_added_directoryuser.job_title_"
-  //      "chg_parameter_removed_client.session_manager_encryptor"
-  //
-  // Different languages produce different symbol names for the same spec
-  // entity (PascalCase, snake_case, etc.), which yields different IDs.
-  // Normalizing by lowercasing and stripping all underscores collapses
-  // these into the same key.  The category prefix (e.g. "symbol_added")
-  // also loses its underscores, but no two distinct categories collide
-  // after this transformation.
-  return id.toLowerCase().replace(/_/g, '');
-}
-
 function highestSeverity(left, right) {
   const rank = { breaking: 3, 'soft-risk': 2, additive: 1 };
   return rank[right] > rank[left] ? right : left;
@@ -277,8 +242,7 @@ function buildRollup(languageData) {
       const routeKey = meta.route ? `${String(meta.route.method).toUpperCase()} ${meta.route.path}` : '';
       const manifestEntries = routeKey ? (entry.operationsMap.get(routeKey) ?? []) : [];
       const manifestEntry = manifestEntries[0];
-      const normalizedId = normalizeConceptualId(change.conceptualChangeId);
-      const row = rows.get(normalizedId) ?? {
+      const row = rows.get(change.conceptualChangeId) ?? {
         id: change.conceptualChangeId,
         severity: change.severity,
         category: change.category,
@@ -316,7 +280,7 @@ function buildRollup(languageData) {
         };
       }
 
-      rows.set(normalizedId, row);
+      rows.set(change.conceptualChangeId, row);
     }
   }
 
