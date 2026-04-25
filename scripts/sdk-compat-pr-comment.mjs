@@ -226,6 +226,80 @@ function buildLanguageData(dirPath) {
   };
 }
 
+/**
+ * Extract the local symbol name (part after the last dot) and normalize it
+ * for cross-language comparison.  AdminEmails, admin_emails, adminEmails
+ * all become "adminemails".
+ */
+function normalizeLocalName(symbol) {
+  const local = symbol.includes('.') ? symbol.split('.').pop() : symbol;
+  return local.replace(/_/g, '').toLowerCase();
+}
+
+/**
+ * Merge rows that represent the same spec-level change across languages.
+ *
+ * Different languages produce different conceptualChangeIds for the same
+ * underlying change (e.g. AdminPortalGenerateLinkOptions.AdminEmails in
+ * dotnet vs GenerateLink.admin_emails in Ruby).  This pass collapses them
+ * into a single row when:
+ *  - they share the same change category
+ *  - their normalized local symbol names match
+ *  - their language sets don't overlap (no two entries for the same lang)
+ */
+function mergeRelatedRows(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const key = `${row.category}:${normalizeLocalName(row.symbol)}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+
+  const result = [];
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+      continue;
+    }
+
+    // Check for overlapping languages — if the same language appears in
+    // multiple rows, these are genuinely distinct changes, not duplicates.
+    const allLanguages = new Set();
+    let overlap = false;
+    for (const row of group) {
+      for (const lang of Object.keys(row.perLanguage)) {
+        if (allLanguages.has(lang)) {
+          overlap = true;
+          break;
+        }
+        allLanguages.add(lang);
+      }
+      if (overlap) break;
+    }
+
+    if (overlap) {
+      result.push(...group);
+      continue;
+    }
+
+    // Merge all rows into the first one
+    const merged = group[0];
+    for (let i = 1; i < group.length; i++) {
+      const donor = group[i];
+      for (const [lang, entry] of Object.entries(donor.perLanguage)) {
+        merged.perLanguage[lang] = entry;
+      }
+      merged.severity = highestSeverity(merged.severity, donor.severity);
+      if (!merged.routeKey && donor.routeKey) merged.routeKey = donor.routeKey;
+      if (!merged.operationId && donor.operationId) merged.operationId = donor.operationId;
+      if (!merged.detail && donor.detail) merged.detail = donor.detail;
+    }
+    result.push(merged);
+  }
+
+  return result;
+}
+
 function buildRollup(languageData) {
   const languages = languageData.map((entry) => entry.language).sort();
   const rows = new Map();
@@ -284,10 +358,12 @@ function buildRollup(languageData) {
     }
   }
 
+  const mergedRows = mergeRelatedRows([...rows.values()]);
+
   return {
     languages,
     missingLanguages,
-    rows: [...rows.values()].sort((left, right) => {
+    rows: mergedRows.sort((left, right) => {
       const severityOrder = { breaking: 0, 'soft-risk': 1, additive: 2 };
       const severityDiff = severityOrder[left.severity] - severityOrder[right.severity];
       if (severityDiff !== 0) return severityDiff;
