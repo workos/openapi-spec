@@ -290,6 +290,7 @@ function mergeRelatedRows(rows) {
         target.severity = highestSeverity(target.severity, row.severity);
         if (!target.routeKey && row.routeKey) target.routeKey = row.routeKey;
         if (!target.operationId && row.operationId) target.operationId = row.operationId;
+        if (!target.service && row.service) target.service = row.service;
         if (!target.detail && row.detail) target.detail = row.detail;
       } else {
         buckets.push(row);
@@ -324,6 +325,7 @@ function buildRollup(languageData) {
         detail: formatDetail(change),
         routeKey,
         operationId: meta.operationId ?? '',
+        service: manifestEntry?.service ?? '',
         symbol: change.symbol,
         perLanguage: {},
       };
@@ -331,6 +333,7 @@ function buildRollup(languageData) {
       row.severity = highestSeverity(row.severity, change.severity);
       if (!row.routeKey && routeKey) row.routeKey = routeKey;
       if (!row.operationId && meta.operationId) row.operationId = meta.operationId;
+      if (!row.service && manifestEntry?.service) row.service = manifestEntry.service;
       if (!row.detail && change.message) row.detail = change.message;
 
       if (manifestEntries.length > 1) {
@@ -368,7 +371,7 @@ function buildRollup(languageData) {
       const severityOrder = { breaking: 0, 'soft-risk': 1, additive: 2 };
       const severityDiff = severityOrder[left.severity] - severityOrder[right.severity];
       if (severityDiff !== 0) return severityDiff;
-      return `${left.routeKey} ${left.symbol}`.localeCompare(`${right.routeKey} ${right.symbol}`);
+      return `${left.service} ${left.routeKey} ${left.symbol}`.localeCompare(`${right.service} ${right.routeKey} ${right.symbol}`);
     }),
   };
 }
@@ -427,7 +430,8 @@ function renderChangeBlocks(lines, rows, languages) {
     if (activeLangs.length === 0) continue;
 
     const desc = `\`${row.symbol}\` ${categoryVerb(row.category)}`;
-    lines.push(`**${desc}**`);
+    const route = row.routeKey ? ` — \`${row.routeKey}\`` : '';
+    lines.push(`**${desc}**${route}`);
     lines.push('');
     lines.push('| Language | Before | After |');
     lines.push('| --- | --- | --- |');
@@ -442,35 +446,35 @@ function renderChangeBlocks(lines, rows, languages) {
   }
 }
 
-/** Render breaking / soft-risk section: grouped by route, languages as columns. */
+/** Render breaking / soft-risk section: grouped by service, with route shown inline. */
 function renderDetailedSection(lines, title, rows, languages, open) {
   lines.push(`<details${open ? ' open' : ''}>`);
   lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
   lines.push('');
 
-  const byRoute = new Map();
-  const noRoute = [];
+  const byService = new Map();
+  const noService = [];
   for (const row of rows) {
-    if (row.routeKey) {
-      if (!byRoute.has(row.routeKey)) byRoute.set(row.routeKey, []);
-      byRoute.get(row.routeKey).push(row);
+    if (row.service) {
+      if (!byService.has(row.service)) byService.set(row.service, []);
+      byService.get(row.service).push(row);
     } else {
-      noRoute.push(row);
+      noService.push(row);
     }
   }
 
-  for (const [route, routeRows] of byRoute) {
-    lines.push(`#### \`${route}\``);
+  for (const [service, serviceRows] of byService) {
+    lines.push(`#### ${service}`);
     lines.push('');
-    renderChangeBlocks(lines, routeRows, languages);
+    renderChangeBlocks(lines, serviceRows, languages);
   }
 
-  if (noRoute.length > 0) {
-    if (byRoute.size > 0) {
-      lines.push('#### Non-operation changes');
+  if (noService.length > 0) {
+    if (byService.size > 0) {
+      lines.push('#### Other changes');
       lines.push('');
     }
-    renderChangeBlocks(lines, noRoute, languages);
+    renderChangeBlocks(lines, noService, languages);
   }
 
   lines.push('</details>');
