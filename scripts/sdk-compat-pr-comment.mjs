@@ -116,13 +116,6 @@ function highestSeverity(left, right) {
   return rank[right] > rank[left] ? right : left;
 }
 
-function titleCaseCategory(category) {
-  return String(category)
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
 function formatDetail(change) {
   if (change.message) return change.message;
 
@@ -369,6 +362,130 @@ function buildRollup(languageData) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Rendering helpers
+// ---------------------------------------------------------------------------
+
+const CATEGORY_VERBS = {
+  symbol_removed: 'removed',
+  symbol_added: 'added',
+  symbol_renamed: 'renamed',
+  parameter_removed: 'param removed',
+  parameter_added_optional_terminal: 'optional param added',
+  parameter_added_non_terminal_optional: 'optional param added',
+  parameter_renamed: 'param renamed',
+  parameter_type_narrowed: 'param type changed',
+  parameter_requiredness_increased: 'param now required',
+  parameter_position_changed_order_sensitive: 'param reordered',
+  constructor_position_changed_order_sensitive: 'ctor param reordered',
+  constructor_reordered_named_friendly: 'ctor reordered (named-friendly)',
+  field_type_changed: 'type changed',
+  return_type_changed: 'return type changed',
+  enum_member_value_changed: 'enum value changed',
+};
+
+function categoryVerb(category) {
+  return CATEGORY_VERBS[category] ?? category.replace(/_/g, ' ');
+}
+
+/** Pull the first backtick-wrapped reference out of a formatted cell. */
+function extractRef(formatted) {
+  if (!formatted || formatted === '—') return '—';
+  const match = formatted.match(/`([^`]+)`/);
+  if (!match) return formatted.split('<br>')[0] || '—';
+  const inner = match[1];
+  if (inner === '(removed)' || inner === '(absent)') return '—';
+  return `\`${inner}\``;
+}
+
+/** One compact cell per language in the detailed table. */
+function compactCell(entry) {
+  if (!entry) return '—';
+  const prev = extractRef(entry.previous);
+  const now = extractRef(entry.now);
+  if (prev === '—' && now === '—') return '—';
+  if (prev === '—') return now;
+  if (now === '—') return prev;
+  return `${prev} → ${now}`;
+}
+
+/** Render a table of changes with languages as columns. */
+function renderChangeTable(lines, rows, languages) {
+  const activeLangs = languages.filter((lang) => rows.some((row) => row.perLanguage[lang]));
+  if (activeLangs.length === 0) return;
+
+  lines.push(`| Change | ${activeLangs.join(' | ')} |`);
+  lines.push(`| --- | ${activeLangs.map(() => '---').join(' | ')} |`);
+
+  for (const row of rows) {
+    const local = row.symbol.includes('.') ? row.symbol.split('.').pop() : row.symbol;
+    const desc = escapeCell(`\`${local}\` ${categoryVerb(row.category)}`);
+    const cells = activeLangs.map((lang) => escapeCell(compactCell(row.perLanguage[lang])));
+    lines.push(`| ${desc} | ${cells.join(' | ')} |`);
+  }
+  lines.push('');
+}
+
+/** Render breaking / soft-risk section: grouped by route, languages as columns. */
+function renderDetailedSection(lines, title, rows, languages, open) {
+  lines.push(`<details${open ? ' open' : ''}>`);
+  lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
+  lines.push('');
+
+  const byRoute = new Map();
+  const noRoute = [];
+  for (const row of rows) {
+    if (row.routeKey) {
+      if (!byRoute.has(row.routeKey)) byRoute.set(row.routeKey, []);
+      byRoute.get(row.routeKey).push(row);
+    } else {
+      noRoute.push(row);
+    }
+  }
+
+  for (const [route, routeRows] of byRoute) {
+    lines.push(`#### \`${route}\``);
+    lines.push('');
+    renderChangeTable(lines, routeRows, languages);
+  }
+
+  if (noRoute.length > 0) {
+    if (byRoute.size > 0) {
+      lines.push('#### Non-operation changes');
+      lines.push('');
+    }
+    renderChangeTable(lines, noRoute, languages);
+  }
+
+  lines.push('</details>');
+  lines.push('');
+}
+
+/** Render additive section: compact list with language coverage. */
+function renderCompactSection(lines, title, rows, languages) {
+  lines.push('<details>');
+  lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
+  lines.push('');
+
+  lines.push('| Change | Languages |');
+  lines.push('| --- | --- |');
+
+  for (const row of rows) {
+    const affected = languages.filter((lang) => row.perLanguage[lang]);
+    const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
+    const local = row.symbol.includes('.') ? row.symbol.split('.').pop() : row.symbol;
+    lines.push(`| ${escapeCell(`\`${local}\` ${categoryVerb(row.category)}`)} | ${langStr} |`);
+  }
+
+  lines.push('');
+  lines.push('</details>');
+  lines.push('');
+}
+
+// ---------------------------------------------------------------------------
+// Main renderer
+// ---------------------------------------------------------------------------
+
 function renderMarkdown(languageData, buildResult) {
   const rollup = buildRollup(languageData);
   const lines = [];
@@ -409,48 +526,20 @@ function renderMarkdown(languageData, buildResult) {
     return lines.join('\n') + '\n';
   }
 
-  const groupedRows = new Map();
-  for (const row of rollup.rows) {
-    const entries = groupedRows.get(row.category) ?? [];
-    entries.push(row);
-    groupedRows.set(row.category, entries);
-  }
+  const breaking = rollup.rows.filter((r) => r.severity === 'breaking');
+  const softRisk = rollup.rows.filter((r) => r.severity === 'soft-risk');
+  const additive = rollup.rows.filter((r) => r.severity === 'additive');
 
   lines.push('');
 
-  for (const [category, rows] of groupedRows) {
-    const title = titleCaseCategory(category);
-    const isBreaking = category === 'symbol_removed' || category.includes('breaking');
-    lines.push(`<details${isBreaking ? ' open' : ''}>`);
-    lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
-    lines.push('');
-
-    for (const row of rows) {
-      if (row.routeKey) {
-        lines.push(`#### \`${row.routeKey}\``);
-      } else {
-        lines.push(`#### \`${row.symbol}\``);
-      }
-      lines.push('');
-      lines.push(row.detail || row.symbol);
-      lines.push('');
-
-      if (row.operationId) {
-        lines.push(`operationId: \`${row.operationId}\``);
-        lines.push('');
-      }
-
-      lines.push('| Language | Previous | Now |');
-      lines.push('| --- | --- | --- |');
-      for (const language of rollup.languages) {
-        const entry = row.perLanguage[language];
-        lines.push(`| ${language} | ${escapeCell(entry?.previous ?? '—')} | ${escapeCell(entry?.now ?? '—')} |`);
-      }
-      lines.push('');
-    }
-
-    lines.push('</details>');
-    lines.push('');
+  if (breaking.length > 0) {
+    renderDetailedSection(lines, 'Breaking', breaking, rollup.languages, true);
+  }
+  if (softRisk.length > 0) {
+    renderDetailedSection(lines, 'Soft-risk', softRisk, rollup.languages, false);
+  }
+  if (additive.length > 0) {
+    renderCompactSection(lines, 'Additive', additive, rollup.languages);
   }
 
   return lines.join('\n') + '\n';
