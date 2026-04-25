@@ -135,9 +135,19 @@ function escapeCell(value) {
   return String(value).replace(/\|/g, '\\|').replace(/\n/g, '<br>');
 }
 
+function formatParamList(parameters) {
+  if (!parameters?.length) return '';
+  const params = parameters.map((p) => (p.required ? p.publicName : `${p.publicName}?`));
+  if (params.length <= 5) return params.join(', ');
+  return params.slice(0, 4).join(', ') + ', \u2026';
+}
+
 function formatSymbolReference(symbol) {
   if (!symbol?.fqName) return '';
-  if (symbol.kind === 'callable' || symbol.kind === 'constructor') return `\`${symbol.fqName}(...)\``;
+  if (symbol.kind === 'callable' || symbol.kind === 'constructor') {
+    const params = formatParamList(symbol.parameters);
+    return `\`${symbol.fqName}(${params})\``;
+  }
   return `\`${symbol.fqName}\``;
 }
 
@@ -170,7 +180,8 @@ function formatNowState(change, candidateSymbol, manifestEntry) {
   const lines = [];
 
   if (manifestEntry) {
-    lines.push(`\`${manifestEntry.service}.${manifestEntry.sdkMethod}(...)\``);
+    const params = formatParamList(candidateSymbol?.parameters);
+    lines.push(`\`${manifestEntry.service}.${manifestEntry.sdkMethod}(${params})\``);
   } else {
     const symbolRef = formatSymbolReference(candidateSymbol);
     if (symbolRef) {
