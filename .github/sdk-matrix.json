@@ -2,26 +2,36 @@
   {
     "language": "dotnet",
     "sdk_repo": "workos/workos-dotnet",
-    "sdk_checkout_path": "backend/workos-dotnet"
+    "sdk_checkout_path": "backend/workos-dotnet",
+    "runtime": "dotnet",
+    "runtime_version": "9.0.x"
   },
   {
     "language": "go",
     "sdk_repo": "workos/workos-go",
-    "sdk_checkout_path": "backend/workos-go"
+    "sdk_checkout_path": "backend/workos-go",
+    "runtime": "go",
+    "runtime_version": "1.24"
   },
   {
     "language": "php",
     "sdk_repo": "workos/workos-php",
-    "sdk_checkout_path": "backend/workos-php"
+    "sdk_checkout_path": "backend/workos-php",
+    "runtime": "php",
+    "runtime_version": "8.3"
   },
   {
     "language": "python",
     "sdk_repo": "workos/workos-python",
-    "sdk_checkout_path": "backend/workos-python"
+    "sdk_checkout_path": "backend/workos-python",
+    "runtime": "python",
+    "runtime_version": "3.13"
   },
   {
     "language": "ruby",
     "sdk_repo": "workos/workos-ruby",
-    "sdk_checkout_path": "backend/workos-ruby"
+    "sdk_checkout_path": "backend/workos-ruby",
+    "runtime": "ruby",
+    "runtime_version": "3.4"
   }
 ]
