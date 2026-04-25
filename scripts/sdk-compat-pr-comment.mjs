@@ -420,21 +420,26 @@ function compactCell(entry) {
   return `${prev} → ${now}`;
 }
 
-/** Render a table of changes with languages as columns. */
-function renderChangeTable(lines, rows, languages) {
-  const activeLangs = languages.filter((lang) => rows.some((row) => row.perLanguage[lang]));
-  if (activeLangs.length === 0) return;
-
-  lines.push(`| Change | ${activeLangs.join(' | ')} |`);
-  lines.push(`| --- | ${activeLangs.map(() => '---').join(' | ')} |`);
-
+/** Render changes as per-change blocks with before/after code samples. */
+function renderChangeBlocks(lines, rows, languages) {
   for (const row of rows) {
-    const local = row.symbol.includes('.') ? row.symbol.split('.').pop() : row.symbol;
-    const desc = escapeCell(`\`${local}\` ${categoryVerb(row.category)}`);
-    const cells = activeLangs.map((lang) => escapeCell(compactCell(row.perLanguage[lang])));
-    lines.push(`| ${desc} | ${cells.join(' | ')} |`);
+    const activeLangs = languages.filter((lang) => row.perLanguage[lang]);
+    if (activeLangs.length === 0) continue;
+
+    const desc = `\`${row.symbol}\` ${categoryVerb(row.category)}`;
+    lines.push(`**${desc}**`);
+    lines.push('');
+    lines.push('| Language | Before | After |');
+    lines.push('| --- | --- | --- |');
+
+    for (const lang of activeLangs) {
+      const entry = row.perLanguage[lang];
+      const before = entry.previous || '—';
+      const after = entry.now || '—';
+      lines.push(`| ${lang} | ${escapeCell(before)} | ${escapeCell(after)} |`);
+    }
+    lines.push('');
   }
-  lines.push('');
 }
 
 /** Render breaking / soft-risk section: grouped by route, languages as columns. */
@@ -457,7 +462,7 @@ function renderDetailedSection(lines, title, rows, languages, open) {
   for (const [route, routeRows] of byRoute) {
     lines.push(`#### \`${route}\``);
     lines.push('');
-    renderChangeTable(lines, routeRows, languages);
+    renderChangeBlocks(lines, routeRows, languages);
   }
 
   if (noRoute.length > 0) {
@@ -465,7 +470,7 @@ function renderDetailedSection(lines, title, rows, languages, open) {
       lines.push('#### Non-operation changes');
       lines.push('');
     }
-    renderChangeTable(lines, noRoute, languages);
+    renderChangeBlocks(lines, noRoute, languages);
   }
 
   lines.push('</details>');
@@ -484,8 +489,7 @@ function renderCompactSection(lines, title, rows, languages) {
   for (const row of rows) {
     const affected = languages.filter((lang) => row.perLanguage[lang]);
     const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
-    const local = row.symbol.includes('.') ? row.symbol.split('.').pop() : row.symbol;
-    lines.push(`| ${escapeCell(`\`${local}\` ${categoryVerb(row.category)}`)} | ${langStr} |`);
+    lines.push(`| ${escapeCell(`\`${row.symbol}\` ${categoryVerb(row.category)}`)} | ${langStr} |`);
   }
 
   lines.push('');
