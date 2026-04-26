@@ -67,17 +67,6 @@ jobs:
         working-directory: openapi-spec
         run: npm ci
 
-      - name: Extract baseline snapshot
-        working-directory: openapi-spec
-        run: |
-          npm run sdk:compat-extract -- \
-            --lang ${{ matrix.language }} \
-            --sdk-root "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
-
-      - name: Generate SDK
-        working-directory: openapi-spec
-        run: npm run sdk:generate -- --lang ${{ matrix.language }}  --output ".oagen/${{ matrix.language }}/sdk"
-
       - name: Detect SDK runtime version
         id: sdk-version
         working-directory: ${{ matrix.sdk_checkout_path }}
@@ -129,13 +118,20 @@ jobs:
         with:
           php-version: ${{ steps.sdk-version.outputs.version }}
 
+      - name: Extract baseline snapshot
+        working-directory: openapi-spec
+        run: |
+          npm run sdk:compat-extract -- \
+            --lang ${{ matrix.language }} \
+            --sdk-root "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+
+      - name: Generate SDK
+        working-directory: openapi-spec
+        run: npm run sdk:generate -- --lang ${{ matrix.language }} --output "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+
       - name: Run SDK CI
         working-directory: ${{ matrix.sdk_checkout_path }}
         run: |
-          # Overlay generated files onto the live SDK checkout
-          rsync -a "$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk/" .
-
-          # Run the SDK's CI script if it exists
           if [ -x script/ci ]; then
             script/ci
           elif [ -x scripts/ci ]; then
@@ -149,8 +145,16 @@ jobs:
         run: |
           npm run sdk:compat-extract -- \
             --lang ${{ matrix.language }} \
-            --sdk-root .oagen/${{ matrix.language }}/sdk \
+            --sdk-root "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}" \
             --output .oagen/${{ matrix.language }}/sdk
+
+      - name: Copy manifest for diagnostics
+        if: always()
+        working-directory: openapi-spec
+        run: |
+          mkdir -p .oagen/${{ matrix.language }}/sdk
+          cp "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}/.oagen-manifest.json" \
+             .oagen/${{ matrix.language }}/sdk/ 2>/dev/null || true
 
       - name: Compat diff
         id: compat-diff
