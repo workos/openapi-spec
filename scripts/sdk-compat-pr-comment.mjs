@@ -293,6 +293,73 @@ function foldRowInto(target, row) {
  *    (e.g. AdminPortal.generateLink param admin_emails ↔
  *     AdminPortalGenerateLinkOptions.AdminEmails).
  */
+/**
+ * Pair symbol_removed + symbol_added rows that share an owner type and
+ * language set into a single symbol_renamed row.  This collapses the common
+ * pattern where a spec field rename surfaces as a removal + addition in
+ * languages that use Options/Params types (dotnet, go) while appearing as a
+ * parameter rename in languages that use positional args (php, ruby).
+ *
+ * Only pairs when there is exactly one removal and one addition for a given
+ * (owner-type, language-set) combination to avoid false positives.
+ */
+function pairRemoveAddRows(rows) {
+  // Index remove/add rows by normalized (owner-type, language-set) key
+  const removeByKey = new Map();
+  const addByKey = new Map();
+
+  for (const row of rows) {
+    if (row.category !== 'symbol_removed' && row.category !== 'symbol_added') continue;
+    const dot = row.symbol.lastIndexOf('.');
+    if (dot === -1) continue;
+    const owner = row.symbol.substring(0, dot).replace(/_/g, '').toLowerCase();
+    const langKey = Object.keys(row.perLanguage).sort().join(',');
+    const groupKey = `${owner}:${langKey}`;
+
+    const map = row.category === 'symbol_removed' ? removeByKey : addByKey;
+    if (!map.has(groupKey)) map.set(groupKey, []);
+    map.get(groupKey).push(row);
+  }
+
+  const absorbed = new Set();
+  const renamed = [];
+
+  for (const [groupKey, removeRows] of removeByKey) {
+    if (removeRows.length !== 1) continue; // ambiguous — skip
+    const addRows = addByKey.get(groupKey);
+    if (!addRows || addRows.length !== 1) continue; // ambiguous — skip
+
+    const rr = removeRows[0];
+    const ar = addRows[0];
+    if (absorbed.has(rr) || absorbed.has(ar)) continue;
+
+    absorbed.add(rr);
+    absorbed.add(ar);
+
+    const merged = {
+      ...rr,
+      category: 'symbol_renamed',
+      severity: 'breaking',
+      perLanguage: {},
+      mergeHints: [...new Set([...(rr.mergeHints ?? []), ...(ar.mergeHints ?? [])])],
+    };
+    if (!merged.routeKey && ar.routeKey) merged.routeKey = ar.routeKey;
+    if (!merged.operationId && ar.operationId) merged.operationId = ar.operationId;
+    if (!merged.service && ar.service) merged.service = ar.service;
+
+    for (const lang of Object.keys(rr.perLanguage)) {
+      merged.perLanguage[lang] = {
+        previous: rr.perLanguage[lang]?.previous || '—',
+        now: ar.perLanguage[lang]?.now || '—',
+      };
+    }
+
+    renamed.push(merged);
+  }
+
+  return [...rows.filter((r) => !absorbed.has(r)), ...renamed];
+}
+
 function mergeRelatedRows(rows) {
   // --- Pass 1: category + local name (existing logic) ---
   const groups = new Map();
@@ -335,11 +402,14 @@ function mergeRelatedRows(rows) {
     pass1.push(...buckets);
   }
 
+  // --- Pass 1.5: pair symbol_removed + symbol_added into symbol_renamed ---
+  const afterPairing = pairRemoveAddRows(pass1);
+
   // --- Pass 2: cross-category merge via routeKey + mergeHints ---
   // Only attempt this when rows share a routeKey (same HTTP endpoint)
   // and have a common normalized merge hint (the affected field name).
   const routeGroups = new Map();
-  for (const row of pass1) {
+  for (const row of afterPairing) {
     if (!row.routeKey) continue;
     for (const hint of row.mergeHints ?? []) {
       const key = `${row.routeKey}:${hint}`;
@@ -351,7 +421,6 @@ function mergeRelatedRows(rows) {
   const absorbed = new Set();
   for (const group of routeGroups.values()) {
     if (group.length <= 1) continue;
-    // Pick the first row as the target; fold the rest into it
     const target = group[0];
     for (let i = 1; i < group.length; i++) {
       const row = group[i];
@@ -361,7 +430,37 @@ function mergeRelatedRows(rows) {
     }
   }
 
-  return pass1.filter((row) => !absorbed.has(row));
+  // --- Pass 3: absorb non-routeKey rows into unique anchors ---
+  // A row without a routeKey (e.g. an Options-type field change) can be
+  // folded into a routeKey row (e.g. a service method param change) when
+  // they share a merge hint — they represent the same spec-level change
+  // surfacing differently across languages.  Only absorb when there is
+  // exactly one candidate anchor to avoid ambiguous merges.
+  const hintToAnchor = new Map();
+  for (const row of afterPairing) {
+    if (!row.routeKey || absorbed.has(row)) continue;
+    for (const hint of row.mergeHints ?? []) {
+      if (hint.length < 4) continue; // skip generic hints like "id"
+      if (!hintToAnchor.has(hint)) hintToAnchor.set(hint, new Set());
+      hintToAnchor.get(hint).add(row);
+    }
+  }
+
+  for (const row of afterPairing) {
+    if (row.routeKey || absorbed.has(row)) continue;
+    const candidates = new Set();
+    for (const hint of row.mergeHints ?? []) {
+      if (hint.length < 4) continue;
+      const anchors = hintToAnchor.get(hint);
+      if (anchors) for (const a of anchors) candidates.add(a);
+    }
+    if (candidates.size === 1) {
+      foldRowInto([...candidates][0], row);
+      absorbed.add(row);
+    }
+  }
+
+  return afterPairing.filter((row) => !absorbed.has(row));
 }
 
 function buildRollup(languageData) {
@@ -391,6 +490,8 @@ function buildRollup(languageData) {
         symbol: change.symbol,
         mergeHints: [],
         perLanguage: {},
+        kind: '',
+        signature: '',
       };
 
       // Collect normalized field names for cross-category merge.
@@ -418,6 +519,10 @@ function buildRollup(languageData) {
       if (!row.operationId && meta.operationId) row.operationId = meta.operationId;
       if (!row.service && manifestEntry?.service) row.service = manifestEntry.service;
       if (!row.detail && change.message) row.detail = change.message;
+      if (!row.kind && meta.kind) row.kind = meta.kind;
+      if (!row.signature && meta.candidateSymbol?.parameters?.length) {
+        row.signature = formatParamList(meta.candidateSymbol.parameters);
+      }
 
       if (manifestEntries.length > 1) {
         row.perLanguage[entry.language] = {
@@ -564,22 +669,64 @@ function renderDetailedSection(lines, title, rows, languages, open) {
   lines.push('');
 }
 
-/** Render additive section: compact list with language coverage. */
+/** Render additive section: grouped by service with method signatures. */
 function renderCompactSection(lines, title, rows, languages) {
   lines.push('<details>');
   lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
   lines.push('');
 
-  lines.push('| Change | Languages |');
-  lines.push('| --- | --- |');
-
+  // Group by service
+  const byService = new Map();
+  const noService = [];
   for (const row of rows) {
-    const affected = languages.filter((lang) => row.perLanguage[lang]);
-    const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
-    lines.push(`| ${escapeCell(`\`${row.symbol}\` ${categoryVerb(row.category)}`)} | ${langStr} |`);
+    if (row.service) {
+      if (!byService.has(row.service)) byService.set(row.service, []);
+      byService.get(row.service).push(row);
+    } else {
+      noService.push(row);
+    }
   }
 
-  lines.push('');
+  function renderAdditiveGroup(groupRows) {
+    const methods = groupRows.filter((r) => r.kind === 'callable');
+    const others = groupRows.filter((r) => r.kind !== 'callable');
+
+    if (methods.length > 0) {
+      for (const row of methods) {
+        const affected = languages.filter((lang) => row.perLanguage[lang]);
+        const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
+        const sig = row.signature ? `(${row.signature})` : '';
+        lines.push(`- \`${row.symbol}${sig}\` — ${langStr}`);
+      }
+      lines.push('');
+    }
+
+    if (others.length > 0) {
+      lines.push('| Change | Languages |');
+      lines.push('| --- | --- |');
+      for (const row of others) {
+        const affected = languages.filter((lang) => row.perLanguage[lang]);
+        const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
+        lines.push(`| ${escapeCell(`\`${row.symbol}\` ${categoryVerb(row.category)}`)} | ${langStr} |`);
+      }
+      lines.push('');
+    }
+  }
+
+  for (const [service, serviceRows] of [...byService].sort((a, b) => a[0].localeCompare(b[0]))) {
+    lines.push(`#### ${service}`);
+    lines.push('');
+    renderAdditiveGroup(serviceRows);
+  }
+
+  if (noService.length > 0) {
+    if (byService.size > 0) {
+      lines.push('#### Other');
+      lines.push('');
+    }
+    renderAdditiveGroup(noService);
+  }
+
   lines.push('</details>');
   lines.push('');
 }
