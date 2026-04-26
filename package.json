@@ -14,14 +14,16 @@
     "sdk:compat-extract": "bash scripts/sdk-compat-extract.sh",
     "sdk:compat-diff": "bash scripts/sdk-compat-diff.sh",
     "sdk:compat-summary": "bash scripts/sdk-compat-summary.sh",
+    "sdk:languages": "node -e \"console.log(JSON.parse(require('fs').readFileSync('.github/sdk-matrix.json','utf8')).map(e=>e.language).join('\\n'))\"",
+    "sdk:generate-all": "bash scripts/sdk-generate-all.sh --parent-dir",
     "sdk:check": "npx oagen resolve --spec spec/open-api-spec.yaml --format json > /dev/null && echo 'Config loaded successfully'",
     "dev:link": "npm link @workos/oagen @workos/oagen-emitters",
     "dev:unlink": "npm install",
     "prepare": "husky"
   },
   "dependencies": {
-    "@workos/oagen": "^0.9.0",
-    "@workos/oagen-emitters": "^0.6.0",
+    "@workos/oagen": "^0.10.3",
+    "@workos/oagen-emitters": "^0.6.1",
     "js-yaml": "^4.1.1",
     "openapi-to-postmanv2": "^6.0.1"
   },
