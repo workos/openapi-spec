@@ -241,17 +241,60 @@ function normalizeLocalName(symbol) {
 }
 
 /**
+ * Merge a source row into a target bucket.  When the same language already
+ * exists in the target, the before/after cells are concatenated (the two
+ * rows represent different symbols affected by the same spec change in
+ * that language, e.g. an options-type field + a model field).
+ */
+function foldRowInto(target, row) {
+  for (const [lang, entry] of Object.entries(row.perLanguage)) {
+    const existing = target.perLanguage[lang];
+    if (existing) {
+      // Combine cells: deduplicate identical references
+      const prevSet = new Set(existing.previous.split('<br>'));
+      const nowSet = new Set(existing.now.split('<br>'));
+      for (const part of entry.previous.split('<br>')) {
+        if (part && !prevSet.has(part)) {
+          existing.previous += `<br>${part}`;
+          prevSet.add(part);
+        }
+      }
+      for (const part of entry.now.split('<br>')) {
+        if (part && !nowSet.has(part)) {
+          existing.now += `<br>${part}`;
+          nowSet.add(part);
+        }
+      }
+    } else {
+      target.perLanguage[lang] = { ...entry };
+    }
+  }
+  target.severity = highestSeverity(target.severity, row.severity);
+  if (!target.routeKey && row.routeKey) target.routeKey = row.routeKey;
+  if (!target.operationId && row.operationId) target.operationId = row.operationId;
+  if (!target.service && row.service) target.service = row.service;
+  if (!target.detail && row.detail) target.detail = row.detail;
+}
+
+/**
  * Merge rows that represent the same spec-level change across languages.
  *
- * Different languages produce different conceptualChangeIds for the same
- * underlying change (e.g. AdminPortalGenerateLinkOptions.AdminEmails in
- * dotnet vs GenerateLink.admin_emails in Ruby).  This pass collapses them
- * into a single row when:
- *  - they share the same change category
- *  - their normalized local symbol names match
- *  - their language sets don't overlap (no two entries for the same lang)
+ * Two merge passes:
+ *
+ * 1. **Category-local merge** — rows with the same change category and
+ *    normalized local symbol name are merged when their language sets
+ *    don't overlap (original logic).
+ *
+ * 2. **Cross-category merge** — rows that share a routeKey AND a common
+ *    merge hint (the affected field name) are folded together even if
+ *    their categories differ and languages overlap.  This catches cases
+ *    like a parameter rename in PHP/Ruby being the same spec change as a
+ *    field removal in dotnet/Go
+ *    (e.g. AdminPortal.generateLink param admin_emails ↔
+ *     AdminPortalGenerateLinkOptions.AdminEmails).
  */
 function mergeRelatedRows(rows) {
+  // --- Pass 1: category + local name (existing logic) ---
   const groups = new Map();
   for (const row of rows) {
     const key = `${row.category}:${normalizeLocalName(row.symbol)}`;
@@ -259,10 +302,10 @@ function mergeRelatedRows(rows) {
     groups.get(key).push(row);
   }
 
-  const result = [];
+  const pass1 = [];
   for (const group of groups.values()) {
     if (group.length === 1) {
-      result.push(group[0]);
+      pass1.push(group[0]);
       continue;
     }
 
@@ -284,22 +327,41 @@ function mergeRelatedRows(rows) {
       }
 
       if (target) {
-        for (const [lang, entry] of Object.entries(row.perLanguage)) {
-          target.perLanguage[lang] = entry;
-        }
-        target.severity = highestSeverity(target.severity, row.severity);
-        if (!target.routeKey && row.routeKey) target.routeKey = row.routeKey;
-        if (!target.operationId && row.operationId) target.operationId = row.operationId;
-        if (!target.service && row.service) target.service = row.service;
-        if (!target.detail && row.detail) target.detail = row.detail;
+        foldRowInto(target, row);
       } else {
         buckets.push(row);
       }
     }
-    result.push(...buckets);
+    pass1.push(...buckets);
   }
 
-  return result;
+  // --- Pass 2: cross-category merge via routeKey + mergeHints ---
+  // Only attempt this when rows share a routeKey (same HTTP endpoint)
+  // and have a common normalized merge hint (the affected field name).
+  const routeGroups = new Map();
+  for (const row of pass1) {
+    if (!row.routeKey) continue;
+    for (const hint of row.mergeHints ?? []) {
+      const key = `${row.routeKey}:${hint}`;
+      if (!routeGroups.has(key)) routeGroups.set(key, []);
+      routeGroups.get(key).push(row);
+    }
+  }
+
+  const absorbed = new Set();
+  for (const group of routeGroups.values()) {
+    if (group.length <= 1) continue;
+    // Pick the first row as the target; fold the rest into it
+    const target = group[0];
+    for (let i = 1; i < group.length; i++) {
+      const row = group[i];
+      if (row === target || absorbed.has(row)) continue;
+      foldRowInto(target, row);
+      absorbed.add(row);
+    }
+  }
+
+  return pass1.filter((row) => !absorbed.has(row));
 }
 
 function buildRollup(languageData) {
@@ -327,8 +389,29 @@ function buildRollup(languageData) {
         operationId: meta.operationId ?? '',
         service: manifestEntry?.service ?? '',
         symbol: change.symbol,
+        mergeHints: [],
         perLanguage: {},
       };
+
+      // Collect normalized field names for cross-category merge.
+      // The local symbol name (e.g. "AdminEmails" from
+      // "AdminPortalGenerateLinkOptions.AdminEmails") and any affected
+      // parameter name (e.g. "adminEmails" from a parameter rename)
+      // are all normalized so they can match across languages.
+      const symbolHint = normalizeLocalName(change.symbol);
+      if (symbolHint && !row.mergeHints.includes(symbolHint)) row.mergeHints.push(symbolHint);
+      for (const key of ['parameter', 'name']) {
+        const oldVal = change.old?.[key];
+        if (oldVal && oldVal !== '(removed)' && oldVal !== '(absent)') {
+          const hint = normalizeLocalName(oldVal);
+          if (hint && !row.mergeHints.includes(hint)) row.mergeHints.push(hint);
+        }
+        const newVal = change.new?.[key];
+        if (newVal && newVal !== '(removed)' && newVal !== '(absent)') {
+          const hint = normalizeLocalName(newVal);
+          if (hint && !row.mergeHints.includes(hint)) row.mergeHints.push(hint);
+        }
+      }
 
       row.severity = highestSeverity(row.severity, change.severity);
       if (!row.routeKey && routeKey) row.routeKey = routeKey;
