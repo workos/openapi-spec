@@ -118,13 +118,16 @@ jobs:
         with:
           php-version: ${{ steps.sdk-version.outputs.version }}
 
-      - name: Install SDK formatter tools
+      - name: Setup SDK
         working-directory: ${{ matrix.sdk_checkout_path }}
         run: |
-          case "${{ matrix.language }}" in
-            python) uv tool install ruff ;;
-            php)    composer install --prefer-dist --no-progress --no-interaction ;;
-          esac
+          for f in script/setup scripts/setup script/setup.sh scripts/setup.sh; do
+            if [ -x "$f" ]; then
+              echo "Running $f"
+              ./"$f"
+              break
+            fi
+          done
 
       - name: Extract baseline snapshot
         working-directory: openapi-spec

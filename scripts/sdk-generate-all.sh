@@ -32,6 +32,15 @@ for lang in $LANGUAGES; do
   echo "Generating SDK: $lang -> $OUTPUT"
   echo "========================================"
 
+  # Run the SDK's setup script if it exists (installs formatters, deps, etc.)
+  for f in script/setup scripts/setup script/setup.sh scripts/setup.sh; do
+    if [[ -x "$OUTPUT/$f" ]]; then
+      echo "Running setup: $OUTPUT/$f"
+      (cd "$OUTPUT" && ./"$f")
+      break
+    fi
+  done
+
   if ! npm --prefix "$REPO_ROOT" run sdk:generate -- --lang "$lang" --output "$OUTPUT"; then
     echo "[FAIL] Generation failed for: $lang"
     FAILED+=("$lang (generation failed)")
