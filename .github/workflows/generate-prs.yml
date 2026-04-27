@@ -6,6 +6,18 @@ on:
     paths:
       - 'spec/**'
   workflow_dispatch:
+    inputs:
+      languages:
+        description: Languages to generate
+        type: choice
+        default: all
+        options:
+          - all
+          - dotnet
+          - go
+          - php
+          - python
+          - ruby
 
 concurrency:
   group: sdk-generation
@@ -24,7 +36,13 @@ jobs:
 
       - name: Load SDK matrix
         id: set-matrix
-        run: echo "matrix=$(jq -c . .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
+        run: |
+          LANG="${{ inputs.languages }}"
+          if [ -z "$LANG" ] || [ "$LANG" = "all" ]; then
+            echo "matrix=$(jq -c . .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
+          else
+            echo "matrix=$(jq -c --arg lang "$LANG" '[.[] | select(.language == $lang)]' .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
+          fi
 
   generate_pr:
     name: generate_pr (${{ matrix.language }})
