@@ -81,18 +81,34 @@ jobs:
             --output "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
 
       - name: Export previous spec snapshot
+        id: prev-spec
         working-directory: openapi-spec
         run: |
           PREV_COMMIT=$(git log --skip=1 -1 --format=%H -- spec/open-api-spec.yaml)
-          git show "${PREV_COMMIT}:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
+          if [ -z "$PREV_COMMIT" ]; then
+            echo "No previous spec commit found"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            git show "${PREV_COMMIT}:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Diff report
         id: diff-report
+        if: steps.prev-spec.outputs.available == 'true'
         working-directory: openapi-spec
         run: |
-          REPORT=$(npx oagen diff \
+          if ! REPORT=$(npx oagen diff \
             --old /tmp/previous-open-api-spec.yaml \
-            --new spec/open-api-spec.yaml) || true
+            --new spec/open-api-spec.yaml); then
+            echo "::warning::oagen diff failed"
+            exit 0
+          fi
+
+          if ! echo "$REPORT" | jq -e '.summary' > /dev/null 2>&1; then
+            echo "::warning::oagen diff returned invalid JSON"
+            exit 0
+          fi
 
           echo "$REPORT" > /tmp/diff-report.json
 
@@ -113,9 +129,12 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          DIFF_REPORT=$(cat /tmp/diff-report.json)
+          PREFIX=""
+          SUMMARY=""
 
-          if [ -n "$ANTHROPIC_API_KEY" ]; then
+          if [ -f /tmp/diff-report.json ] && [ -n "$ANTHROPIC_API_KEY" ]; then
+            DIFF_REPORT=$(cat /tmp/diff-report.json)
+
             RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
               -H "content-type: application/json" \
               -H "x-api-key: $ANTHROPIC_API_KEY" \
@@ -130,11 +149,11 @@ jobs:
                     content: ("Given this OpenAPI spec diff report, do two things:\n1. Classify the change type: respond with ONLY one of `feat!` (breaking changes), `feat` (additive changes), or `fix` (modifications only).\n2. Write a short summary (under 50 chars) suitable for a commit message.\n\nRespond in exactly this format, two lines:\nPREFIX: <feat!|feat|fix>\nSUMMARY: <short description>\n\nDiff report:\n" + $report)
                   }]
                 }')") || true
-          fi
 
-          CLAUDE_TEXT=$(echo "${RESPONSE:-}" | jq -r '.content[0].text // empty')
-          PREFIX=$(echo "$CLAUDE_TEXT" | grep '^PREFIX:' | sed 's/^PREFIX: *//')
-          SUMMARY=$(echo "$CLAUDE_TEXT" | grep '^SUMMARY:' | sed 's/^SUMMARY: *//')
+            CLAUDE_TEXT=$(echo "${RESPONSE:-}" | jq -r '.content[0].text // empty')
+            PREFIX=$(echo "$CLAUDE_TEXT" | grep '^PREFIX:' | sed 's/^PREFIX: *//')
+            SUMMARY=$(echo "$CLAUDE_TEXT" | grep '^SUMMARY:' | sed 's/^SUMMARY: *//')
+          fi
 
           if [ -z "$PREFIX" ]; then
             BREAKING='${{ steps.diff-report.outputs.breaking }}'
