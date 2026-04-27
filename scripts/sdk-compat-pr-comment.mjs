@@ -108,6 +108,7 @@ function pickSymbolMeta(change, baselineIndex, candidateIndex) {
     route: routeMatch?.route,
     operationId: routeMatch?.operationId ?? anyMatch?.operationId,
     kind: routeMatch?.kind ?? anyMatch?.kind,
+    sourceFile: candidateSymbol?.sourceFile ?? baselineSymbol?.sourceFile,
   };
 }
 
@@ -524,6 +525,7 @@ function buildRollup(languageData) {
         row.signature = formatParamList(meta.candidateSymbol.parameters);
       }
 
+      const langSourceFile = meta.sourceFile ?? '';
       if (manifestEntries.length > 1) {
         row.perLanguage[entry.language] = {
           previous: formatPreviousState(change, meta.baselineSymbol),
@@ -531,11 +533,13 @@ function buildRollup(languageData) {
             .map((item) => formatNowState(change, meta.candidateSymbol, item))
             .filter(Boolean)
             .join('<br><br>'),
+          sourceFile: langSourceFile,
         };
       } else if (manifestEntry) {
         row.perLanguage[entry.language] = {
           previous: formatPreviousState(change, meta.baselineSymbol),
           now: formatNowState(change, meta.candidateSymbol, manifestEntry),
+          sourceFile: langSourceFile,
         };
       } else {
         row.perLanguage[entry.language] = {
@@ -543,6 +547,7 @@ function buildRollup(languageData) {
           now:
             formatNowState(change, meta.candidateSymbol, undefined) ||
             (routeKey ? `manifest entry missing for ${routeKey}` : 'non-operation symbol'),
+          sourceFile: langSourceFile,
         };
       }
 
@@ -567,6 +572,21 @@ function buildRollup(languageData) {
 // ---------------------------------------------------------------------------
 // Rendering helpers
 // ---------------------------------------------------------------------------
+
+const KIND_LABELS = {
+  service_accessor: 'service',
+  callable: 'function',
+  constructor: 'constructor',
+  field: 'field',
+  property: 'property',
+  enum: 'enum',
+  enum_member: 'enum value',
+  alias: 'type',
+};
+
+function kindLabel(kind) {
+  return KIND_LABELS[kind] ?? '';
+}
 
 const CATEGORY_VERBS = {
   symbol_removed: 'removed',
@@ -637,7 +657,9 @@ function renderChangeBlocks(lines, rows, languages) {
     const activeLangs = languages.filter((lang) => group.some((r) => r.perLanguage[lang]));
     if (activeLangs.length === 0) continue;
 
-    const desc = `\`${first.symbol}\` ${categoryVerb(first.category)}`;
+    const kl = kindLabel(first.kind);
+    const kindTag = kl ? ` _(${kl})_` : '';
+    const desc = `\`${first.symbol}\` ${categoryVerb(first.category)}${kindTag}`;
     const route = first.routeKey ? ` — \`${first.routeKey}\`` : '';
     lines.push(`**${desc}**${route}`);
     lines.push('');
@@ -647,15 +669,18 @@ function renderChangeBlocks(lines, rows, languages) {
     for (const lang of activeLangs) {
       const befores = [];
       const afters = [];
+      const sourceFiles = new Set();
       for (const row of group) {
         const entry = row.perLanguage[lang];
         if (!entry) continue;
+        if (entry.sourceFile) sourceFiles.add(entry.sourceFile);
         if (entry.previous && entry.previous !== '—') befores.push(entry.previous);
         if (entry.now && entry.now !== '—') afters.push(entry.now);
       }
       const before = befores.length > 0 ? befores.join('<br>') : '—';
       const after = afters.length > 0 ? afters.join('<br>') : '—';
-      lines.push(`| ${lang} | ${escapeCell(before)} | ${escapeCell(after)} |`);
+      const fileSuffix = sourceFiles.size > 0 ? `<br>📄 ${[...sourceFiles].join(', ')}` : '';
+      lines.push(`| ${lang} | ${escapeCell(before + fileSuffix)} | ${escapeCell(after)} |`);
     }
     lines.push('');
   }
@@ -723,7 +748,7 @@ function renderCompactSection(lines, title, rows, languages) {
         const affected = languages.filter((lang) => row.perLanguage[lang]);
         const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
         const sig = row.signature ? `(${row.signature})` : '';
-        lines.push(`- \`${row.symbol}${sig}\` — ${langStr}`);
+        lines.push(`- \`${row.symbol}${sig}\` _(function)_ — ${langStr}`);
       }
       lines.push('');
     }
@@ -734,7 +759,9 @@ function renderCompactSection(lines, title, rows, languages) {
       for (const row of others) {
         const affected = languages.filter((lang) => row.perLanguage[lang]);
         const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
-        lines.push(`| ${escapeCell(`\`${row.symbol}\` ${categoryVerb(row.category)}`)} | ${langStr} |`);
+        const kl = kindLabel(row.kind);
+        const kindTag = kl ? ` _(${kl})_` : '';
+        lines.push(`| ${escapeCell(`\`${row.symbol}\` ${categoryVerb(row.category)}${kindTag}`)} | ${langStr} |`);
       }
       lines.push('');
     }
