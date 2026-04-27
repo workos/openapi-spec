@@ -14,6 +14,7 @@
     "sdk:compat-extract": "bash scripts/sdk-compat-extract.sh",
     "sdk:compat-diff": "bash scripts/sdk-compat-diff.sh",
     "sdk:compat-summary": "bash scripts/sdk-compat-summary.sh",
+    "sdk:compat-report": "node scripts/sdk-compat-pr-comment.mjs --artifacts-root .oagen --output compat-report.md --build-result success",
     "sdk:languages": "node -e \"console.log(JSON.parse(require('fs').readFileSync('.github/sdk-matrix.json','utf8')).map(e=>e.language).join('\\n'))\"",
     "sdk:generate-all": "bash scripts/sdk-generate-all.sh --parent-dir",
     "sdk:check": "npx oagen resolve --spec spec/open-api-spec.yaml --format json > /dev/null && echo 'Config loaded successfully'",

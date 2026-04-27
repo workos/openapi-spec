@@ -631,6 +631,120 @@ function compactCell(entry) {
   return `${prev} → ${now}`;
 }
 
+// ---------------------------------------------------------------------------
+// Domain inference and compact rendering helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a function that maps each row to a logical API domain.
+ *
+ * Resolution order:
+ * 1. row.service (set from the manifest for callable symbols)
+ * 2. Prefix-match the symbol root against known service names
+ * 3. Fall back to the symbol root itself (part before the first dot),
+ *    consolidated so that if root A is a prefix of root B both map to A.
+ *    e.g. DirectoryUser & DirectoryUserWithGroups → DirectoryUser;
+ *         EventSchema & EventSchemaContext → EventSchema.
+ */
+function buildDomainResolver(rows) {
+  const services = new Set();
+  for (const row of rows) {
+    if (row.service) services.add(row.service);
+  }
+  const sortedServices = [...services].sort((a, b) => b.length - a.length);
+
+  // Collect every root (pre-dot component) and consolidate: when one root
+  // is a strict prefix of another, the longer one maps to the shorter.
+  const roots = new Set();
+  for (const row of rows) {
+    const root = row.symbol.split('.')[0];
+    if (root) roots.add(root);
+  }
+
+  const rootToDomain = new Map();
+  const sortedRoots = [...roots].sort((a, b) => a.length - b.length);
+  for (const root of roots) {
+    let best = root;
+    for (const shorter of sortedRoots) {
+      if (shorter.length >= root.length) break;
+      if (root.startsWith(shorter)) {
+        best = shorter;
+        break;
+      }
+    }
+    rootToDomain.set(root, best);
+  }
+
+  return function deriveDomain(row) {
+    if (row.service) return row.service;
+    const root = row.symbol.split('.')[0];
+    for (const svc of sortedServices) {
+      if (root.startsWith(svc)) return svc;
+    }
+    return rootToDomain.get(root) ?? (root || 'Other');
+  };
+}
+
+const SUPER_CATEGORIES = {
+  symbol_removed: 'removed',
+  symbol_renamed: 'renamed',
+  symbol_added: 'added',
+  parameter_removed: 'params',
+  parameter_renamed: 'params',
+  parameter_type_narrowed: 'params',
+  parameter_requiredness_increased: 'params',
+  parameter_position_changed_order_sensitive: 'params',
+  parameter_added_optional_terminal: 'params',
+  parameter_added_non_terminal_optional: 'params',
+  constructor_position_changed_order_sensitive: 'params',
+  constructor_reordered_named_friendly: 'params',
+  field_type_changed: 'type_changed',
+  return_type_changed: 'type_changed',
+  enum_member_value_changed: 'type_changed',
+};
+
+function superCategory(category) {
+  return SUPER_CATEGORIES[category] ?? 'other';
+}
+
+/**
+ * Extract a compact description of a parameter change from a row,
+ * parsing the formatted per-language cells for parameter and position info.
+ */
+function describeParamChange(row) {
+  const firstEntry = Object.values(row.perLanguage)[0];
+  if (!firstEntry) return categoryVerb(row.category);
+
+  const oldParamMatch = firstEntry.previous?.match(/parameter:\s*`([^`]+)`/);
+  const newParamMatch = firstEntry.now?.match(/parameter:\s*`([^`]+)`/);
+  const param = oldParamMatch?.[1] ?? newParamMatch?.[1];
+
+  if (!param) return categoryVerb(row.category);
+
+  if (row.category.includes('removed')) return `\`${param}\` removed`;
+  if (row.category.includes('renamed')) {
+    const newParam = newParamMatch?.[1];
+    if (newParam && newParam !== param) return `\`${param}\` → \`${newParam}\``;
+    return `\`${param}\` renamed`;
+  }
+  if (row.category.includes('position') || row.category.includes('reordered')) {
+    const oldPos = firstEntry.previous?.match(/position:\s*`(\d+)`/)?.[1];
+    const newPos = firstEntry.now?.match(/position:\s*`(\d+)`/)?.[1];
+    if (oldPos && newPos) return `\`${param}\` moved ${oldPos}\u2192${newPos}`;
+    return `\`${param}\` reordered`;
+  }
+  if (row.category.includes('type')) {
+    const oldType = firstEntry.previous?.match(/type:\s*`([^`]+)`/)?.[1];
+    const newType = firstEntry.now?.match(/type:\s*`([^`]+)`/)?.[1];
+    if (oldType && newType) return `\`${param}\` type: \`${oldType}\` \u2192 \`${newType}\``;
+    return `\`${param}\` type changed`;
+  }
+  if (row.category.includes('required')) return `\`${param}\` now required`;
+  if (row.category.includes('added')) return `\`${param}\` added`;
+
+  return `\`${param}\` ${categoryVerb(row.category)}`;
+}
+
 /** Render changes as per-change blocks with before/after code samples.
  *  Rows that share the same symbol + category are collapsed into a single
  *  table so that e.g. three param removals on one method render as one block.
@@ -686,57 +800,60 @@ function renderChangeBlocks(lines, rows, languages) {
   }
 }
 
-/** Render breaking / soft-risk section: grouped by service, with route shown inline. */
-function renderDetailedSection(lines, title, rows, languages, open) {
+/** Render breaking / soft-risk section: grouped by domain, then by change type. */
+function renderDetailedSection(lines, title, rows, languages, open, deriveDomain) {
   lines.push(`<details${open ? ' open' : ''}>`);
   lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
   lines.push('');
 
-  const byService = new Map();
-  const noService = [];
+  if (!deriveDomain) deriveDomain = buildDomainResolver(rows);
+
+  const byDomain = new Map();
   for (const row of rows) {
-    if (row.service) {
-      if (!byService.has(row.service)) byService.set(row.service, []);
-      byService.get(row.service).push(row);
-    } else {
-      noService.push(row);
-    }
+    const domain = deriveDomain(row);
+    if (!byDomain.has(domain)) byDomain.set(domain, []);
+    byDomain.get(domain).push(row);
   }
 
-  for (const [service, serviceRows] of byService) {
-    lines.push(`#### ${service}`);
+  for (const [domain, domainRows] of byDomain) {
+    lines.push(`#### ${domain}`);
     lines.push('');
-    renderChangeBlocks(lines, serviceRows, languages);
-  }
 
-  if (noService.length > 0) {
-    if (byService.size > 0) {
-      lines.push('#### Other changes');
-      lines.push('');
+    const removed = domainRows.filter((r) => superCategory(r.category) === 'removed');
+    const renamed = domainRows.filter((r) => superCategory(r.category) === 'renamed');
+    const params = domainRows.filter((r) => superCategory(r.category) === 'params');
+    const typeChanged = domainRows.filter((r) => superCategory(r.category) === 'type_changed');
+    const other = domainRows.filter((r) => {
+      const sc = superCategory(r.category);
+      return sc !== 'removed' && sc !== 'renamed' && sc !== 'params' && sc !== 'type_changed';
+    });
+
+    renderRemovedRows(lines, removed, languages);
+    renderRenamedRows(lines, renamed, languages);
+    renderParamChangeRows(lines, params, languages);
+    renderTypeChangeRows(lines, typeChanged, languages);
+    if (other.length > 0) {
+      renderChangeBlocks(lines, other, languages);
     }
-    renderChangeBlocks(lines, noService, languages);
   }
 
   lines.push('</details>');
   lines.push('');
 }
 
-/** Render additive section: grouped by service with method signatures. */
-function renderCompactSection(lines, title, rows, languages) {
+/** Render additive section: grouped by domain with method signatures. */
+function renderCompactSection(lines, title, rows, languages, deriveDomain) {
   lines.push('<details>');
   lines.push(`<summary><h3>${title} (${rows.length})</h3></summary>`);
   lines.push('');
 
-  // Group by service
-  const byService = new Map();
-  const noService = [];
+  // Group by domain (matches the detailed section grouping)
+  if (!deriveDomain) deriveDomain = buildDomainResolver(rows);
+  const byDomain = new Map();
   for (const row of rows) {
-    if (row.service) {
-      if (!byService.has(row.service)) byService.set(row.service, []);
-      byService.get(row.service).push(row);
-    } else {
-      noService.push(row);
-    }
+    const domain = deriveDomain(row);
+    if (!byDomain.has(domain)) byDomain.set(domain, []);
+    byDomain.get(domain).push(row);
   }
 
   function formatAdditiveLangs(row) {
@@ -764,21 +881,162 @@ function renderCompactSection(lines, title, rows, languages) {
     lines.push('');
   }
 
-  for (const [service, serviceRows] of [...byService].sort((a, b) => a[0].localeCompare(b[0]))) {
-    lines.push(`#### ${service}`);
+  for (const [domain, domainRows] of [...byDomain].sort((a, b) => a[0].localeCompare(b[0]))) {
+    lines.push(`#### ${domain}`);
     lines.push('');
-    renderAdditiveGroup(serviceRows);
-  }
-
-  if (noService.length > 0) {
-    if (byService.size > 0) {
-      lines.push('#### Other');
-      lines.push('');
-    }
-    renderAdditiveGroup(noService);
+    renderAdditiveGroup(domainRows);
   }
 
   lines.push('</details>');
+  lines.push('');
+}
+
+// ---------------------------------------------------------------------------
+// Compact sub-renderers (used by the improved renderDetailedSection)
+// ---------------------------------------------------------------------------
+
+/** Render removed rows compactly: methods as a table, types/fields in a collapsible table. */
+function renderRemovedRows(lines, rows, languages) {
+  if (rows.length === 0) return;
+
+  const methods = rows.filter(
+    (r) => r.kind === 'callable' || r.kind === 'constructor' || r.kind === 'service_accessor',
+  );
+  const others = rows.filter((r) => !methods.includes(r));
+
+  if (methods.length > 0) {
+    lines.push(`**Removed methods** (${methods.length})`);
+    lines.push('');
+    lines.push('| Method | Languages |');
+    lines.push('| --- | --- |');
+    for (const row of methods) {
+      const langs = Object.keys(row.perLanguage).sort().join(', ');
+      const sig = row.signature ? `(${row.signature})` : '';
+      lines.push(`| \`${row.symbol}${sig}\` | ${langs} |`);
+    }
+    lines.push('');
+  }
+
+  if (others.length > 0) {
+    const kindCounts = {};
+    for (const row of others) {
+      const k = kindLabel(row.kind) || 'symbol';
+      kindCounts[k] = (kindCounts[k] || 0) + 1;
+    }
+    const kindsDesc = Object.entries(kindCounts)
+      .map(([k, c]) => `${c} ${k}${c !== 1 ? 's' : ''}`)
+      .join(', ');
+
+    lines.push(`<details>`);
+    lines.push(`<summary><strong>${kindsDesc} removed</strong></summary>`);
+    lines.push('');
+    lines.push('| Symbol | Kind | Languages |');
+    lines.push('| --- | --- | --- |');
+    for (const row of others) {
+      const kl = kindLabel(row.kind) || 'symbol';
+      const langs = Object.keys(row.perLanguage).sort().join(', ');
+      lines.push(`| \`${row.symbol}\` | ${kl} | ${langs} |`);
+    }
+    lines.push('');
+    lines.push('</details>');
+    lines.push('');
+  }
+}
+
+/** Render renamed rows as a compact before/after table. */
+function renderRenamedRows(lines, rows, languages) {
+  if (rows.length === 0) return;
+
+  lines.push(`**Renamed** (${rows.length})`);
+  lines.push('');
+  lines.push('| Symbol | Before | After | Languages |');
+  lines.push('| --- | --- | --- | --- |');
+
+  for (const row of rows) {
+    const langs = Object.keys(row.perLanguage).sort().join(', ');
+    const firstEntry = Object.values(row.perLanguage)[0];
+    const before = extractRef(firstEntry?.previous);
+    const after = extractRef(firstEntry?.now);
+    lines.push(
+      `| \`${row.symbol}\` | ${escapeCell(before)} | ${escapeCell(after)} | ${langs} |`,
+    );
+  }
+  lines.push('');
+}
+
+/** Render parameter changes grouped by parent method — one row per method. */
+function renderParamChangeRows(lines, rows, languages) {
+  if (rows.length === 0) return;
+
+  const byMethod = new Map();
+  for (const row of rows) {
+    if (!byMethod.has(row.symbol)) byMethod.set(row.symbol, []);
+    byMethod.get(row.symbol).push(row);
+  }
+
+  lines.push(`**Parameter changes** (${rows.length})`);
+  lines.push('');
+  lines.push('| Method | Changes | Languages |');
+  lines.push('| --- | --- | --- |');
+
+  for (const [method, methodRows] of byMethod) {
+    const descriptions = methodRows.map((r) => describeParamChange(r));
+    const langs = new Set();
+    for (const r of methodRows) {
+      for (const lang of Object.keys(r.perLanguage)) langs.add(lang);
+    }
+    lines.push(
+      `| \`${method}\` | ${escapeCell(descriptions.join('; '))} | ${[...langs].sort().join(', ')} |`,
+    );
+  }
+  lines.push('');
+}
+
+/** Render type/field/enum changes using the existing Before/After block format. */
+function renderTypeChangeRows(lines, rows, languages) {
+  if (rows.length === 0) return;
+
+  lines.push(`**Type changes** (${rows.length})`);
+  lines.push('');
+  renderChangeBlocks(lines, rows, languages);
+}
+
+/** Render a domain-grouped summary table showing change counts per API domain. */
+function renderDomainSummary(lines, rows, languages, deriveDomain) {
+  if (!deriveDomain) deriveDomain = buildDomainResolver(rows);
+  const domainData = new Map();
+
+  for (const row of rows) {
+    const domain = deriveDomain(row);
+    if (!domainData.has(domain)) {
+      domainData.set(domain, { breaking: 0, softRisk: 0, additive: 0, languages: new Set() });
+    }
+    const d = domainData.get(domain);
+    if (row.severity === 'breaking') d.breaking++;
+    else if (row.severity === 'soft-risk') d.softRisk++;
+    else d.additive++;
+    for (const lang of Object.keys(row.perLanguage)) d.languages.add(lang);
+  }
+
+  const sorted = [...domainData.entries()].sort((a, b) => {
+    const totalA = a[1].breaking * 100 + a[1].softRisk * 10 + a[1].additive;
+    const totalB = b[1].breaking * 100 + b[1].softRisk * 10 + b[1].additive;
+    return totalB - totalA;
+  });
+
+  lines.push('### Changes by domain');
+  lines.push('');
+  lines.push('| Domain | Breaking | Soft-risk | Additive | Languages |');
+  lines.push('| --- | --- | --- | --- | --- |');
+
+  for (const [domain, data] of sorted) {
+    const b = data.breaking || '\u2014';
+    const s = data.softRisk || '\u2014';
+    const a = data.additive || '\u2014';
+    const langs =
+      data.languages.size === languages.length ? 'all' : [...data.languages].sort().join(', ');
+    lines.push(`| ${domain} | ${b} | ${s} | ${a} | ${langs} |`);
+  }
   lines.push('');
 }
 
@@ -830,16 +1088,22 @@ function renderMarkdown(languageData, buildResult) {
   const softRisk = rollup.rows.filter((r) => r.severity === 'soft-risk');
   const additive = rollup.rows.filter((r) => r.severity === 'additive');
 
+  // Build domain resolver once from all rows so type-only domains (e.g.
+  // EventSchema) are correctly grouped even when they have no service field.
+  const deriveDomain = buildDomainResolver(rollup.rows);
+
   lines.push('');
 
+  renderDomainSummary(lines, rollup.rows, rollup.languages, deriveDomain);
+
   if (breaking.length > 0) {
-    renderDetailedSection(lines, 'Breaking', breaking, rollup.languages, true);
+    renderDetailedSection(lines, 'Breaking', breaking, rollup.languages, true, deriveDomain);
   }
   if (softRisk.length > 0) {
-    renderDetailedSection(lines, 'Soft-risk', softRisk, rollup.languages, false);
+    renderDetailedSection(lines, 'Soft-risk', softRisk, rollup.languages, false, deriveDomain);
   }
   if (additive.length > 0) {
-    renderCompactSection(lines, 'Additive', additive, rollup.languages);
+    renderCompactSection(lines, 'Additive', additive, rollup.languages, deriveDomain);
   }
 
   return lines.join('\n') + '\n';
