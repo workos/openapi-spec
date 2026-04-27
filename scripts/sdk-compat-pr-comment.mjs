@@ -739,32 +739,29 @@ function renderCompactSection(lines, title, rows, languages) {
     }
   }
 
+  function formatAdditiveLangs(row) {
+    const affected = languages.filter((lang) => row.perLanguage[lang]);
+    if (affected.length === languages.length && affected.every((lang) => !row.perLanguage[lang]?.sourceFile)) {
+      return 'all';
+    }
+    return affected
+      .map((lang) => {
+        const sf = row.perLanguage[lang]?.sourceFile;
+        return sf ? `${lang}<br>📄 ${sf}` : lang;
+      })
+      .join('<br>');
+  }
+
   function renderAdditiveGroup(groupRows) {
-    const methods = groupRows.filter((r) => r.kind === 'callable');
-    const others = groupRows.filter((r) => r.kind !== 'callable');
-
-    if (methods.length > 0) {
-      for (const row of methods) {
-        const affected = languages.filter((lang) => row.perLanguage[lang]);
-        const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
-        const sig = row.signature ? `(${row.signature})` : '';
-        lines.push(`- \`${row.symbol}${sig}\` _(function)_ — ${langStr}`);
-      }
-      lines.push('');
+    lines.push('| Change | Languages |');
+    lines.push('| --- | --- |');
+    for (const row of groupRows) {
+      const kl = kindLabel(row.kind);
+      const kindTag = kl ? ` _(${kl})_` : '';
+      const sig = row.kind === 'callable' && row.signature ? `(${row.signature})` : '';
+      lines.push(`| ${escapeCell(`\`${row.symbol}${sig}\` ${categoryVerb(row.category)}${kindTag}`)} | ${escapeCell(formatAdditiveLangs(row))} |`);
     }
-
-    if (others.length > 0) {
-      lines.push('| Change | Languages |');
-      lines.push('| --- | --- |');
-      for (const row of others) {
-        const affected = languages.filter((lang) => row.perLanguage[lang]);
-        const langStr = affected.length === languages.length ? 'all' : affected.join(', ');
-        const kl = kindLabel(row.kind);
-        const kindTag = kl ? ` _(${kl})_` : '';
-        lines.push(`| ${escapeCell(`\`${row.symbol}\` ${categoryVerb(row.category)}${kindTag}`)} | ${langStr} |`);
-      }
-      lines.push('');
-    }
+    lines.push('');
   }
 
   for (const [service, serviceRows] of [...byService].sort((a, b) => a[0].localeCompare(b[0]))) {
