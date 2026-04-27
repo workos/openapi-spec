@@ -76,8 +76,8 @@ jobs:
       - name: Export previous spec snapshot
         working-directory: openapi-spec
         run: |
-          BASE_SHA="$(cat .last-synced-sha)"
-          git show "${BASE_SHA}:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
+          PREV_COMMIT=$(git log --skip=1 -1 --format=%H -- spec/open-api-spec.yaml)
+          git show "${PREV_COMMIT}:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
 
       - name: Diff report
         id: diff-report
