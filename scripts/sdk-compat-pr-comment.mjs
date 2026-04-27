@@ -680,7 +680,7 @@ function renderChangeBlocks(lines, rows, languages) {
       const before = befores.length > 0 ? befores.join('<br>') : '—';
       const after = afters.length > 0 ? afters.join('<br>') : '—';
       const fileSuffix = sourceFiles.size > 0 ? `<br>📄 ${[...sourceFiles].join(', ')}` : '';
-      lines.push(`| ${lang} | ${escapeCell(before + fileSuffix)} | ${escapeCell(after)} |`);
+      lines.push(`| ${lang}${fileSuffix} | ${escapeCell(before)} | ${escapeCell(after)} |`);
     }
     lines.push('');
   }
