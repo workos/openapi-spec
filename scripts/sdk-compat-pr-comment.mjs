@@ -611,23 +611,50 @@ function compactCell(entry) {
   return `${prev} → ${now}`;
 }
 
-/** Render changes as per-change blocks with before/after code samples. */
+/** Render changes as per-change blocks with before/after code samples.
+ *  Rows that share the same symbol + category are collapsed into a single
+ *  table so that e.g. three param removals on one method render as one block.
+ */
 function renderChangeBlocks(lines, rows, languages) {
+  // Group rows by symbol + category
+  const groups = [];
+  const groupIndex = new Map();
   for (const row of rows) {
-    const activeLangs = languages.filter((lang) => row.perLanguage[lang]);
+    const key = `${row.symbol}:${row.category}`;
+    let idx = groupIndex.get(key);
+    if (idx === undefined) {
+      idx = groups.length;
+      groupIndex.set(key, idx);
+      groups.push([]);
+    }
+    groups[idx].push(row);
+  }
+
+  for (const group of groups) {
+    const first = group[0];
+
+    // Collect all active languages across the group
+    const activeLangs = languages.filter((lang) => group.some((r) => r.perLanguage[lang]));
     if (activeLangs.length === 0) continue;
 
-    const desc = `\`${row.symbol}\` ${categoryVerb(row.category)}`;
-    const route = row.routeKey ? ` — \`${row.routeKey}\`` : '';
+    const desc = `\`${first.symbol}\` ${categoryVerb(first.category)}`;
+    const route = first.routeKey ? ` — \`${first.routeKey}\`` : '';
     lines.push(`**${desc}**${route}`);
     lines.push('');
     lines.push('| Language | Before | After |');
     lines.push('| --- | --- | --- |');
 
     for (const lang of activeLangs) {
-      const entry = row.perLanguage[lang];
-      const before = entry.previous || '—';
-      const after = entry.now || '—';
+      const befores = [];
+      const afters = [];
+      for (const row of group) {
+        const entry = row.perLanguage[lang];
+        if (!entry) continue;
+        if (entry.previous && entry.previous !== '—') befores.push(entry.previous);
+        if (entry.now && entry.now !== '—') afters.push(entry.now);
+      }
+      const before = befores.length > 0 ? befores.join('<br>') : '—';
+      const after = afters.length > 0 ? afters.join('<br>') : '—';
       lines.push(`| ${lang} | ${escapeCell(before)} | ${escapeCell(after)} |`);
     }
     lines.push('');
