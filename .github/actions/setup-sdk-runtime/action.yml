@@ -1,0 +1,74 @@
+name: Setup SDK Runtime
+description: Install the language runtime and formatter tools needed by an SDK emitter
+
+inputs:
+  language:
+    description: Target language (ruby, python, go, dotnet, php)
+    required: true
+  sdk-path:
+    description: Path to the checked-out SDK repo
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Detect SDK runtime version
+      id: sdk-version
+      working-directory: ${{ inputs.sdk-path }}
+      shell: bash
+      run: |
+        case "${{ inputs.language }}" in
+          ruby)   echo "version=$(cat .ruby-version)" >> "$GITHUB_OUTPUT" ;;
+          python) echo "version=$(cat .python-version 2>/dev/null || grep -Po '(?<=requires-python.*>=)\d+\.\d+' pyproject.toml)" >> "$GITHUB_OUTPUT" ;;
+          go)     echo "version=$(grep '^go ' go.mod | awk '{print $2}')" >> "$GITHUB_OUTPUT" ;;
+          dotnet) echo "version=$(grep -Po '(?<=<TargetFramework>net)\d+\.\d+' $(find . -name '*.csproj' -path '*/src/*' | head -1))" >> "$GITHUB_OUTPUT" ;;
+          php)    echo "version=$(grep -Po '\"php\":\s*\"\^?\K[\d.]+' composer.json)" >> "$GITHUB_OUTPUT" ;;
+        esac
+
+    - name: Setup Ruby
+      if: inputs.language == 'ruby'
+      uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735 # v1.305.0
+      with:
+        ruby-version: ${{ steps.sdk-version.outputs.version }}
+        bundler-cache: true
+        working-directory: ${{ inputs.sdk-path }}
+
+    - name: Setup Python
+      if: inputs.language == 'python'
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      with:
+        python-version: ${{ steps.sdk-version.outputs.version }}
+
+    - name: Setup uv
+      if: inputs.language == 'python'
+      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      with:
+        enable-cache: true
+        cache-dependency-glob: '${{ inputs.sdk-path }}/**/uv.lock'
+
+    - name: Setup Go
+      if: inputs.language == 'go'
+      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      with:
+        go-version: ${{ steps.sdk-version.outputs.version }}
+
+    - name: Setup .NET
+      if: inputs.language == 'dotnet'
+      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      with:
+        dotnet-version: ${{ steps.sdk-version.outputs.version }}
+
+    - name: Setup PHP
+      if: inputs.language == 'php'
+      uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # 2.37.0
+      with:
+        php-version: ${{ steps.sdk-version.outputs.version }}
+
+    - name: Install SDK formatter tools
+      working-directory: ${{ inputs.sdk-path }}
+      shell: bash
+      run: |
+        case "${{ inputs.language }}" in
+          python) uv tool install ruff ;;
+          php)    composer install --prefer-dist --no-progress --no-interaction ;;
+        esac

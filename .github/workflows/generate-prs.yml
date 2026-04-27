@@ -67,6 +67,12 @@ jobs:
         working-directory: openapi-spec
         run: npm ci
 
+      - name: Setup SDK runtime
+        uses: ./openapi-spec/.github/actions/setup-sdk-runtime
+        with:
+          language: ${{ matrix.language }}
+          sdk-path: ${{ matrix.sdk_checkout_path }}
+
       - name: Generate SDK
         working-directory: openapi-spec
         run: |
