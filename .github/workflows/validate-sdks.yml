@@ -67,6 +67,65 @@ jobs:
         working-directory: openapi-spec
         run: npm ci
 
+      - name: Detect SDK runtime version
+        id: sdk-version
+        working-directory: ${{ matrix.sdk_checkout_path }}
+        run: |
+          case "${{ matrix.language }}" in
+            ruby)   echo "version=$(cat .ruby-version)" >> "$GITHUB_OUTPUT" ;;
+            python) echo "version=$(cat .python-version 2>/dev/null || grep -Po '(?<=requires-python.*>=)\d+\.\d+' pyproject.toml)" >> "$GITHUB_OUTPUT" ;;
+            go)     echo "version=$(grep '^go ' go.mod | awk '{print $2}')" >> "$GITHUB_OUTPUT" ;;
+            dotnet) echo "version=$(grep -Po '(?<=<TargetFramework>net)\d+\.\d+' $(find . -name '*.csproj' -path '*/src/*' | head -1))" >> "$GITHUB_OUTPUT" ;;
+            php)    echo "version=$(grep -Po '\"php\":\s*\"\^?\K[\d.]+' composer.json)" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Setup Ruby
+        if: matrix.language == 'ruby'
+        uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735 # v1.305.0
+        with:
+          ruby-version: ${{ steps.sdk-version.outputs.version }}
+          bundler-cache: true
+          working-directory: ${{ matrix.sdk_checkout_path }}
+
+      - name: Setup Python
+        if: matrix.language == 'python'
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ steps.sdk-version.outputs.version }}
+
+      - name: Setup uv
+        if: matrix.language == 'python'
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: '${{ matrix.sdk_checkout_path }}/**/uv.lock'
+
+      - name: Setup Go
+        if: matrix.language == 'go'
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ steps.sdk-version.outputs.version }}
+
+      - name: Setup .NET
+        if: matrix.language == 'dotnet'
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          dotnet-version: ${{ steps.sdk-version.outputs.version }}
+
+      - name: Setup PHP
+        if: matrix.language == 'php'
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # 2.37.0
+        with:
+          php-version: ${{ steps.sdk-version.outputs.version }}
+
+      - name: Install SDK formatter tools
+        working-directory: ${{ matrix.sdk_checkout_path }}
+        run: |
+          case "${{ matrix.language }}" in
+            python) uv tool install ruff ;;
+            php)    composer install --prefer-dist --no-progress --no-interaction ;;
+          esac
+
       - name: Extract baseline snapshot
         working-directory: openapi-spec
         run: |
@@ -76,18 +135,38 @@ jobs:
 
       - name: Generate SDK
         working-directory: openapi-spec
-        run: npm run sdk:generate -- --lang ${{ matrix.language }}  --output ".oagen/${{ matrix.language }}/sdk"
+        run: npm run sdk:generate -- --lang ${{ matrix.language }} --output "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+
+      - name: Run SDK CI
+        working-directory: ${{ matrix.sdk_checkout_path }}
+        run: |
+          if [ -x script/ci ]; then
+            script/ci
+          elif [ -x scripts/ci ]; then
+            scripts/ci
+          else
+            echo "No script/ci or scripts/ci found, skipping"
+          fi
 
       - name: Extract candidate snapshot
         working-directory: openapi-spec
         run: |
           npm run sdk:compat-extract -- \
             --lang ${{ matrix.language }} \
-            --sdk-root .oagen/${{ matrix.language }}/sdk \
+            --sdk-root "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}" \
             --output .oagen/${{ matrix.language }}/sdk
+
+      - name: Copy manifest for diagnostics
+        if: always()
+        working-directory: openapi-spec
+        run: |
+          mkdir -p .oagen/${{ matrix.language }}/sdk
+          cp "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}/.oagen-manifest.json" \
+             .oagen/${{ matrix.language }}/sdk/ 2>/dev/null || true
 
       - name: Compat diff
         id: compat-diff
+        continue-on-error: true
         working-directory: openapi-spec
         run: npm run sdk:compat-diff -- --lang ${{ matrix.language }}
 
@@ -105,6 +184,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: oagen-diagnostics-${{ matrix.language }}
+          include-hidden-files: true
           path: openapi-spec/.oagen/${{ matrix.language }}/
           retention-days: 14
 
