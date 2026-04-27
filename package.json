@@ -22,7 +22,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@workos/oagen": "^0.10.4",
+    "@workos/oagen": "^0.11.0",
     "@workos/oagen-emitters": "^0.6.3",
     "js-yaml": "^4.1.1",
     "openapi-to-postmanv2": "^6.0.1"
