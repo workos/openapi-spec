@@ -253,10 +253,10 @@ jobs:
         working-directory: ${{ matrix.sdk_checkout_path }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PREFIX: ${{ steps.classify.outputs.prefix }}
+          SUMMARY: ${{ steps.classify.outputs.summary }}
+          DESCRIPTION: ${{ steps.classify.outputs.description }}
         run: |
-          PREFIX="${{ steps.classify.outputs.prefix }}"
-          SUMMARY="${{ steps.classify.outputs.summary }}"
-          DESCRIPTION="${{ steps.classify.outputs.description }}"
           BRANCH="oagen/spec-update-${{ github.sha }}"
 
           git config user.name "workos-sdk-automation[bot]"
