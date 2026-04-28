@@ -244,7 +244,7 @@ jobs:
             echo "prefix=$PREFIX"
             echo "summary=$SUMMARY"
             echo "description<<DESCRIPTION_EOF"
-            echo "${DESCRIPTION:-$SUMMARY}"
+            printf '%s\n' "${DESCRIPTION:-$SUMMARY}"
             echo "DESCRIPTION_EOF"
           } >> "$GITHUB_OUTPUT"
 
