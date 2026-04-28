@@ -121,10 +121,12 @@ jobs:
         if: steps.prev-spec.outputs.available == 'true'
         working-directory: openapi-spec
         run: |
-          if ! REPORT=$(npx oagen diff \
+          REPORT=$(npx oagen diff \
             --old /tmp/previous-open-api-spec.yaml \
-            --new spec/open-api-spec.yaml); then
-            echo "::warning::oagen diff failed"
+            --new spec/open-api-spec.yaml) || DIFF_EXIT=$?
+          # Exit code 2 means breaking changes were detected — not a failure
+          if [ "${DIFF_EXIT:-0}" -ne 0 ] && [ "${DIFF_EXIT:-0}" -ne 2 ]; then
+            echo "::warning::oagen diff failed (exit code ${DIFF_EXIT})"
             exit 0
           fi
 
