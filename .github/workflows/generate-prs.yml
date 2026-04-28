@@ -161,7 +161,11 @@ jobs:
           # Truncate to ~800KB to stay within Haiku's 200K token context window
           head -c 800000 /tmp/sdk-diff.txt > /tmp/sdk-diff-truncated.txt
 
-          if [ -s /tmp/sdk-diff-truncated.txt ] && [ -n "$ANTHROPIC_API_KEY" ]; then
+          DIFF_SIZE=$(wc -c < /tmp/sdk-diff-truncated.txt)
+          echo "SDK diff size: ${DIFF_SIZE} bytes"
+
+          if [ "$DIFF_SIZE" -gt 0 ] && [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "Sending ${DIFF_SIZE} bytes to Claude for classification..."
             RESPONSE=$(jq -n --rawfile diff /tmp/sdk-diff-truncated.txt \
                 --arg lang "${{ matrix.language }}" \
                 '{
@@ -197,8 +201,16 @@ jobs:
               -H "anthropic-version: 2023-06-01" \
               -d @-) || true
 
+            # Log response type for debugging (without leaking content)
+            echo "Response type: $(echo "${RESPONSE:-}" | jq -r '.type // "empty"')"
+            echo "Stop reason: $(echo "${RESPONSE:-}" | jq -r '.stop_reason // empty')"
+            echo "Error: $(echo "${RESPONSE:-}" | jq -r '.error.message // empty')"
+
             PREFIX=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.prefix // empty')
             SUMMARY=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.summary // empty')
+            echo "Classified as: prefix=${PREFIX} summary=${SUMMARY}"
+          else
+            echo "Skipping classification: diff is empty or no API key"
           fi
 
           if [ -z "$PREFIX" ]; then
