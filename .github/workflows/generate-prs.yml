@@ -145,33 +145,54 @@ jobs:
 
       - name: Classify changes with Claude
         id: classify
+        working-directory: ${{ matrix.sdk_checkout_path }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           PREFIX=""
           SUMMARY=""
 
-          if [ -f /tmp/diff-report.json ] && [ -n "$ANTHROPIC_API_KEY" ]; then
-            DIFF_REPORT=$(cat /tmp/diff-report.json)
+          SDK_DIFF=$(git diff --stat && echo "---" && git diff)
 
+          if [ -n "$SDK_DIFF" ] && [ -n "$ANTHROPIC_API_KEY" ]; then
             RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
               -H "content-type: application/json" \
               -H "x-api-key: $ANTHROPIC_API_KEY" \
               -H "anthropic-version: 2023-06-01" \
               -d "$(jq -n \
-                --arg report "$DIFF_REPORT" \
+                --arg diff "$SDK_DIFF" \
+                --arg lang "${{ matrix.language }}" \
                 '{
-                  model: "claude-haiku-4-5-20251001",
+                  model: "claude-haiku-4-5-latest",
                   max_tokens: 256,
+                  tools: [{
+                    name: "classify_change",
+                    description: "Classify an SDK code change and provide a short summary",
+                    input_schema: {
+                      type: "object",
+                      properties: {
+                        prefix: {
+                          type: "string",
+                          enum: ["feat!", "feat", "fix"],
+                          description: "feat! for breaking changes (removed/renamed public methods, changed signatures, removed fields). feat for additive changes (new methods, new classes, new fields). fix for non-breaking modifications (bug fixes, internal refactors, doc changes)."
+                        },
+                        summary: {
+                          type: "string",
+                          description: "A short summary (under 50 chars) of what changed in the SDK, suitable for a commit message. Focus on the user-facing impact, not internal details."
+                        }
+                      },
+                      required: ["prefix", "summary"]
+                    }
+                  }],
+                  tool_choice: {type: "tool", name: "classify_change"},
                   messages: [{
                     role: "user",
-                    content: ("Given this OpenAPI spec diff report, do two things:\n1. Classify the change type: respond with ONLY one of `feat!` (breaking changes), `feat` (additive changes), or `fix` (modifications only).\n2. Write a short summary (under 50 chars) suitable for a commit message.\n\nRespond in exactly this format, two lines:\nPREFIX: <feat!|feat|fix>\nSUMMARY: <short description>\n\nDiff report:\n" + $report)
+                    content: ("Classify this generated " + $lang + " SDK diff. Focus on the public API surface: new classes/methods are feat, removed/renamed public symbols are feat!, and internal-only changes are fix.\n\n" + $diff)
                   }]
                 }')") || true
 
-            CLAUDE_TEXT=$(echo "${RESPONSE:-}" | jq -r '.content[0].text // empty')
-            PREFIX=$(echo "$CLAUDE_TEXT" | grep '^PREFIX:' | sed 's/^PREFIX: *//')
-            SUMMARY=$(echo "$CLAUDE_TEXT" | grep '^SUMMARY:' | sed 's/^SUMMARY: *//')
+            PREFIX=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.prefix // empty')
+            SUMMARY=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.summary // empty')
           fi
 
           if [ -z "$PREFIX" ]; then
