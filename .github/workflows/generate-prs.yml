@@ -152,15 +152,15 @@ jobs:
           PREFIX=""
           SUMMARY=""
 
-          SDK_DIFF=$(git diff --stat && echo "---" && git diff)
+          git diff --stat > /tmp/sdk-diff.txt
+          echo -e "\n---\n" >> /tmp/sdk-diff.txt
+          git diff >> /tmp/sdk-diff.txt
 
-          if [ -n "$SDK_DIFF" ] && [ -n "$ANTHROPIC_API_KEY" ]; then
-            RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
-              -H "content-type: application/json" \
-              -H "x-api-key: $ANTHROPIC_API_KEY" \
-              -H "anthropic-version: 2023-06-01" \
-              -d "$(jq -n \
-                --arg diff "$SDK_DIFF" \
+          # Truncate to ~800KB to stay within Haiku's 200K token context window
+          head -c 800000 /tmp/sdk-diff.txt > /tmp/sdk-diff-truncated.txt
+
+          if [ -s /tmp/sdk-diff-truncated.txt ] && [ -n "$ANTHROPIC_API_KEY" ]; then
+            RESPONSE=$(jq -n --rawfile diff /tmp/sdk-diff-truncated.txt \
                 --arg lang "${{ matrix.language }}" \
                 '{
                   model: "claude-haiku-4-5-latest",
@@ -189,7 +189,11 @@ jobs:
                     role: "user",
                     content: ("Classify this generated " + $lang + " SDK diff. Focus on the public API surface: new classes/methods are feat, removed/renamed public symbols are feat!, and internal-only changes are fix.\n\n" + $diff)
                   }]
-                }')") || true
+                }' | curl -s https://api.anthropic.com/v1/messages \
+              -H "content-type: application/json" \
+              -H "x-api-key: $ANTHROPIC_API_KEY" \
+              -H "anthropic-version: 2023-06-01" \
+              -d @-) || true
 
             PREFIX=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.prefix // empty')
             SUMMARY=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.summary // empty')
