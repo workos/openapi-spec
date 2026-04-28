@@ -286,7 +286,7 @@ jobs:
 
           ${DESCRIPTION}
 
-          Triggered by openapi-spec commit: ${{ github.sha }}
+          Triggered by workos/openapi-spec@${{ github.sha }}
           PR_EOF
 
           gh pr create \
