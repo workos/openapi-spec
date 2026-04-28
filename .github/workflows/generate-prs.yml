@@ -152,9 +152,11 @@ jobs:
           PREFIX=""
           SUMMARY=""
 
-          git diff --stat > /tmp/sdk-diff.txt
+          # Stage everything so new (untracked) files appear in the diff
+          git add -A
+          git diff --cached --stat > /tmp/sdk-diff.txt
           echo -e "\n---\n" >> /tmp/sdk-diff.txt
-          git diff >> /tmp/sdk-diff.txt
+          git diff --cached >> /tmp/sdk-diff.txt
 
           # Truncate to ~800KB to stay within Haiku's 200K token context window
           head -c 800000 /tmp/sdk-diff.txt > /tmp/sdk-diff-truncated.txt
