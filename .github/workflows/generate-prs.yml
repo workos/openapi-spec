@@ -18,6 +18,10 @@ on:
           - php
           - python
           - ruby
+      dry_run:
+        description: Run generation and classification without creating PRs
+        type: boolean
+        default: false
 
 concurrency:
   group: sdk-generation
@@ -235,7 +239,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Create PR on live SDK
-        if: success()
+        if: success() && inputs.dry_run != true
         working-directory: ${{ matrix.sdk_checkout_path }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
