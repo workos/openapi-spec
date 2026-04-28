@@ -281,13 +281,8 @@ jobs:
           git commit -m "${PREFIX}(generated): ${SUMMARY}"
           git push origin "$BRANCH"
 
-          cat > /tmp/pr-body.md <<PR_EOF
-          ## Summary
-
-          ${DESCRIPTION}
-
-          Triggered by workos/openapi-spec@${{ github.sha }}
-          PR_EOF
+          printf '## Summary\n\n%s\n\nTriggered by workos/openapi-spec@%s\n' \
+            "$DESCRIPTION" "${{ github.sha }}" > /tmp/pr-body.md
 
           gh pr create \
             --title "${PREFIX}(generated): ${SUMMARY}" \
