@@ -377,15 +377,5 @@ const config: OagenConfig = {
   },
   operationHints,
   mountRules,
-  // Model placement pins. Each entry maps an IR model name (post-cleanSchemaName,
-  // so `User`, not `UserlandUser`) to the IR service that should own its
-  // emission. Without this, oagen's "first service to reference a model wins"
-  // rule can shift placement when new endpoints add references — which surfaces
-  // as a breaking import-path change in the Python SDK (per-service modules).
-  modelHints: {
-    // Anchor the User model to UserManagementUsers; mountRules above remap
-    // that to UserManagement, so the file lands at user_management/models/user.py.
-    User: 'UserManagementUsers',
-  },
 };
 export default config;
