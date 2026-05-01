@@ -3378,7 +3378,7 @@ paths:
             application/json:
               schema:
                 $ref: >-
-                  #/components/schemas/UserlandUserOrganizationMembershipBaseList
+                  #/components/schemas/UserlandUserOrganizationMembershipBaseWithUserList
         '400':
           description: Bad Request
           content:
@@ -4604,7 +4604,7 @@ paths:
             application/json:
               schema:
                 $ref: >-
-                  #/components/schemas/UserlandUserOrganizationMembershipBaseList
+                  #/components/schemas/UserlandUserOrganizationMembershipBaseWithUserList
         '400':
           description: Bad Request
           content:
@@ -8295,7 +8295,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiKeyList'
+                $ref: '#/components/schemas/OrganizationApiKeyList'
         '404':
           description: Not Found
           content:
@@ -8335,7 +8335,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiKeyWithValue'
+                $ref: '#/components/schemas/OrganizationApiKeyWithValue'
         '404':
           description: Not Found
           content:
@@ -12208,6 +12208,33 @@ paths:
       tags:
         - user-management.invitations
   /user_management/jwt_template:
+    get:
+      operationId: JwtTemplatesController_getJwtTemplate
+      summary: Get JWT template
+      description: Get the JWT template for the current environment.
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwtTemplate'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - user-management.jwt-template
     put:
       operationId: JwtTemplatesController_updateJwtTemplate
       summary: Update JWT template
@@ -12225,7 +12252,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JwtTemplateResponse'
+                $ref: '#/components/schemas/JwtTemplate'
         '422':
           description: Unprocessable Entity
           content:
@@ -12689,6 +12716,11 @@ paths:
                     description: >-
                       The primary role assigned to the user within the
                       organization.
+                  user:
+                    $ref: '#/components/schemas/UserlandUser'
+                    description: >-
+                      The user that belongs to the organization through this
+                      membership.
                 required:
                   - object
                   - id
@@ -12699,6 +12731,7 @@ paths:
                   - created_at
                   - updated_at
                   - role
+                  - user
                 x-inline-with-overrides: true
         '400':
           description: Bad Request
@@ -13045,7 +13078,7 @@ paths:
                   user_id:
                     type: string
                     description: The ID of the user.
-                    example: user_01EHQTV6MWP9P1F4ZXGXMC8ABB
+                    example: user_01E4ZCR3C56J083X43JQXF3JK5
                   organization_id:
                     type: string
                     description: The ID of the organization which the user belongs to.
@@ -13098,6 +13131,11 @@ paths:
                     description: >-
                       The primary role assigned to the user within the
                       organization.
+                  user:
+                    $ref: '#/components/schemas/UserlandUser'
+                    description: >-
+                      The user that belongs to the organization through this
+                      membership.
                 required:
                   - object
                   - id
@@ -13108,6 +13146,7 @@ paths:
                   - created_at
                   - updated_at
                   - role
+                  - user
                 x-inline-with-overrides: true
         '400':
           description: Bad Request
@@ -15370,6 +15409,181 @@ paths:
                   - message
       tags:
         - user-management.users
+  /user_management/users/{userId}/api_keys:
+    get:
+      operationId: UserApiKeysController_list
+      summary: List API keys for a user
+      description: Get a list of API keys owned by a specific user.
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          description: Unique identifier of the user.
+          schema:
+            type: string
+            example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list.
+          schema:
+            example: obj_1234567890
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list.
+          schema:
+            example: obj_1234567890
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: Order the results by the creation time.
+          schema:
+            default: desc
+            example: desc
+            enum:
+              - normal
+              - desc
+              - asc
+            type: string
+        - name: organization_id
+          required: false
+          in: query
+          description: >-
+            The ID of the organization to filter user API keys by. When
+            provided, only API keys created against that organization membership
+            are returned.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiKeyList'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - api_keys
+      x-feature-flag: user-api-keys
+    post:
+      operationId: UserApiKeysController_create
+      summary: Create an API key for a user
+      description: >-
+        Create a new API key owned by a user. The user must have an active
+        membership in the specified organization.
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          description: Unique identifier of the user.
+          schema:
+            type: string
+            example: user_01EHZNVPK3SFK441A1RGBFSHRT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserApiKeyDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiKeyWithValue'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Validation failed.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          description: The validation error code.
+                          example: required
+                        field:
+                          type: string
+                          description: The field that failed validation.
+                          example: event.action
+                      required:
+                        - code
+                        - field
+                    description: The list of validation errors.
+                required:
+                  - message
+                  - errors
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      tags:
+        - api_keys
+      x-feature-flag: user-api-keys
   /user_management/users/{userId}/feature-flags:
     get:
       operationId: UserlandUserFeatureFlagsController_list
@@ -17469,7 +17683,9 @@ components:
         content:
           type: string
           description: The JWT template content as a Liquid template string.
-          example: '{"iss": "{{environment.id}}", "sub": "{{user.id}}"}'
+          example: >-
+            {"urn:myapp:full_name": "{{user.first_name}} {{user.last_name}}",
+            "urn:myapp:email": "{{user.email}}"}
       required:
         - content
     CreateOrganizationDomainDto:
@@ -18120,6 +18336,32 @@ components:
                     x-exclude-from-lint: true
                 required:
                   - role_slug
+    CreateUserApiKeyDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: A descriptive name for the API key.
+          example: Production API Key
+        organization_id:
+          type: string
+          description: >-
+            The ID of the organization the user API key is associated with. The
+            user must have an active membership in this organization.
+          example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        permissions:
+          description: >-
+            The permission slugs to assign to the API key. Each permission must
+            be enabled for user API keys.
+          example:
+            - posts:read
+            - posts:write
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - organization_id
     CreateUserlandUserDto:
       allOf:
         - type: object
@@ -18615,21 +18857,48 @@ components:
           description: Unique identifier of the API Key.
           example: api_key_01EHZNVPK3SFK441A1RGBFSHRT
         owner:
-          type: object
-          properties:
-            type:
-              type: string
-              description: The type of the API Key owner.
-              example: organization
-              const: organization
-            id:
-              type: string
-              description: Unique identifier of the API Key owner.
-              example: org_01EHZNVPK3SFK441A1RGBFSHRT
-          required:
-            - type
-            - id
+          discriminator:
+            propertyName: type
+          oneOf:
+            - type: object
+              properties:
+                type:
+                  type: string
+                  description: The type of the API Key owner.
+                  example: organization
+                  const: organization
+                id:
+                  type: string
+                  description: Unique identifier of the API Key owner.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+              required:
+                - type
+                - id
+            - type: object
+              properties:
+                type:
+                  type: string
+                  description: The type of the API Key owner.
+                  example: user
+                  const: user
+                id:
+                  type: string
+                  description: Unique identifier of the API Key owner.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    Unique identifier of the organization the API Key can
+                    access.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+              required:
+                - type
+                - id
+                - organization_id
           description: The entity that owns the API Key.
+          example:
+            type: organization
+            id: org_01EHZNVPK3SFK441A1RGBFSHRT
         name:
           type: string
           description: A descriptive name for the API Key.
@@ -18673,7 +18942,6 @@ components:
         - permissions
         - created_at
         - updated_at
-      description: The API Key object if the value is valid, or `null` if invalid.
     ApiKeyValidationResponse:
       type: object
       properties:
@@ -19772,7 +20040,171 @@ components:
       required:
         - object
         - data
-    UserlandUserOrganizationMembershipBaseList:
+    UserlandUser:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the user object.
+          const: user
+        id:
+          type: string
+          description: The unique ID of the user.
+          example: user_01E4ZCR3C56J083X43JQXF3JK5
+        first_name:
+          type:
+            - string
+            - 'null'
+          description: The first name of the user.
+          example: Marcelina
+        last_name:
+          type:
+            - string
+            - 'null'
+          description: The last name of the user.
+          example: Davis
+        profile_picture_url:
+          type:
+            - string
+            - 'null'
+          description: A URL reference to an image representing the user.
+          example: https://workoscdn.com/images/v1/123abc
+        email:
+          type: string
+          description: The email address of the user.
+          example: marcelina.davis@example.com
+        email_verified:
+          type: boolean
+          description: Whether the user's email has been verified.
+          example: true
+        external_id:
+          type:
+            - string
+            - 'null'
+          description: The external ID of the user.
+          example: f1ffa2b2-c20b-4d39-be5c-212726e11222
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 600
+          description: Object containing metadata key/value pairs associated with the user.
+          example:
+            timezone: America/New_York
+          propertyNames:
+            maxLength: 40
+          maxProperties: 50
+        last_sign_in_at:
+          format: date-time
+          type:
+            - string
+            - 'null'
+          description: The timestamp when the user last signed in.
+          example: '2025-06-25T19:07:33.155Z'
+        locale:
+          type:
+            - string
+            - 'null'
+          description: The user's preferred locale.
+          example: en-US
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - first_name
+        - last_name
+        - profile_picture_url
+        - email
+        - email_verified
+        - external_id
+        - last_sign_in_at
+        - created_at
+        - updated_at
+      description: The user object.
+    UserlandUserOrganizationMembershipBaseWithUser:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the organization membership object.
+          const: organization_membership
+        id:
+          type: string
+          description: The unique ID of the organization membership.
+          example: om_01HXYZ123456789ABCDEFGHIJ
+        user_id:
+          type: string
+          description: The ID of the user.
+          example: user_01E4ZCR3C56J083X43JQXF3JK5
+        organization_id:
+          type: string
+          description: The ID of the organization which the user belongs to.
+          example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - pending
+          description: >-
+            The status of the organization membership. One of `active`,
+            `inactive`, or `pending`.
+          example: active
+        directory_managed:
+          type: boolean
+          description: >-
+            Whether this organization membership is managed by a directory sync
+            connection.
+          example: false
+        organization_name:
+          type: string
+          description: The name of the organization which the user belongs to.
+          example: Acme Corp
+        custom_attributes:
+          type: object
+          additionalProperties: {}
+          description: >-
+            An object containing IdP-sourced attributes from the linked
+            [Directory User](/reference/directory-sync/directory-user) or [SSO
+            Profile](/reference/sso/profile). Directory User attributes take
+            precedence when both are linked.
+          example:
+            department: Engineering
+            title: Developer Experience Engineer
+            location: Brooklyn
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        user:
+          $ref: '#/components/schemas/UserlandUser'
+          description: The user that belongs to the organization through this membership.
+      required:
+        - object
+        - id
+        - user_id
+        - organization_id
+        - status
+        - directory_managed
+        - created_at
+        - updated_at
+        - user
+    UserlandUserOrganizationMembershipBaseWithUserList:
       type: object
       properties:
         object:
@@ -19782,75 +20214,8 @@ components:
         data:
           type: array
           items:
-            type: object
-            properties:
-              object:
-                type: string
-                description: Distinguishes the organization membership object.
-                const: organization_membership
-              id:
-                type: string
-                description: The unique ID of the organization membership.
-                example: om_01HXYZ123456789ABCDEFGHIJ
-              user_id:
-                type: string
-                description: The ID of the user.
-                example: user_01EHQTV6MWP9P1F4ZXGXMC8ABB
-              organization_id:
-                type: string
-                description: The ID of the organization which the user belongs to.
-                example: org_01EHZNVPK3SFK441A1RGBFSHRT
-              status:
-                type: string
-                enum:
-                  - active
-                  - inactive
-                  - pending
-                description: >-
-                  The status of the organization membership. One of `active`,
-                  `inactive`, or `pending`.
-                example: active
-              directory_managed:
-                type: boolean
-                description: >-
-                  Whether this organization membership is managed by a directory
-                  sync connection.
-                example: false
-              organization_name:
-                type: string
-                description: The name of the organization which the user belongs to.
-                example: Acme Corp
-              custom_attributes:
-                type: object
-                additionalProperties: {}
-                description: >-
-                  An object containing IdP-sourced attributes from the linked
-                  [Directory User](/reference/directory-sync/directory-user) or
-                  [SSO Profile](/reference/sso/profile). Directory User
-                  attributes take precedence when both are linked.
-                example:
-                  department: Engineering
-                  title: Developer Experience Engineer
-                  location: Brooklyn
-              created_at:
-                format: date-time
-                type: string
-                description: An ISO 8601 timestamp.
-                example: '2026-01-15T12:00:00.000Z'
-              updated_at:
-                format: date-time
-                type: string
-                description: An ISO 8601 timestamp.
-                example: '2026-01-15T12:00:00.000Z'
-            required:
-              - object
-              - id
-              - user_id
-              - organization_id
-              - status
-              - directory_managed
-              - created_at
-              - updated_at
+            $ref: >-
+              #/components/schemas/UserlandUserOrganizationMembershipBaseWithUser
           description: The list of records for the current page.
         list_metadata:
           type: object
@@ -20397,6 +20762,12 @@ components:
             - 'null'
           description: The last name of the user.
           example: Davis
+        name:
+          type:
+            - string
+            - 'null'
+          description: The full name of the user.
+          example: Marcelina Davis
         emails:
           type: array
           items:
@@ -20476,8 +20847,14 @@ components:
           items:
             $ref: '#/components/schemas/DirectoryGroup'
           description: >-
-            The directory groups the user belongs to. Use the List Directory
-            Groups endpoint with a user filter instead.
+            The directory groups the user belongs to. Deprecated: starting May
+            1, 2026, this field returns an empty array by default for newly
+            created teams. Existing teams currently depending on this field
+            should migrate to the new access pattern for better throughput
+            performance — the field is unbounded by user, so users with many
+            group memberships produce large, slow response payloads. Use the
+            List Directory Groups endpoint with a `user` filter to fetch a
+            user's group memberships.
           deprecated: true
       required:
         - object
@@ -20531,6 +20908,113 @@ components:
         - object
         - data
         - list_metadata
+        - list_metadata
+    UserlandUserOrganizationMembershipBaseList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              object:
+                type: string
+                description: Distinguishes the organization membership object.
+                const: organization_membership
+              id:
+                type: string
+                description: The unique ID of the organization membership.
+                example: om_01HXYZ123456789ABCDEFGHIJ
+              user_id:
+                type: string
+                description: The ID of the user.
+                example: user_01E4ZCR3C56J083X43JQXF3JK5
+              organization_id:
+                type: string
+                description: The ID of the organization which the user belongs to.
+                example: org_01EHZNVPK3SFK441A1RGBFSHRT
+              status:
+                type: string
+                enum:
+                  - active
+                  - inactive
+                  - pending
+                description: >-
+                  The status of the organization membership. One of `active`,
+                  `inactive`, or `pending`.
+                example: active
+              directory_managed:
+                type: boolean
+                description: >-
+                  Whether this organization membership is managed by a directory
+                  sync connection.
+                example: false
+              organization_name:
+                type: string
+                description: The name of the organization which the user belongs to.
+                example: Acme Corp
+              custom_attributes:
+                type: object
+                additionalProperties: {}
+                description: >-
+                  An object containing IdP-sourced attributes from the linked
+                  [Directory User](/reference/directory-sync/directory-user) or
+                  [SSO Profile](/reference/sso/profile). Directory User
+                  attributes take precedence when both are linked.
+                example:
+                  department: Engineering
+                  title: Developer Experience Engineer
+                  location: Brooklyn
+              created_at:
+                format: date-time
+                type: string
+                description: An ISO 8601 timestamp.
+                example: '2026-01-15T12:00:00.000Z'
+              updated_at:
+                format: date-time
+                type: string
+                description: An ISO 8601 timestamp.
+                example: '2026-01-15T12:00:00.000Z'
+            required:
+              - object
+              - id
+              - user_id
+              - organization_id
+              - status
+              - directory_managed
+              - created_at
+              - updated_at
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: om_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: om_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
         - list_metadata
     Group:
       type: object
@@ -20627,6 +21111,7 @@ components:
           enum:
             - api
             - dashboard
+            - admin_portal
             - system
           description: The source of the actor that performed the action.
         name:
@@ -20725,6 +21210,12 @@ components:
             - 'null'
           description: The last name of the user.
           example: Davis
+        name:
+          type:
+            - string
+            - 'null'
+          description: The full name of the user.
+          example: Marcelina Davis
         emails:
           type: array
           items:
@@ -20811,96 +21302,6 @@ components:
         - custom_attributes
         - created_at
         - updated_at
-    UserlandUser:
-      type: object
-      properties:
-        object:
-          type: string
-          description: Distinguishes the user object.
-          const: user
-        id:
-          type: string
-          description: The unique ID of the user.
-          example: user_01E4ZCR3C56J083X43JQXF3JK5
-        first_name:
-          type:
-            - string
-            - 'null'
-          description: The first name of the user.
-          example: Marcelina
-        last_name:
-          type:
-            - string
-            - 'null'
-          description: The last name of the user.
-          example: Davis
-        profile_picture_url:
-          type:
-            - string
-            - 'null'
-          description: A URL reference to an image representing the user.
-          example: https://workoscdn.com/images/v1/123abc
-        email:
-          type: string
-          description: The email address of the user.
-          example: marcelina.davis@example.com
-        email_verified:
-          type: boolean
-          description: Whether the user's email has been verified.
-          example: true
-        external_id:
-          type:
-            - string
-            - 'null'
-          description: The external ID of the user.
-          example: f1ffa2b2-c20b-4d39-be5c-212726e11222
-        metadata:
-          type: object
-          additionalProperties:
-            type: string
-            maxLength: 600
-          description: Object containing metadata key/value pairs associated with the user.
-          example:
-            timezone: America/New_York
-          propertyNames:
-            maxLength: 40
-          maxProperties: 50
-        last_sign_in_at:
-          format: date-time
-          type:
-            - string
-            - 'null'
-          description: The timestamp when the user last signed in.
-          example: '2025-06-25T19:07:33.155Z'
-        locale:
-          type:
-            - string
-            - 'null'
-          description: The user's preferred locale.
-          example: en-US
-        created_at:
-          format: date-time
-          type: string
-          description: An ISO 8601 timestamp.
-          example: '2026-01-15T12:00:00.000Z'
-        updated_at:
-          format: date-time
-          type: string
-          description: An ISO 8601 timestamp.
-          example: '2026-01-15T12:00:00.000Z'
-      required:
-        - object
-        - id
-        - first_name
-        - last_name
-        - profile_picture_url
-        - email
-        - email_verified
-        - external_id
-        - last_sign_in_at
-        - created_at
-        - updated_at
-      description: The user object.
     WaitlistUser:
       type: object
       properties:
@@ -21194,19 +21595,42 @@ components:
                       description: Unique identifier of the API key.
                       example: api_key_01EHWNCE74X7JSDV0X3SZ3KJNY
                     owner:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                          description: The type of the API key owner.
-                          const: organization
-                        id:
-                          type: string
-                          description: The unique identifier of the API key owner.
-                          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
-                      required:
-                        - type
-                        - id
+                      oneOf:
+                        - type: object
+                          properties:
+                            type:
+                              type: string
+                              description: The type of the API key owner.
+                              const: organization
+                            id:
+                              type: string
+                              description: The unique identifier of the API key owner.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                          required:
+                            - type
+                            - id
+                        - type: object
+                          properties:
+                            type:
+                              type: string
+                              description: The type of the API key owner.
+                              const: user
+                            id:
+                              type: string
+                              description: >-
+                                The unique identifier of the user who owns the
+                                API key.
+                              example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                            organization_id:
+                              type: string
+                              description: >-
+                                The unique identifier of the organization the
+                                API key belongs to.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                          required:
+                            - type
+                            - id
+                            - organization_id
                       description: The owner of the API key.
                     name:
                       type: string
@@ -21287,19 +21711,42 @@ components:
                       description: Unique identifier of the API key.
                       example: api_key_01EHWNCE74X7JSDV0X3SZ3KJNY
                     owner:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                          description: The type of the API key owner.
-                          const: organization
-                        id:
-                          type: string
-                          description: The unique identifier of the API key owner.
-                          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
-                      required:
-                        - type
-                        - id
+                      oneOf:
+                        - type: object
+                          properties:
+                            type:
+                              type: string
+                              description: The type of the API key owner.
+                              const: organization
+                            id:
+                              type: string
+                              description: The unique identifier of the API key owner.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                          required:
+                            - type
+                            - id
+                        - type: object
+                          properties:
+                            type:
+                              type: string
+                              description: The type of the API key owner.
+                              const: user
+                            id:
+                              type: string
+                              description: >-
+                                The unique identifier of the user who owns the
+                                API key.
+                              example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                            organization_id:
+                              type: string
+                              description: >-
+                                The unique identifier of the organization the
+                                API key belongs to.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                          required:
+                            - type
+                            - id
+                            - organization_id
                       description: The owner of the API key.
                     name:
                       type: string
@@ -24044,6 +24491,12 @@ components:
                         - 'null'
                       description: The last name of the user.
                       example: Davis
+                    name:
+                      type:
+                        - string
+                        - 'null'
+                      description: The full name of the user.
+                      example: Marcelina Davis
                     emails:
                       type: array
                       items:
@@ -24350,6 +24803,7 @@ components:
                           enum:
                             - api
                             - dashboard
+                            - admin_portal
                             - system
                           description: The source of the actor that performed the action.
                         name:
@@ -24509,6 +24963,7 @@ components:
                           enum:
                             - api
                             - dashboard
+                            - admin_portal
                             - system
                           description: The source of the actor that performed the action.
                         name:
@@ -24668,6 +25123,7 @@ components:
                           enum:
                             - api
                             - dashboard
+                            - admin_portal
                             - system
                         name:
                           type:
@@ -24947,6 +25403,7 @@ components:
                           enum:
                             - api
                             - dashboard
+                            - admin_portal
                             - system
                           description: The source of the actor that performed the action.
                         name:
@@ -28132,6 +28589,51 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: vault.byok_key.deleted
+                data:
+                  type: object
+                  properties:
+                    organization_id:
+                      type: string
+                      description: The unique identifier of the organization.
+                      example: org_01EHT88Z8J8795GZNQ4ZP1J81T
+                    key_provider:
+                      type: string
+                      enum:
+                        - AWS_KMS
+                        - GCP_KMS
+                        - AZURE_KEY_VAULT
+                      description: The external key provider used for BYOK.
+                      example: AWS_KMS
+                  required:
+                    - organization_id
+                    - key_provider
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: vault.byok_key.verification_completed
                 data:
                   type: object
@@ -28802,7 +29304,7 @@ components:
           - *ref_23
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
-    JwtTemplateResponse:
+    JwtTemplate:
       type: object
       properties:
         object:
@@ -28812,7 +29314,9 @@ components:
         content:
           type: string
           description: The JWT template content as a Liquid template string.
-          example: '{"iss": "{{environment.id}}", "sub": "{{user.id}}"}'
+          example: >-
+            {"urn:myapp:full_name": "{{user.first_name}} {{user.last_name}}",
+            "urn:myapp:email": "{{user.email}}"}
         created_at:
           type: string
           description: The timestamp when the JWT template was created.
@@ -29020,7 +29524,77 @@ components:
         - object
         - data
         - list_metadata
-    ApiKeyList:
+    OrganizationApiKey:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the API Key object.
+          const: api_key
+        id:
+          type: string
+          description: Unique identifier of the API Key.
+          example: api_key_01EHZNVPK3SFK441A1RGBFSHRT
+        owner:
+          type: object
+          properties:
+            type:
+              type: string
+              description: The type of the API Key owner.
+              example: organization
+              const: organization
+            id:
+              type: string
+              description: Unique identifier of the API Key owner.
+              example: org_01EHZNVPK3SFK441A1RGBFSHRT
+          required:
+            - type
+            - id
+          description: The entity that owns the API Key.
+        name:
+          type: string
+          description: A descriptive name for the API Key.
+          example: Production API Key
+        obfuscated_value:
+          type: string
+          description: An obfuscated representation of the API Key value.
+          example: sk_...3456
+        last_used_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Timestamp of when the API Key was last used.
+          example: null
+        permissions:
+          type: array
+          items:
+            type: string
+          description: The permission slugs assigned to the API Key.
+          example:
+            - posts:read
+            - posts:write
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - owner
+        - name
+        - obfuscated_value
+        - last_used_at
+        - permissions
+        - created_at
+        - updated_at
+    OrganizationApiKeyList:
       type: object
       properties:
         object:
@@ -29030,7 +29604,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/ApiKey'
+            $ref: '#/components/schemas/OrganizationApiKey'
           description: The list of records for the current page.
         list_metadata:
           type: object
@@ -29059,7 +29633,7 @@ components:
         - object
         - data
         - list_metadata
-    ApiKeyWithValue:
+    OrganizationApiKeyWithValue:
       type: object
       properties:
         object:
@@ -30089,7 +30663,7 @@ components:
         user_id:
           type: string
           description: The ID of the user.
-          example: user_01EHQTV6MWP9P1F4ZXGXMC8ABB
+          example: user_01E4ZCR3C56J083X43JQXF3JK5
         organization_id:
           type: string
           description: The ID of the organization which the user belongs to.
@@ -30139,6 +30713,9 @@ components:
         role:
           $ref: '#/components/schemas/SlimRole'
           description: The primary role assigned to the user within the organization.
+        user:
+          $ref: '#/components/schemas/UserlandUser'
+          description: The user that belongs to the organization through this membership.
       required:
         - object
         - id
@@ -30149,6 +30726,201 @@ components:
         - created_at
         - updated_at
         - role
+        - user
+    UserApiKey:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the API Key object.
+          const: api_key
+        id:
+          type: string
+          description: Unique identifier of the API Key.
+          example: api_key_01EHZNVPK3SFK441A1RGBFSHRT
+        owner:
+          type: object
+          properties:
+            type:
+              type: string
+              description: The type of the API Key owner.
+              example: user
+              const: user
+            id:
+              type: string
+              description: Unique identifier of the API Key owner.
+              example: user_01EHZNVPK3SFK441A1RGBFSHRT
+            organization_id:
+              type: string
+              description: Unique identifier of the organization the API Key can access.
+              example: org_01EHZNVPK3SFK441A1RGBFSHRT
+          required:
+            - type
+            - id
+            - organization_id
+          description: The entity that owns the API Key.
+        name:
+          type: string
+          description: A descriptive name for the API Key.
+          example: Production API Key
+        obfuscated_value:
+          type: string
+          description: An obfuscated representation of the API Key value.
+          example: sk_...3456
+        last_used_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Timestamp of when the API Key was last used.
+          example: null
+        permissions:
+          type: array
+          items:
+            type: string
+          description: The permission slugs assigned to the API Key.
+          example:
+            - posts:read
+            - posts:write
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - owner
+        - name
+        - obfuscated_value
+        - last_used_at
+        - permissions
+        - created_at
+        - updated_at
+    UserApiKeyList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserApiKey'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: api_key_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: api_key_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
+    UserApiKeyWithValue:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the API Key object.
+          const: api_key
+        id:
+          type: string
+          description: Unique identifier of the API Key.
+          example: api_key_01EHZNVPK3SFK441A1RGBFSHRT
+        owner:
+          type: object
+          properties:
+            type:
+              type: string
+              description: The type of the API Key owner.
+              example: user
+              const: user
+            id:
+              type: string
+              description: Unique identifier of the API Key owner.
+              example: user_01EHZNVPK3SFK441A1RGBFSHRT
+            organization_id:
+              type: string
+              description: Unique identifier of the organization the API Key can access.
+              example: org_01EHZNVPK3SFK441A1RGBFSHRT
+          required:
+            - type
+            - id
+            - organization_id
+          description: The entity that owns the API Key.
+        name:
+          type: string
+          description: A descriptive name for the API Key.
+          example: Production API Key
+        obfuscated_value:
+          type: string
+          description: An obfuscated representation of the API Key value.
+          example: sk_...3456
+        last_used_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Timestamp of when the API Key was last used.
+          example: null
+        permissions:
+          type: array
+          items:
+            type: string
+          description: The permission slugs assigned to the API Key.
+          example:
+            - posts:read
+            - posts:write
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        value:
+          type: string
+          description: The full API Key value. Only returned once at creation time.
+          example: sk_abcdefghijklmnop123456
+      required:
+        - object
+        - id
+        - owner
+        - name
+        - obfuscated_value
+        - last_used_at
+        - permissions
+        - created_at
+        - updated_at
+        - value
     UserlandUserList:
       type: object
       properties:
@@ -30694,6 +31466,12 @@ components:
             - 'null'
           description: The user's last name.
           example: Rundgren
+        name:
+          type:
+            - string
+            - 'null'
+          description: The user's full name.
+          example: Todd Rundgren
         role:
           description: >-
             The role assigned to the user within the organization, if
@@ -30742,6 +31520,7 @@ components:
         - email
         - first_name
         - last_name
+        - name
         - raw_attributes
     SsoTokenResponse:
       type: object
