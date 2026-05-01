@@ -1,4 +1,4 @@
-import type { OagenConfig, OperationHint } from '@workos/oagen';
+import type { OagenConfig, OpenApiDocument, OperationHint } from '@workos/oagen';
 import { toCamelCase } from '@workos/oagen';
 import { workosEmittersPlugin } from '@workos/oagen-emitters';
 
@@ -354,6 +354,81 @@ const mountRules: Record<string, string> = {
   UserManagementMultiFactorAuthentication: 'MultiFactorAuth',
 };
 
+// ---------------------------------------------------------------------------
+// Pre-IR spec overlay -- patch around upstream spec quirks that would otherwise
+// emit breaking SDK changes. See docs/breaking-change-playbook.md and the
+// oagen `transformSpec` docs for usage. Reach for this only when the upstream
+// fix can't land in time AND the change is genuinely additive.
+// ---------------------------------------------------------------------------
+function transformSpec(spec: OpenApiDocument): OpenApiDocument {
+  const components = (spec as { components?: { schemas?: Record<string, Record<string, unknown>> } }).components;
+  const schemas = components?.schemas;
+  const paths = (spec as { paths?: Record<string, Record<string, unknown>> }).paths;
+  if (!schemas || !paths) return spec;
+
+  // -- Fork: UserlandUserOrganizationMembershipBase{,List} --------------------
+  // Upstream forked the existing `…BaseList` into `…BaseWithUserList` to add
+  // a `user` field on the inline list-item shape. That fork renames the
+  // generated list-data type in dotnet/go/ruby, breaking compat. Re-point the
+  // forked $refs at the original list and merge the new `user` field
+  // additively into the original's inline item shape.
+  const forkedListRef = '#/components/schemas/UserlandUserOrganizationMembershipBaseWithUserList';
+  const originalListRef = '#/components/schemas/UserlandUserOrganizationMembershipBaseList';
+  for (const pathItem of Object.values(paths)) {
+    for (const op of Object.values(pathItem)) {
+      const responses = (op as { responses?: Record<string, { content?: Record<string, { schema?: { $ref?: string } }> }> })
+        .responses;
+      const schema = responses?.['200']?.content?.['application/json']?.schema;
+      if (schema?.$ref === forkedListRef) {
+        schema.$ref = originalListRef;
+      }
+    }
+  }
+  const baseList = schemas['UserlandUserOrganizationMembershipBaseList'];
+  const itemProps = (
+    baseList as
+      | {
+          properties?: {
+            data?: { items?: { properties?: Record<string, unknown>; required?: string[] } };
+          };
+        }
+      | undefined
+  )?.properties?.data?.items;
+  if (itemProps?.properties && !itemProps.properties.user) {
+    itemProps.properties.user = {
+      $ref: '#/components/schemas/UserlandUser',
+      description: 'The user that belongs to the organization through this membership.',
+    } as unknown as Record<string, unknown>;
+    if (itemProps.required && !itemProps.required.includes('user')) {
+      itemProps.required.push('user');
+    }
+  }
+  delete schemas['UserlandUserOrganizationMembershipBaseWithUser'];
+  delete schemas['UserlandUserOrganizationMembershipBaseWithUserList'];
+
+  // -- Rename: JwtTemplate -> JwtTemplateResponse -----------------------------
+  // Upstream renamed the response schema. Existing SDKs already expose the
+  // type as `JwtTemplateResponse`/`JWTTemplateResponse`; preserve that name.
+  if (schemas['JwtTemplate'] && !schemas['JwtTemplateResponse']) {
+    schemas['JwtTemplateResponse'] = schemas['JwtTemplate'];
+    delete schemas['JwtTemplate'];
+    const oldRef = '#/components/schemas/JwtTemplate';
+    const newRef = '#/components/schemas/JwtTemplateResponse';
+    for (const pathItem of Object.values(paths)) {
+      for (const op of Object.values(pathItem)) {
+        const responses = (op as { responses?: Record<string, { content?: Record<string, { schema?: { $ref?: string } }> }> })
+          .responses;
+        for (const response of Object.values(responses ?? {})) {
+          const schema = response.content?.['application/json']?.schema;
+          if (schema?.$ref === oldRef) schema.$ref = newRef;
+        }
+      }
+    }
+  }
+
+  return spec;
+}
+
 const config: OagenConfig = {
   ...workosEmittersPlugin,
   docUrl: 'https://workos.com/docs',
@@ -377,5 +452,13 @@ const config: OagenConfig = {
   },
   operationHints,
   mountRules,
+  modelHints: {
+    // `UserlandUser` (→ `User`) is referenced from both UserManagement and
+    // Authorization paths; pin it to UserManagement so hand-written imports
+    // in `workos-python` (e.g. `from workos.user_management.models import User`)
+    // keep resolving.
+    User: 'UserManagement',
+  },
+  transformSpec,
 };
 export default config;
