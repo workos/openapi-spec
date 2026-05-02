@@ -95,6 +95,18 @@ jobs:
             echo "No script/ci or scripts/ci found, skipping"
           fi
 
+      - name: Capture SDK code diff
+        if: always()
+        working-directory: ${{ matrix.sdk_checkout_path }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}"
+          # intent-to-add so untracked generated files appear in the diff
+          git add -AN
+          git -c core.quotepath=false diff HEAD \
+              --src-prefix="a/${{ matrix.language }}/" \
+              --dst-prefix="b/${{ matrix.language }}/" \
+              > "$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-code.diff" || true
+
       - name: Extract candidate snapshot
         working-directory: openapi-spec
         run: |
@@ -157,12 +169,44 @@ jobs:
           pattern: oagen-diagnostics-*
           path: sdk-diagnostics
 
+      - name: Build code diff report
+        if: needs.load-matrix.outputs.spec-changed == 'true'
+        id: diff-report
+        run: |
+          set -e
+          : > /tmp/combined.diff
+          has_content=0
+          for lang in dotnet go php python ruby; do
+            diff_file="sdk-diagnostics/oagen-diagnostics-${lang}/sdk-code.diff"
+            if [ -s "$diff_file" ]; then
+              cat "$diff_file" >> /tmp/combined.diff
+              has_content=1
+            fi
+          done
+          if [ "$has_content" = "1" ]; then
+            npx --yes diff2html-cli@5 -i file -s side --su hidden -F /tmp/sdk-diff-report.html /tmp/combined.diff
+            echo "report-exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "report-exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload code diff report
+        if: steps.diff-report.outputs.report-exists == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sdk-code-diff-report
+          path: /tmp/sdk-diff-report.html
+          retention-days: 14
+
       - name: Render PR comment
         if: needs.load-matrix.outputs.spec-changed == 'true'
         run: |
           node scripts/sdk-compat-pr-comment.mjs \
             --artifacts-root sdk-diagnostics \
             --build-result "${{ needs.sdk_build.result }}" \
+            --run-id "${{ github.run_id }}" \
+            --repo "${{ github.repository }}" \
+            --code-diff-available "${{ steps.diff-report.outputs.report-exists }}" \
             --output /tmp/sdk-compat-comment.md
 
       - name: Upsert PR comment
