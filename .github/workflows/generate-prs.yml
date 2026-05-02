@@ -155,9 +155,6 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          PREFIX=""
-          SUMMARY=""
-
           # Stage everything so new (untracked) files appear in the diff
           git add -A
           git diff --cached --stat > /tmp/sdk-diff.txt
@@ -170,40 +167,67 @@ jobs:
           DIFF_SIZE=$(wc -c < /tmp/sdk-diff-truncated.txt)
           echo "SDK diff size: ${DIFF_SIZE} bytes"
 
+          # Pass the structured oagen diff as scope-grouping signal when available
+          SPEC_DIFF="{}"
+          if [ -f /tmp/diff-report.json ]; then
+            SPEC_DIFF=$(cat /tmp/diff-report.json)
+          fi
+
+          OVERRIDE_BLOCK=""
+          DESCRIPTIONS=""
+          ROLLUP_PREFIX=""
+          ROLLUP_SUMMARY=""
+
           if [ "$DIFF_SIZE" -gt 0 ] && [ -n "$ANTHROPIC_API_KEY" ]; then
             echo "Sending ${DIFF_SIZE} bytes to Claude for classification..."
-            RESPONSE=$(jq -n --rawfile diff /tmp/sdk-diff-truncated.txt \
+            RESPONSE=$(jq -n \
+                --rawfile diff /tmp/sdk-diff-truncated.txt \
+                --argjson spec_diff "$SPEC_DIFF" \
                 --arg lang "${{ matrix.language }}" \
                 '{
                   model: "claude-haiku-4-5-20251001",
-                  max_tokens: 1024,
+                  max_tokens: 4096,
                   tools: [{
-                    name: "classify_change",
-                    description: "Classify an SDK code change and provide a summary and description",
+                    name: "classify_changes",
+                    description: "Group SDK changes by service/mount point and emit one conventional-commit entry per service for the release-please changelog.",
                     input_schema: {
                       type: "object",
                       properties: {
-                        prefix: {
-                          type: "string",
-                          enum: ["feat!", "feat", "fix"],
-                          description: "feat! for breaking changes (removed/renamed public methods, changed signatures, removed fields). feat for additive changes (new methods, new classes, new fields). fix for non-breaking modifications (bug fixes, internal refactors, doc changes)."
-                        },
-                        summary: {
-                          type: "string",
-                          description: "A short summary (under 50 chars) of what changed in the SDK, suitable for a commit message. Focus on the user-facing impact, not internal details."
-                        },
-                        description: {
-                          type: "string",
-                          description: "A markdown-formatted description (3-10 bullet points) of the key changes for the PR body. List new classes/methods added, fields changed, breaking changes, etc. Be specific about what was added, removed, or modified."
+                        entries: {
+                          type: "array",
+                          description: "One entry per service that has user-facing changes. Rules: (1) Group by service (e.g. user_management, directory_sync, authorization) — never emit multiple entries for the same service. (2) Severity collapses upward within a service: any breaking change makes the whole entry feat!; otherwise any addition makes it feat; otherwise fix. (3) Omit services whose changes are purely cosmetic or internal (renames with no public-API effect, doc-only changes, enum value reordering, formatting). The omitted code still ships under the umbrella squash commit; it just does not get its own changelog entry. (4) If every service is noise-only, return a single entry with scope=\"generated\" and prefix=\"fix\".",
+                          items: {
+                            type: "object",
+                            properties: {
+                              prefix: {
+                                type: "string",
+                                enum: ["feat!", "feat", "fix"],
+                                description: "feat! for breaking changes (removed/renamed public symbols, changed signatures, removed fields). feat for additive changes (new methods, new classes, new fields). fix for non-breaking modifications visible in the public API."
+                              },
+                              scope: {
+                                type: "string",
+                                description: "snake_case service/mount-point name (e.g. user_management, directory_sync, authorization, fga, sso, organizations). Use \"generated\" only for the catch-all fallback entry."
+                              },
+                              summary: {
+                                type: "string",
+                                description: "Short user-facing summary under 60 chars. No trailing period. Will appear on the changelog line as: <prefix>(<scope>): <summary>"
+                              },
+                              description: {
+                                type: "string",
+                                description: "2-6 markdown bullets detailing the changes in this service for the PR body. Be specific about classes/methods/fields added, removed, or changed."
+                              }
+                            },
+                            required: ["prefix", "scope", "summary", "description"]
+                          }
                         }
                       },
-                      required: ["prefix", "summary", "description"]
+                      required: ["entries"]
                     }
                   }],
-                  tool_choice: {type: "tool", name: "classify_change"},
+                  tool_choice: {type: "tool", name: "classify_changes"},
                   messages: [{
                     role: "user",
-                    content: ("Classify this generated " + $lang + " SDK diff. Focus on the public API surface: new classes/methods are feat, removed/renamed public symbols are feat!, and internal-only changes are fix.\n\n" + $diff)
+                    content: ("Classify this generated " + $lang + " SDK diff into per-service changelog entries. The structured oagen spec diff (with serviceName and classification fields) is the primary scope-grouping signal; the raw SDK diff gives wording for summaries.\n\n## oagen spec diff\n```json\n" + ($spec_diff | tojson) + "\n```\n\n## SDK diff\n" + $diff)
                   }]
                 }' | curl -s https://api.anthropic.com/v1/messages \
               -H "content-type: application/json" \
@@ -216,36 +240,59 @@ jobs:
             echo "Stop reason: $(echo "${RESPONSE:-}" | jq -r '.stop_reason // empty')"
             echo "Error: $(echo "${RESPONSE:-}" | jq -r '.error.message // empty')"
 
-            PREFIX=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.prefix // empty')
-            SUMMARY=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.summary // empty')
-            DESCRIPTION=$(echo "${RESPONSE:-}" | jq -r '.content[0].input.description // empty')
-            echo "Classified as: prefix=${PREFIX} summary=${SUMMARY}"
+            ENTRIES=$(echo "${RESPONSE:-}" | jq -c '.content[0].input.entries // []')
+            ENTRY_COUNT=$(echo "$ENTRIES" | jq 'length')
+            echo "Got ${ENTRY_COUNT} classification entr(y|ies)"
+
+            if [ "$ENTRY_COUNT" -gt 0 ]; then
+              OVERRIDE_LINES=$(echo "$ENTRIES" | jq -r '.[] | "\(.prefix)(\(.scope)): \(.summary)"')
+              DESCRIPTIONS=$(echo "$ENTRIES" | jq -r '.[] | "### \(.prefix)(\(.scope)): \(.summary)\n\n\(.description)\n"')
+
+              if echo "$ENTRIES" | jq -e '[.[] | select(.prefix == "feat!")] | length > 0' > /dev/null; then
+                ROLLUP_PREFIX="feat!"
+              elif echo "$ENTRIES" | jq -e '[.[] | select(.prefix == "feat")] | length > 0' > /dev/null; then
+                ROLLUP_PREFIX="feat"
+              else
+                ROLLUP_PREFIX="fix"
+              fi
+
+              if [ "$ENTRY_COUNT" -eq 1 ]; then
+                ROLLUP_SUMMARY="regenerate from spec (1 change)"
+              else
+                ROLLUP_SUMMARY="regenerate from spec (${ENTRY_COUNT} changes)"
+              fi
+
+              OVERRIDE_BLOCK=$(printf 'BEGIN_COMMIT_OVERRIDE\n%s\nEND_COMMIT_OVERRIDE' "$OVERRIDE_LINES")
+            fi
           else
             echo "Skipping classification: diff is empty or no API key"
           fi
 
-          if [ -z "$PREFIX" ]; then
+          # Fallback: Claude unavailable or returned no entries — degrade to a single
+          # rollup line derived from the oagen diff summary counts.
+          if [ -z "$ROLLUP_PREFIX" ]; then
             BREAKING='${{ steps.diff-report.outputs.breaking }}'
             ADDED='${{ steps.diff-report.outputs.added }}'
-            if [ "$BREAKING" -gt 0 ] 2>/dev/null; then
-              PREFIX="feat!"
-            elif [ "$ADDED" -gt 0 ] 2>/dev/null; then
-              PREFIX="feat"
+            if [ "${BREAKING:-0}" -gt 0 ] 2>/dev/null; then
+              ROLLUP_PREFIX="feat!"
+            elif [ "${ADDED:-0}" -gt 0 ] 2>/dev/null; then
+              ROLLUP_PREFIX="feat"
             else
-              PREFIX="fix"
+              ROLLUP_PREFIX="fix"
             fi
-          fi
-
-          if [ -z "$SUMMARY" ]; then
-            SUMMARY="update generated SDK from spec changes"
+            ROLLUP_SUMMARY="regenerate from spec"
+            DESCRIPTIONS="Regenerated SDK from spec changes."
           fi
 
           {
-            echo "prefix=$PREFIX"
-            echo "summary=$SUMMARY"
-            echo "description<<DESCRIPTION_EOF"
-            printf '%s\n' "${DESCRIPTION:-$SUMMARY}"
-            echo "DESCRIPTION_EOF"
+            echo "rollup_prefix=$ROLLUP_PREFIX"
+            echo "rollup_summary=$ROLLUP_SUMMARY"
+            echo "override_block<<OVERRIDE_EOF"
+            printf '%s\n' "$OVERRIDE_BLOCK"
+            echo "OVERRIDE_EOF"
+            echo "descriptions<<DESCRIPTIONS_EOF"
+            printf '%s\n' "$DESCRIPTIONS"
+            echo "DESCRIPTIONS_EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create PR on live SDK
@@ -253,9 +300,10 @@ jobs:
         working-directory: ${{ matrix.sdk_checkout_path }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PREFIX: ${{ steps.classify.outputs.prefix }}
-          SUMMARY: ${{ steps.classify.outputs.summary }}
-          DESCRIPTION: ${{ steps.classify.outputs.description }}
+          PREFIX: ${{ steps.classify.outputs.rollup_prefix }}
+          SUMMARY: ${{ steps.classify.outputs.rollup_summary }}
+          DESCRIPTIONS: ${{ steps.classify.outputs.descriptions }}
+          OVERRIDE_BLOCK: ${{ steps.classify.outputs.override_block }}
         run: |
           BRANCH="oagen/spec-update-${{ github.sha }}"
 
@@ -281,8 +329,19 @@ jobs:
           git commit -m "${PREFIX}(generated): ${SUMMARY}"
           git push origin "$BRANCH"
 
-          printf '## Summary\n\n%s\n\nTriggered by workos/openapi-spec@%s\n' \
-            "$DESCRIPTION" "${{ github.sha }}" > /tmp/pr-body.md
+          # The BEGIN_COMMIT_OVERRIDE block tells release-please to treat this
+          # squash-merged PR as multiple conventional commits, one per service.
+          {
+            echo "## Summary"
+            echo
+            echo "$DESCRIPTIONS"
+            echo
+            echo "Triggered by workos/openapi-spec@${{ github.sha }}"
+            if [ -n "$OVERRIDE_BLOCK" ]; then
+              echo
+              echo "$OVERRIDE_BLOCK"
+            fi
+          } > /tmp/pr-body.md
 
           gh pr create \
             --title "${PREFIX}(generated): ${SUMMARY}" \
