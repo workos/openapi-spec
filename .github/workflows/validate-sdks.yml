@@ -184,7 +184,7 @@ jobs:
             fi
           done
           if [ "$has_content" = "1" ]; then
-            npx --yes diff2html-cli@5 -i file -s side --su hidden -F /tmp/sdk-diff-report.html /tmp/combined.diff
+            npx --yes diff2html-cli@5 -i file -s side --su hidden -F /tmp/sdk-diff-report.html -- /tmp/combined.diff
             echo "report-exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "report-exists=false" >> "$GITHUB_OUTPUT"
