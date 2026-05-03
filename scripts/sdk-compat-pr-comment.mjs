@@ -11,6 +11,7 @@ function parseArgs(argv) {
     runId: '',
     repo: '',
     codeDiffAvailable: false,
+    pagesUrl: '',
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -26,13 +27,15 @@ function parseArgs(argv) {
       args.repo = argv[++i] ?? '';
     } else if (arg === '--code-diff-available') {
       args.codeDiffAvailable = (argv[++i] ?? '') === 'true';
+    } else if (arg === '--pages-url') {
+      args.pagesUrl = argv[++i] ?? '';
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
 
   if (!args.artifactsRoot || !args.output) {
-    throw new Error('Usage: sdk-compat-pr-comment.mjs --artifacts-root <dir> --output <file> [--build-result <result>] [--run-id <id>] [--repo <owner/name>] [--code-diff-available true|false]');
+    throw new Error('Usage: sdk-compat-pr-comment.mjs --artifacts-root <dir> --output <file> [--build-result <result>] [--run-id <id>] [--repo <owner/name>] [--code-diff-available true|false] [--pages-url <url>]');
   }
 
   return args;
@@ -1058,7 +1061,7 @@ function renderDomainSummary(lines, rows, languages, deriveDomain) {
 // ---------------------------------------------------------------------------
 
 function renderMarkdown(languageData, options) {
-  const { buildResult, runId, repo, codeDiffAvailable } = options;
+  const { buildResult, runId, repo, codeDiffAvailable, pagesUrl } = options;
   const rollup = buildRollup(languageData);
   const lines = [];
 
@@ -1071,7 +1074,10 @@ function renderMarkdown(languageData, options) {
     lines.push('');
   }
 
-  if (codeDiffAvailable && runId && repo) {
+  if (codeDiffAvailable && pagesUrl) {
+    lines.push(`📄 [View full code diff](${pagesUrl})`);
+    lines.push('');
+  } else if (codeDiffAvailable && runId && repo) {
     lines.push(
       `📄 Full code diff: [download report](https://github.com/${repo}/actions/runs/${runId}#artifacts) — open \`sdk-diff-report.html\` from the \`sdk-code-diff-report\` artifact.`,
     );
@@ -1139,6 +1145,7 @@ function main() {
     runId: args.runId,
     repo: args.repo,
     codeDiffAvailable: args.codeDiffAvailable,
+    pagesUrl: args.pagesUrl,
   });
   fs.writeFileSync(args.output, markdown, 'utf8');
 }

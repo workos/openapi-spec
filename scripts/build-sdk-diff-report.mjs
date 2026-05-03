@@ -73,7 +73,11 @@ function renderLanguageBody(language, diffText) {
       matching: 'lines',
     });
 
-    blocks.push(`<div class="diff-file" data-category="${category}">${fileHtml}</div>`);
+    const anchorId = filePath;
+    const header = `<div class="diff-file-header"><a class="permalink" href="#${escapeHtml(encodeURI(anchorId))}" title="Copy link to this file">🔗</a> <code class="permalink-path">${escapeHtml(filePath)}</code></div>`;
+    blocks.push(
+      `<div class="diff-file" id="${escapeHtml(anchorId)}" data-category="${category}">${header}${fileHtml}</div>`,
+    );
   }
 
   return { fileCount: files.length, counts, body: blocks.join('\n') };
@@ -107,7 +111,7 @@ function buildHtml(languageReports) {
   const tabs = sortedLanguages
     .map((entry, idx) => {
       const totals = `${entry.fileCount} file${entry.fileCount === 1 ? '' : 's'}`;
-      return `<button type="button" class="tab${idx === 0 ? ' active' : ''}" data-tab="${escapeHtml(entry.language)}">${escapeHtml(entry.language)} <span class="tab-count">${totals}</span></button>`;
+      return `<a class="tab${idx === 0 ? ' active' : ''}" href="#${escapeHtml(entry.language)}" data-tab="${escapeHtml(entry.language)}">${escapeHtml(entry.language)} <span class="tab-count">${totals}</span></a>`;
     })
     .join('\n');
 
@@ -133,10 +137,15 @@ function buildHtml(languageReports) {
   .filters { display: flex; gap: 12px; align-items: center; font-size: 13px; }
   .filters label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
   .tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 0 24px; background: #fff; border-bottom: 1px solid #d0d7de; }
-  .tab { background: transparent; border: none; padding: 10px 16px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: #57606a; }
+  .tab { background: transparent; border: none; padding: 10px 16px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: #57606a; text-decoration: none; }
   .tab:hover { color: #1f2328; }
   .tab.active { color: #1f2328; border-bottom-color: #fd8c73; font-weight: 600; }
   .tab-count { color: #8c959f; font-weight: 400; font-size: 11px; margin-left: 4px; }
+  .diff-file-header { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-bottom: none; border-radius: 6px 6px 0 0; font-size: 12px; }
+  .diff-file-header .permalink { text-decoration: none; opacity: 0.5; }
+  .diff-file-header .permalink:hover { opacity: 1; }
+  .diff-file-header .permalink-path { color: #57606a; }
+  .diff-file:target .diff-file-header { background: #fff8c5; }
   main { padding: 16px 24px; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
@@ -170,12 +179,30 @@ ${panels}
 (function () {
   const tabs = document.querySelectorAll('.tab');
   const panels = document.querySelectorAll('.tab-panel');
+  const languages = Array.from(tabs).map((t) => t.dataset.tab);
+
+  function activateTab(language) {
+    if (!languages.includes(language)) return false;
+    tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === language));
+    panels.forEach((p) => p.classList.toggle('active', p.dataset.panel === language));
+    updateEmptyState();
+    return true;
+  }
+
+  function languageFromHash(rawHash) {
+    if (!rawHash) return null;
+    const decoded = decodeURIComponent(rawHash.replace(/^#/, ''));
+    const first = decoded.split('/')[0];
+    return languages.includes(first) ? first : null;
+  }
+
   tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', (event) => {
+      event.preventDefault();
       const target = tab.dataset.tab;
-      tabs.forEach((t) => t.classList.toggle('active', t === tab));
-      panels.forEach((p) => p.classList.toggle('active', p.dataset.panel === target));
-      updateEmptyState();
+      if (activateTab(target)) {
+        history.replaceState(null, '', '#' + encodeURIComponent(target));
+      }
     });
   });
 
@@ -196,6 +223,18 @@ ${panels}
       panel.classList.toggle('all-hidden', !visible);
     });
   }
+
+  // Permalink-driven activation: switch to the right tab on initial load,
+  // then again whenever the hash changes (browser back/forward, manual edit,
+  // clicking a per-file permalink that lands in another tab).
+  function syncFromHash() {
+    const language = languageFromHash(location.hash);
+    if (language) activateTab(language);
+  }
+
+  window.addEventListener('hashchange', syncFromHash);
+  syncFromHash();
+  updateEmptyState();
 })();
 </script>
 </body>

@@ -1,7 +1,7 @@
 name: Validate SDKs
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
 
@@ -192,6 +192,49 @@ jobs:
           path: /tmp/sdk-diff-report.html
           retention-days: 14
 
+      - name: Publish report to GitHub Pages
+        id: publish-pages
+        if: >-
+          steps.diff-report.outputs.report-exists == 'true'
+          && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          worktree=$(mktemp -d)
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch --depth=1 origin gh-pages
+            git worktree add "$worktree" origin/gh-pages
+            (cd "$worktree" && git checkout -B gh-pages)
+          else
+            git worktree add --orphan -b gh-pages "$worktree"
+            : > "$worktree/.nojekyll"
+          fi
+
+          target_dir="$worktree/pr-${PR_NUMBER}"
+          mkdir -p "$target_dir"
+          cp /tmp/sdk-diff-report.html "$target_dir/sdk-diff-report.html"
+
+          (
+            cd "$worktree"
+            git add -A
+            if git diff --cached --quiet; then
+              echo "No changes to publish"
+            else
+              git commit -m "Update PR #${PR_NUMBER} SDK diff preview"
+              git push origin gh-pages
+            fi
+          )
+
+          owner="${REPO%%/*}"
+          name="${REPO#*/}"
+          echo "pages-url=https://${owner}.github.io/${name}/pr-${PR_NUMBER}/sdk-diff-report.html" >> "$GITHUB_OUTPUT"
+
       - name: Render PR comment
         if: needs.load-matrix.outputs.spec-changed == 'true'
         run: |
@@ -201,6 +244,7 @@ jobs:
             --run-id "${{ github.run_id }}" \
             --repo "${{ github.repository }}" \
             --code-diff-available "${{ steps.diff-report.outputs.report-exists }}" \
+            --pages-url "${{ steps.publish-pages.outputs.pages-url }}" \
             --output /tmp/sdk-compat-comment.md
 
       - name: Upsert PR comment
