@@ -1,0 +1,45 @@
+name: Cleanup PR preview
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-cleanup-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove pr-${{ github.event.pull_request.number }} from gh-pages
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          if ! git ls-remote --exit-code --heads "https://github.com/${{ github.repository }}.git" gh-pages >/dev/null 2>&1; then
+            echo "gh-pages branch does not exist; nothing to clean up"
+            exit 0
+          fi
+
+          tmp=$(mktemp -d)
+          git clone --depth=1 --branch gh-pages \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
+            "$tmp"
+
+          cd "$tmp"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ ! -d "pr-${PR_NUMBER}" ]; then
+            echo "No preview directory for PR #${PR_NUMBER}"
+            exit 0
+          fi
+
+          git rm -rf "pr-${PR_NUMBER}"
+          git commit -m "Remove PR #${PR_NUMBER} SDK diff preview"
+          git push origin gh-pages

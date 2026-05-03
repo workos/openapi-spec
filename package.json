@@ -23,8 +23,8 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@workos/oagen": "^0.13.0",
-    "@workos/oagen-emitters": "^0.7.2",
+    "@workos/oagen": "^0.16.0",
+    "@workos/oagen-emitters": "^0.7.5",
     "js-yaml": "^4.1.1",
     "openapi-to-postmanv2": "^6.0.1"
   },
@@ -35,6 +35,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.6.0",
+    "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
