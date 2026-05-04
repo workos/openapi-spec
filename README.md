@@ -127,6 +127,68 @@ node scripts/sdk-compat-pr-comment.mjs \
 4. `npm run sdk:generate -- --lang <lang> --output .oagen/<lang>/sdk` to generate
 5. `npm run sdk:verify -- --lang <lang> --output .oagen/<lang>/sdk` to verify
 
+## Grabbing from npm
+
+The spec is published to npm as [`@workos-inc/openapi-spec`](https://www.npmjs.com/package/@workos-inc/openapi-spec).
+
+```bash
+npm install @workos-inc/openapi-spec
+```
+
+### Usage
+
+The package ships TypeScript types generated from the spec, plus the raw `open-api-spec.yaml` file.
+
+**TypeScript types:**
+
+```ts
+import type { paths, components, operations } from "@workos-inc/openapi-spec";
+
+type User = components["schemas"]["User"];
+
+type CreateUserRequest =
+  paths["/user_management/users"]["post"]["requestBody"]["content"]["application/json"];
+
+type CreateUserResponse =
+  paths["/user_management/users"]["post"]["responses"]["201"]["content"]["application/json"];
+
+// Annotate HTTP client responses with the generated types:
+const res = await fetch("https://api.workos.com/user_management/users/user_123");
+const user: components["schemas"]["User"] = await res.json();
+```
+
+The types follow the [`openapi-typescript`](https://openapi-ts.dev) layout: top-level `paths`, `components`, and `operations` interfaces.
+
+**Loading the raw spec (Node.js, ESM):**
+
+```ts
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import yaml from "js-yaml";
+
+const require = createRequire(import.meta.url);
+const specPath = require.resolve("@workos-inc/openapi-spec/spec");
+const spec = yaml.load(readFileSync(specPath, "utf8"));
+
+console.log(spec.info.title, spec.info.version);
+```
+
+**Loading the raw spec (Node.js, CommonJS):**
+
+```js
+const { readFileSync } = require("node:fs");
+const yaml = require("js-yaml");
+
+const specPath = require.resolve("@workos-inc/openapi-spec/spec");
+const spec = yaml.load(readFileSync(specPath, "utf8"));
+```
+
+**Bundlers (Vite, webpack, etc.) with a YAML loader:**
+
+```ts
+import spec from "@workos-inc/openapi-spec/spec";
+```
+
 ## Generating Postman Collections
 
 This repository includes scripts to generate Postman collections from the OpenAPI specification. See the `scripts/postman` folder for more information.

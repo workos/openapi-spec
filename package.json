@@ -22,12 +22,6 @@
     "dev:unlink": "npm install",
     "prepare": "husky"
   },
-  "dependencies": {
-    "@workos/oagen": "^0.16.0",
-    "@workos/oagen-emitters": "^0.7.5",
-    "js-yaml": "^4.1.1",
-    "openapi-to-postmanv2": "^6.0.1"
-  },
   "overrides": {
     "js-yaml": "^4.1.1",
     "lodash": "^4.17.23"
@@ -35,8 +29,12 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.6.0",
+    "@workos/oagen": "^0.16.0",
+    "@workos/oagen-emitters": "^0.7.5",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
+    "js-yaml": "^4.1.1",
+    "openapi-to-postmanv2": "^6.0.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }
