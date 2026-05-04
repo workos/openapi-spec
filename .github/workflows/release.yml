@@ -45,10 +45,15 @@ jobs:
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "Current: $current → Next: $next"
 
-      - name: Assemble package
+      - name: Generate TypeScript types
         run: |
           set -euo pipefail
           mkdir -p dist
+          npx -y openapi-typescript@7 spec/open-api-spec.yaml -o dist/types.d.ts
+
+      - name: Assemble package
+        run: |
+          set -euo pipefail
           cp spec/open-api-spec.yaml dist/
           cp LICENSE.txt dist/ 2>/dev/null || true
           cp README.md dist/ 2>/dev/null || true
@@ -56,16 +61,25 @@ jobs:
           {
             "name": "${PACKAGE_NAME}",
             "version": "${{ steps.version.outputs.next }}",
-            "description": "WorkOS OpenAPI specification",
+            "description": "WorkOS OpenAPI specification and TypeScript types",
             "license": "MIT",
             "repository": {
               "type": "git",
               "url": "git+https://github.com/${{ github.repository }}.git"
             },
             "files": [
-              "open-api-spec.yaml"
+              "open-api-spec.yaml",
+              "types.d.ts"
             ],
-            "main": "open-api-spec.yaml"
+            "types": "types.d.ts",
+            "exports": {
+              ".": {
+                "types": "./types.d.ts",
+                "default": "./open-api-spec.yaml"
+              },
+              "./spec": "./open-api-spec.yaml",
+              "./package.json": "./package.json"
+            }
           }
           EOF
 
