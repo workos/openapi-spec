@@ -127,6 +127,48 @@ node scripts/sdk-compat-pr-comment.mjs \
 4. `npm run sdk:generate -- --lang <lang> --output .oagen/<lang>/sdk` to generate
 5. `npm run sdk:verify -- --lang <lang> --output .oagen/<lang>/sdk` to verify
 
+## Grabbing from npm
+
+The spec is published to npm as [`@workos-inc/openapi-spec`](https://www.npmjs.com/package/@workos-inc/openapi-spec).
+
+```bash
+npm install @workos-inc/openapi-spec
+```
+
+### Usage
+
+The package ships the raw `open-api-spec.yaml` file. Resolve its path and parse it with your YAML loader of choice.
+
+**Node.js (ESM):**
+
+```ts
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import yaml from "js-yaml";
+
+const require = createRequire(import.meta.url);
+const specPath = require.resolve("@workos-inc/openapi-spec");
+const spec = yaml.load(readFileSync(specPath, "utf8"));
+
+console.log(spec.info.title, spec.info.version);
+```
+
+**Node.js (CommonJS):**
+
+```js
+const { readFileSync } = require("node:fs");
+const yaml = require("js-yaml");
+
+const specPath = require.resolve("@workos-inc/openapi-spec");
+const spec = yaml.load(readFileSync(specPath, "utf8"));
+```
+
+**Bundlers (Vite, webpack, etc.) with a YAML loader:**
+
+```ts
+import spec from "@workos-inc/openapi-spec/open-api-spec.yaml";
+```
+
 ## Generating Postman Collections
 
 This repository includes scripts to generate Postman collections from the OpenAPI specification. See the `scripts/postman` folder for more information.
