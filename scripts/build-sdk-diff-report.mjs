@@ -159,15 +159,15 @@ function buildHtml(languageReports) {
   .tab-panel.all-hidden .empty-filtered { display: block; }
 </style>
 </head>
-<body>
+<body class="hide-test hide-manifest">
 <header>
   <h1>WorkOS SDK code diff report</h1>
   <div class="controls">
     <div class="filters">
       <strong>Show:</strong>
       <label><input type="checkbox" data-filter="code" checked> code</label>
-      <label><input type="checkbox" data-filter="test" checked> tests</label>
-      <label><input type="checkbox" data-filter="manifest" checked> manifest</label>
+      <label><input type="checkbox" data-filter="test"> tests</label>
+      <label><input type="checkbox" data-filter="manifest"> manifest</label>
     </div>
   </div>
 </header>
