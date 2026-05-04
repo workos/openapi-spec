@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PACKAGE_NAME: '@workos-inc/openapi-spec'
+  PACKAGE_NAME: '@workos/openapi-spec'
 
 jobs:
   publish:

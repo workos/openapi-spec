@@ -129,10 +129,10 @@ node scripts/sdk-compat-pr-comment.mjs \
 
 ## Grabbing from npm
 
-The spec is published to npm as [`@workos-inc/openapi-spec`](https://www.npmjs.com/package/@workos-inc/openapi-spec).
+The spec is published to npm as [`@workos/openapi-spec`](https://www.npmjs.com/package/@workos/openapi-spec).
 
 ```bash
-npm install @workos-inc/openapi-spec
+npm install @workos/openapi-spec
 ```
 
 ### Usage
@@ -142,7 +142,7 @@ The package ships TypeScript types generated from the spec, plus the raw `open-a
 **TypeScript types:**
 
 ```ts
-import type { paths, components, operations } from "@workos-inc/openapi-spec";
+import type { paths, components, operations } from "@workos/openapi-spec";
 
 type User = components["schemas"]["User"];
 
@@ -167,7 +167,7 @@ import { createRequire } from "node:module";
 import yaml from "js-yaml";
 
 const require = createRequire(import.meta.url);
-const specPath = require.resolve("@workos-inc/openapi-spec/spec");
+const specPath = require.resolve("@workos/openapi-spec/spec");
 const spec = yaml.load(readFileSync(specPath, "utf8"));
 
 console.log(spec.info.title, spec.info.version);
@@ -179,14 +179,14 @@ console.log(spec.info.title, spec.info.version);
 const { readFileSync } = require("node:fs");
 const yaml = require("js-yaml");
 
-const specPath = require.resolve("@workos-inc/openapi-spec/spec");
+const specPath = require.resolve("@workos/openapi-spec/spec");
 const spec = yaml.load(readFileSync(specPath, "utf8"));
 ```
 
 **Bundlers (Vite, webpack, etc.) with a YAML loader:**
 
 ```ts
-import spec from "@workos-inc/openapi-spec/spec";
+import spec from "@workos/openapi-spec/spec";
 ```
 
 ## Generating Postman Collections
