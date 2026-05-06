@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_PATTERNS = {
   dotnet: [/(^|\/)Tests?\//, /Tests?\.cs$/i, /\.Tests?\.csproj$/i],
   go: [/_test\.go$/],
+  kotlin: [/(^|\/)src\/test\//, /Test\.kt$/, /Tests\.kt$/],
   php: [/(^|\/)tests?\//i],
   python: [/(^|\/)tests?\//, /(^|\/)test_[^/]+\.py$/, /[^/]+_test\.py$/, /(^|\/)conftest\.py$/],
   ruby: [/(^|\/)spec\//, /(^|\/)test\//, /_spec\.rb$/, /_test\.rb$/],

@@ -466,6 +466,14 @@ const config: OagenConfig = {
     // in `workos-python` (e.g. `from workos.user_management.models import User`)
     // keep resolving.
     User: 'UserManagement',
+    // `UserApiKeyOwner` is the auto-named user-variant of `ApiKey.owner`'s
+    // discriminated union (in the api_keys-tagged ops) AND the inline owner
+    // of `UserApiKey.owner` (in the user_management-prefixed ops). Without a
+    // hint, `assignModelsToServices` picks the first service in spec order —
+    // `ApiKeys` — and the file lands in `lib/workos/api_keys/`, splitting it
+    // from its sibling user_api_key_*_owner aliases that all live under
+    // user_management/. Pin it so the family stays together.
+    UserApiKeyOwner: 'UserManagement',
   },
   transformSpec,
 };

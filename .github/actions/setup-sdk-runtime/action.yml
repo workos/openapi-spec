@@ -3,7 +3,7 @@ description: Install the language runtime and formatter tools needed by an SDK e
 
 inputs:
   language:
-    description: Target language (ruby, python, go, dotnet, php)
+    description: Target language (ruby, python, go, dotnet, php, kotlin)
     required: true
   sdk-path:
     description: Path to the checked-out SDK repo
@@ -23,6 +23,7 @@ runs:
           go)     echo "version=$(grep '^go ' go.mod | awk '{print $2}')" >> "$GITHUB_OUTPUT" ;;
           dotnet) echo "version=$(grep -Po '(?<=<TargetFramework>net)\d+\.\d+' $(find . -name '*.csproj' -path '*/src/*' | head -1))" >> "$GITHUB_OUTPUT" ;;
           php)    echo "version=$(grep -Po '\"php\":\s*\"\^?\K[\d.]+' composer.json)" >> "$GITHUB_OUTPUT" ;;
+          kotlin) echo "version=$(grep -Po '(?<=JavaVersion\.VERSION_)\d+' build.gradle.kts | head -1)" >> "$GITHUB_OUTPUT" ;;
         esac
 
     - name: Setup Ruby
@@ -63,6 +64,17 @@ runs:
       uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # 2.37.0
       with:
         php-version: ${{ steps.sdk-version.outputs.version }}
+
+    - name: Setup Java
+      if: inputs.language == 'kotlin'
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+      with:
+        distribution: temurin
+        java-version: ${{ steps.sdk-version.outputs.version }}
+
+    - name: Setup Gradle
+      if: inputs.language == 'kotlin'
+      uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v6.1.0
 
     - name: Install SDK formatter tools
       working-directory: ${{ inputs.sdk-path }}
