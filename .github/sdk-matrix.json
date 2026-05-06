@@ -10,6 +10,11 @@
     "sdk_checkout_path": "backend/workos-go"
   },
   {
+    "language": "kotlin",
+    "sdk_repo": "workos/workos-kotlin",
+    "sdk_checkout_path": "backend/workos-kotlin"
+  },
+  {
     "language": "php",
     "sdk_repo": "workos/workos-php",
     "sdk_checkout_path": "backend/workos-php"
