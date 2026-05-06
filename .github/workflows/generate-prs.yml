@@ -169,14 +169,60 @@ jobs:
 
           # Pass the structured oagen diff as scope-grouping signal when available
           SPEC_DIFF="{}"
+          BEHAVIOR_CHANGES="[]"
           if [ -f /tmp/diff-report.json ]; then
             SPEC_DIFF=$(cat /tmp/diff-report.json)
+            # Behavior changes (e.g. removed query-param defaults) are emitted as
+            # a separate top-level array by oagen. They are mechanically
+            # rendered below as feat(scope)!: change default lines so they don't
+            # depend on Claude inferring them from the raw SDK diff.
+            BEHAVIOR_CHANGES=$(echo "$SPEC_DIFF" | jq -c '.behaviorChanges // []')
           fi
 
           OVERRIDE_BLOCK=""
           DESCRIPTIONS=""
+          BEHAVIOR_OVERRIDE_LINES=""
+          BEHAVIOR_DESCRIPTIONS=""
           ROLLUP_PREFIX=""
           ROLLUP_SUMMARY=""
+
+          # Pre-render behavior changes deterministically. We group by
+          # serviceName so a spec-wide change (like removing the pagination
+          # `order` default from every list endpoint) collapses to a single
+          # commit-override line per service rather than 30 duplicates.
+          BEHAVIOR_COUNT=$(echo "$BEHAVIOR_CHANGES" | jq 'length')
+          if [ "${BEHAVIOR_COUNT:-0}" -gt 0 ]; then
+            # Collapse all behavior changes for the same param across services
+            # into a single commit-override line, e.g.
+            #   feat!: change default for order in list operations (desc → <unset>)
+            # so release-please bumps the major version once with a clear
+            # reason rather than 23 near-duplicate entries. The PR body then
+            # itemizes which services were touched.
+            BEHAVIOR_OVERRIDE_LINES=$(echo "$BEHAVIOR_CHANGES" | jq -r '
+              group_by(.paramName) |
+              .[] |
+              (.[0].paramName) as $param |
+              (.[0].oldDefault // "<unset>") as $old |
+              (.[0].newDefault // "<unset>") as $new |
+              (length) as $count |
+              if $count > 1 then
+                "feat!: change default for \($param) in list operations (\($old) → \($new))"
+              else
+                (.[0].serviceName | gsub("(?<a>[a-z])(?<b>[A-Z])"; .a + "_" + .b) | ascii_downcase) as $scope |
+                "feat(\($scope))!: change default for \($param) (\($old) → \($new))"
+              end
+            ')
+            BEHAVIOR_DESCRIPTIONS=$(echo "$BEHAVIOR_CHANGES" | jq -r '
+              group_by(.paramName) |
+              .[] |
+              (.[0].paramName) as $param |
+              (.[0].oldDefault // "<unset>") as $old |
+              (.[0].newDefault // "<unset>") as $new |
+              (length) as $count |
+              ([.[] | (.serviceName | gsub("(?<a>[a-z])(?<b>[A-Z])"; .a + "_" + .b) | ascii_downcase)] | unique) as $scopes |
+              "### feat!: change default for \($param) (\($old) → \($new))\n\n- Server-side default for `\($param)` changed across \($count) list operation(s) in: \($scopes | map("`" + . + "`") | join(", ")).\n- Callers who did not explicitly set `\($param)` will now receive different server behavior. Set the parameter explicitly to preserve the previous default.\n"
+            ')
+          fi
 
           if [ "$DIFF_SIZE" -gt 0 ] && [ -n "$ANTHROPIC_API_KEY" ]; then
             echo "Sending ${DIFF_SIZE} bytes to Claude for classification..."
@@ -189,28 +235,28 @@ jobs:
                   max_tokens: 4096,
                   tools: [{
                     name: "classify_changes",
-                    description: "Group SDK changes by service/mount point and emit one conventional-commit entry per service for the release-please changelog.",
+                    description: "Group SDK changes by service/mount point and emit one conventional-commit entry per service for the release-please changelog. Type-change and field-removal verdicts MUST be grounded in the structured oagen spec diff — never inferred from the raw SDK diff text alone.",
                     input_schema: {
                       type: "object",
                       properties: {
                         entries: {
                           type: "array",
-                          description: "One entry per service that has user-facing changes. Rules: (1) Group by service (e.g. user_management, directory_sync, authorization) — never emit multiple entries for the same service. (2) Severity collapses upward within a service: any breaking change makes the whole entry feat!; otherwise any addition makes it feat; otherwise fix. (3) Omit services whose changes are purely cosmetic or internal (renames with no public-API effect, doc-only changes, enum value reordering, formatting). The omitted code still ships under the umbrella squash commit; it just does not get its own changelog entry. (4) If every service is noise-only, return a single entry with scope=\"generated\" and prefix=\"fix\".",
+                          description: "One entry per service that has user-facing changes. Rules: (1) Group by service (e.g. user_management, directory_sync, authorization) — never emit multiple entries for the same service. (2) Severity collapses upward within a service: any breaking change makes the whole entry feat!; otherwise any addition makes it feat; otherwise fix. (3) Omit services whose changes are purely cosmetic or internal (renames with no public-API effect, doc-only changes, enum value reordering, formatting). The omitted code still ships under the umbrella squash commit; it just does not get its own changelog entry. (4) If every service is noise-only, return a single entry with scope=\"generated\" and prefix=\"fix\". (5) Behavior changes (changed/removed query-param defaults) are pre-rendered as separate entries by the workflow — do NOT duplicate them here. (6) DEDUPE: if the same set of fields is touched across multiple services in the same way (e.g. struct-tag standardization on shared models), emit ONE entry with scope=\"generated\" rather than per-service duplicates. (7) Do NOT split a single conceptual change into multiple entries that share a scope — collapse them.",
                           items: {
                             type: "object",
                             properties: {
                               prefix: {
                                 type: "string",
-                                enum: ["feat!", "feat", "fix"],
-                                description: "feat! for breaking changes (removed/renamed public symbols, changed signatures, removed fields). feat for additive changes (new methods, new classes, new fields). fix for non-breaking modifications visible in the public API."
+                                enum: ["feat!", "feat", "fix", "chore"],
+                                description: "feat! ONLY for source-level breaking changes that are present in the structured oagen spec diff: a `field-type-changed`, `field-removed`, `model-removed`, `enum-removed`, `param-removed`, `param-type-changed`, `operation-removed`, or `param-required-changed` (optional → required) event. feat for additive changes (new methods, new classes, new fields, new optional params). fix for non-breaking observable modifications. chore for changes that do not affect the public API surface — including struct-tag-only changes (adding `url:\"-\"`, toggling `omitempty`), formatting, comment edits, or reordering. CRITICAL: a Go field gaining `url:\"-\"` is NOT a field-type change — its Go type did not change. If the structured oagen diff does NOT list the field in `field-type-changed`, the headline must NOT use \"Change ... field type\" wording, and prefix MUST NOT be feat!."
                               },
                               scope: {
                                 type: "string",
-                                description: "snake_case service/mount-point name (e.g. user_management, directory_sync, authorization, fga, sso, organizations). Use \"generated\" only for the catch-all fallback entry."
+                                description: "snake_case service/mount-point name (e.g. user_management, directory_sync, authorization, fga, sso, organizations). Use \"generated\" for cross-cutting changes that touch multiple services identically (e.g. tag standardization)."
                               },
                               summary: {
                                 type: "string",
-                                description: "Short user-facing summary under 60 chars. No trailing period. Will appear on the changelog line as: <prefix>(<scope>): <summary>"
+                                description: "Short user-facing summary under 60 chars. No trailing period. Will appear on the changelog line as: <prefix>(<scope>): <summary>. Avoid the phrase \"Change ... field type\" unless the structured diff confirms a field-type-changed event."
                               },
                               description: {
                                 type: "string",
@@ -227,7 +273,7 @@ jobs:
                   tool_choice: {type: "tool", name: "classify_changes"},
                   messages: [{
                     role: "user",
-                    content: ("Classify this generated " + $lang + " SDK diff into per-service changelog entries. The structured oagen spec diff (with serviceName and classification fields) is the primary scope-grouping signal; the raw SDK diff gives wording for summaries.\n\n## oagen spec diff\n```json\n" + ($spec_diff | tojson) + "\n```\n\n## SDK diff\n" + $diff)
+                    content: ("Classify this generated " + $lang + " SDK diff into per-service changelog entries.\n\nGrounding rules:\n- The structured oagen spec diff is authoritative for what changed at the IR level. If a field/model/operation does not appear in spec_diff.changes, then no source-level type/signature change happened — the SDK-side textual diff is cosmetic (struct tags, docstrings, formatting). Such changes are `chore`, never `feat!`.\n- Behavior changes (spec_diff.behaviorChanges) are pre-rendered as separate commit-override lines by the workflow. Do NOT include them in your entries.\n- For Go struct fields specifically: adding/changing tag content like `url:\"-\"` or `json:\"name,omitempty\"` is a tag change, not a type change. Do not headline these as \"Change … field type\".\n\n## oagen spec diff\n```json\n" + ($spec_diff | tojson) + "\n```\n\n## SDK diff\n" + $diff)
                   }]
                 }' | curl -s https://api.anthropic.com/v1/messages \
               -H "content-type: application/json" \
@@ -247,8 +293,10 @@ jobs:
             if [ "$ENTRY_COUNT" -gt 0 ]; then
               # Render breaking changes as `feat(scope)!:` (bang after scope, per
               # Conventional Commits) rather than `feat!(scope):`.
-              OVERRIDE_LINES=$(echo "$ENTRIES" | jq -r '.[] | (.prefix | sub("!$"; "")) as $type | (if .prefix | endswith("!") then "!" else "" end) as $bang | "\($type)(\(.scope))\($bang): \(.summary)"')
-              DESCRIPTIONS=$(echo "$ENTRIES" | jq -r '.[] | (.prefix | sub("!$"; "")) as $type | (if .prefix | endswith("!") then "!" else "" end) as $bang | "### \($type)(\(.scope))\($bang): \(.summary)\n\n\(.description)\n"')
+              # Treat the `chore` prefix as a literal, since release-please does
+              # not bump versions for it.
+              CLAUDE_OVERRIDE_LINES=$(echo "$ENTRIES" | jq -r '.[] | (.prefix | sub("!$"; "")) as $type | (if .prefix | endswith("!") then "!" else "" end) as $bang | "\($type)(\(.scope))\($bang): \(.summary)"')
+              CLAUDE_DESCRIPTIONS=$(echo "$ENTRIES" | jq -r '.[] | (.prefix | sub("!$"; "")) as $type | (if .prefix | endswith("!") then "!" else "" end) as $bang | "### \($type)(\(.scope))\($bang): \(.summary)\n\n\(.description)\n"')
 
               if echo "$ENTRIES" | jq -e '[.[] | select(.prefix == "feat!")] | length > 0' > /dev/null; then
                 ROLLUP_TYPE="feat"
@@ -260,21 +308,50 @@ jobs:
                 ROLLUP_TYPE="fix"
                 ROLLUP_BANG=""
               fi
-
-              if [ "$ENTRY_COUNT" -eq 1 ]; then
-                ROLLUP_SUMMARY="regenerate from spec (1 change)"
-              else
-                ROLLUP_SUMMARY="regenerate from spec (${ENTRY_COUNT} changes)"
-              fi
-
-              OVERRIDE_BLOCK=$(printf 'BEGIN_COMMIT_OVERRIDE\n%s\nEND_COMMIT_OVERRIDE' "$OVERRIDE_LINES")
+            else
+              CLAUDE_OVERRIDE_LINES=""
+              CLAUDE_DESCRIPTIONS=""
             fi
           else
+            CLAUDE_OVERRIDE_LINES=""
+            CLAUDE_DESCRIPTIONS=""
             echo "Skipping classification: diff is empty or no API key"
           fi
 
-          # Fallback: Claude unavailable or returned no entries — degrade to a single
-          # rollup line derived from the oagen diff summary counts.
+          # ── Compose final output (behavior changes + Claude entries) ────────
+          # Behavior changes (e.g. `feat(authorization)!: change default for
+          # order`) are always breaking, so they force the rollup to feat! and
+          # take precedence over any softer rollup Claude inferred.
+          if [ -n "$BEHAVIOR_OVERRIDE_LINES" ]; then
+            ROLLUP_TYPE="feat"
+            ROLLUP_BANG="!"
+          fi
+
+          # Combine pre-rendered behavior lines with Claude's per-service
+          # entries. Behavior lines come first because they are the most
+          # consequential (forced major-version bumps).
+          COMBINED_OVERRIDE=$(printf '%s\n%s' "$BEHAVIOR_OVERRIDE_LINES" "$CLAUDE_OVERRIDE_LINES" | sed '/^$/d')
+          if [ -n "$COMBINED_OVERRIDE" ]; then
+            OVERRIDE_BLOCK=$(printf 'BEGIN_COMMIT_OVERRIDE\n%s\nEND_COMMIT_OVERRIDE' "$COMBINED_OVERRIDE")
+            TOTAL_LINES=$(printf '%s\n' "$COMBINED_OVERRIDE" | wc -l | tr -d ' ')
+            if [ "$TOTAL_LINES" -eq 1 ]; then
+              ROLLUP_SUMMARY="regenerate from spec (1 change)"
+            else
+              ROLLUP_SUMMARY="regenerate from spec (${TOTAL_LINES} changes)"
+            fi
+          fi
+
+          # Behavior changes get a dedicated section in the PR body so they
+          # are not buried among scope-level entries.
+          if [ -n "$BEHAVIOR_DESCRIPTIONS" ]; then
+            DESCRIPTIONS=$(printf '## BREAKING: Behavior changes\n\n%s\n## Changes\n\n%s' "$BEHAVIOR_DESCRIPTIONS" "$CLAUDE_DESCRIPTIONS")
+          else
+            DESCRIPTIONS="$CLAUDE_DESCRIPTIONS"
+          fi
+
+          # Fallback: Claude unavailable or returned no entries AND no
+          # behavior changes — degrade to a single rollup line derived from
+          # the oagen diff summary counts.
           if [ -z "$ROLLUP_TYPE" ]; then
             BREAKING='${{ steps.diff-report.outputs.breaking }}'
             ADDED='${{ steps.diff-report.outputs.added }}'
