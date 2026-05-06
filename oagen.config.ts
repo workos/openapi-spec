@@ -139,8 +139,16 @@ const operationHints: Record<string, OperationHint> = {
     name: 'list_memberships_for_resource_by_external_id',
   },
 
+  // -- Authorization -- role assignments for resource by external ID ------------
+  'GET /authorization/organizations/{organization_id}/resources/{resource_type_slug}/{external_id}/role_assignments': {
+    name: 'list_role_assignments_for_resource_by_external_id',
+  },
+
   // -- Authorization -- env-scoped resource memberships -------------------------
   'GET /authorization/resources/{resource_id}/organization_memberships': { name: 'list_memberships_for_resource' },
+
+  // -- Authorization -- env-scoped resource role assignments --------------------
+  'GET /authorization/resources/{resource_id}/role_assignments': { name: 'list_role_assignments_for_resource' },
 
   // -- User Management -- singularized/shortened names --------------------------
   'POST /user_management/users': { name: 'create_user' },

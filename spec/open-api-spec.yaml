@@ -2,9 +2,8 @@ openapi: 3.1.1
 paths:
   /api_keys/validations:
     post:
-      operationId: ApiKeysController_validateApiKey
-      summary: Validate API key
       description: Validate an API key value and return the API key object if valid.
+      operationId: ApiKeysController_validateApiKey
       parameters: []
       requestBody:
         required: true
@@ -34,15 +33,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Validate API key
       tags:
         - api_keys
   /api_keys/{id}:
     delete:
-      operationId: ApiKeysController_delete
-      summary: Delete an API key
       description: >-
         Permanently deletes an API key. This action cannot be undone. Once
         deleted, any requests using this API key will fail authentication.
+      operationId: ApiKeysController_delete
       parameters:
         - name: id
           required: true
@@ -67,13 +66,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete an API key
       tags:
         - api_keys
   /audit_logs/actions:
     get:
-      operationId: AuditLogValidatorsController_list
-      summary: List Actions
       description: Get a list of all Audit Log actions in the current environment.
+      operationId: AuditLogValidatorsController_list
       parameters:
         - name: before
           required: false
@@ -110,13 +109,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -190,16 +183,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Actions
       tags:
         - audit-logs
   /audit_logs/actions/{actionName}/schemas:
     post:
-      operationId: AuditLogValidatorVersionsController_create
-      summary: Create Schema
       description: >-
         Creates a new Audit Log schema used to validate the payload of incoming
         Audit Log Events. If the `action` does not exist, it will also be
         created.
+      operationId: AuditLogValidatorVersionsController_create
       parameters:
         - name: actionName
           required: true
@@ -234,14 +227,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create Schema
       tags:
         - audit-logs
     get:
-      operationId: AuditLogValidatorVersionsController_schemas
-      summary: List Schemas
       description: >-
         Get a list of all schemas for the Audit Logs action identified by
         `:name`.
+      operationId: AuditLogValidatorVersionsController_schemas
       parameters:
         - name: actionName
           required: true
@@ -285,13 +278,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -365,12 +352,11 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Schemas
       tags:
         - audit-logs
   /audit_logs/events:
     post:
-      operationId: AuditLogEventsController_create
-      summary: Create Event
       description: >-
         Create an Audit Log Event.
 
@@ -392,6 +378,7 @@ paths:
 
         Idempotency keys expire after 24 hours. The API will generate a new
         response if you submit a request with an expired key.
+      operationId: AuditLogEventsController_create
       parameters:
         - name: idempotency-key
           in: header
@@ -539,15 +526,15 @@ paths:
                 message: Too many requests.
                 code: rate_limit_exceeded
           description: ''
+      summary: Create Event
       tags:
         - audit-logs
   /audit_logs/exports:
     post:
-      operationId: AuditLogExportsController_exports
-      summary: Create Export
       description: >-
         Create an Audit Log Export. Exports are scoped to a single organization
         within a specified date range.
+      operationId: AuditLogExportsController_exports
       parameters: []
       requestBody:
         required: true
@@ -605,16 +592,16 @@ paths:
               example:
                 message: Invalid date range
                 code: invalid_audit_log_export_range_date
+      summary: Create Export
       tags:
         - audit-logs
   /audit_logs/exports/{auditLogExportId}:
     get:
-      operationId: AuditLogExportsController_export
-      summary: Get Export
       description: >-
         Get an Audit Log Export. The URL will expire after 10 minutes. If the
         export is needed again at a later time, refetching the export will
         regenerate the URL.
+      operationId: AuditLogExportsController_export
       parameters:
         - name: auditLogExportId
           required: true
@@ -654,13 +641,13 @@ paths:
                 message: >-
                   Audit Log Export not found:
                   'audit_log_export_01GBZK5MP7TD1YCFQHFR22180V'.
+      summary: Get Export
       tags:
         - audit-logs
   /auth/challenges/{id}/verify:
     post:
-      operationId: AuthenticationChallengesController_verify
-      summary: Verify Challenge
       description: Verifies an Authentication Challenge.
+      operationId: AuthenticationChallengesController_verify
       parameters:
         - name: id
           required: true
@@ -734,16 +721,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Verify Challenge
       tags:
         - multi-factor-auth.challenges
   /auth/factors/enroll:
     post:
-      operationId: AuthenticationFactorsController_create
-      summary: Enroll Factor
       description: >-
         Enrolls an Authentication Factor to be used as an additional factor of
         authentication. The returned ID should be used to create an
         authentication Challenge.
+      operationId: AuthenticationFactorsController_create
       parameters: []
       requestBody:
         required: true
@@ -798,13 +785,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Enroll Factor
       tags:
         - multi-factor-auth
   /auth/factors/{id}:
     get:
-      operationId: AuthenticationFactorsController_get
-      summary: Get Factor
       description: Gets an Authentication Factor.
+      operationId: AuthenticationFactorsController_get
       parameters:
         - name: id
           required: true
@@ -843,12 +830,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get Factor
       tags:
         - multi-factor-auth
     delete:
-      operationId: AuthenticationFactorsController_delete
-      summary: Delete Factor
       description: Permanently deletes an Authentication Factor. It cannot be undone.
+      operationId: AuthenticationFactorsController_delete
       parameters:
         - name: id
           required: true
@@ -875,13 +862,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete Factor
       tags:
         - multi-factor-auth
   /auth/factors/{id}/challenge:
     post:
-      operationId: AuthenticationFactorsController_challenge
-      summary: Challenge Factor
       description: Creates a Challenge for an Authentication Factor.
+      operationId: AuthenticationFactorsController_challenge
       parameters:
         - name: id
           required: true
@@ -929,12 +916,11 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Challenge Factor
       tags:
         - multi-factor-auth
   /authkit/oauth2/complete:
     post:
-      operationId: ExternalAuthController_completeLogin
-      summary: Complete external authentication
       description: >-
         Completes an external authentication flow and returns control to
         AuthKit. This endpoint is used with [Standalone
@@ -961,6 +947,7 @@ paths:
         If you provide a new `id` with an `email` that already belongs to an
         existing user, the request will fail with an error as email addresses
         are unique to a user.
+      operationId: ExternalAuthController_completeLogin
       parameters: []
       requestBody:
         required: true
@@ -1076,16 +1063,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Complete external authentication
       tags:
         - workos-connect
   /authorization/organization_memberships/{organization_membership_id}/check:
     post:
-      operationId: AuthorizationController_check
-      summary: Check authorization
       description: >-
         Check if an organization membership has a specific permission on a
         resource. Supports identification by resource_id OR by
         resource_external_id + resource_type_slug.
+      operationId: AuthorizationController_check
       parameters:
         - name: organization_membership_id
           required: true
@@ -1146,6 +1133,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Check authorization
       tags:
         - authorization
       x-mutually-exclusive-body-groups: &ref_3
@@ -1159,8 +1147,6 @@ paths:
               - resource_type_slug
   /authorization/organization_memberships/{organization_membership_id}/resources:
     get:
-      operationId: AuthorizationController_listResourcesForMembership
-      summary: List resources for organization membership
       description: >-
         Returns all child resources of a parent resource where the organization
         membership has a specific permission. This is useful for resource
@@ -1171,6 +1157,7 @@ paths:
         You must provide either `parent_resource_id` or both
         `parent_resource_external_id` and `parent_resource_type_slug` to
         identify the parent resource.
+      operationId: AuthorizationController_listResourcesForMembership
       parameters:
         - name: organization_membership_id
           required: true
@@ -1224,13 +1211,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: permission_slug
           required: true
           in: query
@@ -1338,6 +1319,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List resources for organization membership
       tags:
         - authorization
       x-mutually-exclusive-parameter-groups:
@@ -1351,12 +1333,11 @@ paths:
               - parent_resource_external_id
   /authorization/organization_memberships/{organization_membership_id}/resources/{resource_id}/permissions:
     get:
-      operationId: AuthorizationController_listEffectivePermissions
-      summary: List effective permissions for an organization membership on a resource
       description: >-
         Returns all permissions the organization membership effectively has on a
         resource, including permissions inherited through roles assigned to
         ancestor resources.
+      operationId: AuthorizationController_listEffectivePermissions
       parameters:
         - name: organization_membership_id
           required: true
@@ -1417,13 +1398,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -1470,18 +1445,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List effective permissions for an organization membership on a resource
       tags:
         - authorization
   /authorization/organization_memberships/{organization_membership_id}/resources/{resource_type_slug}/{external_id}/permissions:
     get:
-      operationId: AuthorizationController_listEffectivePermissionsByExternalId
-      summary: >-
-        List effective permissions for an organization membership on a resource
-        by external ID
       description: >-
         Returns all permissions the organization membership effectively has on a
         resource identified by its external ID, including permissions inherited
         through roles assigned to ancestor resources.
+      operationId: AuthorizationController_listEffectivePermissionsByExternalId
       parameters:
         - name: organization_membership_id
           required: true
@@ -1549,13 +1522,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -1602,16 +1569,18 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: >-
+        List effective permissions for an organization membership on a resource
+        by external ID
       tags:
         - authorization
   /authorization/organization_memberships/{organization_membership_id}/role_assignments:
     get:
-      operationId: AuthorizationRoleAssignmentsController_listRoleAssignments
-      summary: List role assignments
       description: >-
         List all role assignments for an organization membership. This returns
         all roles that have been assigned to the user on resources, including
         organization-level and sub-resource roles.
+      operationId: AuthorizationRoleAssignmentsController_listRoleAssignments
       parameters:
         - name: organization_membership_id
           required: true
@@ -1665,20 +1634,14 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RoleAssignmentList'
+                $ref: '#/components/schemas/UserRoleAssignmentList'
         '403':
           description: Forbidden
           content:
@@ -1705,12 +1668,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List role assignments
       tags:
         - authorization
     post:
-      operationId: AuthorizationRoleAssignmentsController_assignRole
-      summary: Assign a role
       description: Assign a role to an organization membership on a specific resource.
+      operationId: AuthorizationRoleAssignmentsController_assignRole
       parameters:
         - name: organization_membership_id
           required: true
@@ -1730,10 +1693,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RoleAssignment'
+                $ref: '#/components/schemas/UserRoleAssignment'
               example:
                 object: role_assignment
                 id: role_assignment_01HXYZ123456789ABCDEFGH
+                organization_membership_id: om_01HXYZ123456789ABCDEFGHIJ
                 role:
                   slug: editor
                 resource:
@@ -1782,6 +1746,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Assign a role
       tags:
         - authorization
       x-mutually-exclusive-body-groups: &ref_4
@@ -1794,9 +1759,8 @@ paths:
               - resource_external_id
               - resource_type_slug
     delete:
-      operationId: AuthorizationRoleAssignmentsController_removeRoleByCriteria
-      summary: Remove a role assignment
       description: Remove a role assignment by role slug and resource.
+      operationId: AuthorizationRoleAssignmentsController_removeRoleByCriteria
       parameters:
         - name: organization_membership_id
           required: true
@@ -1853,6 +1817,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Remove a role assignment
       tags:
         - authorization
       x-mutually-exclusive-body-groups: &ref_5
@@ -1866,9 +1831,8 @@ paths:
               - resource_type_slug
   /authorization/organization_memberships/{organization_membership_id}/role_assignments/{role_assignment_id}:
     delete:
-      operationId: AuthorizationRoleAssignmentsController_removeRoleById
-      summary: Remove a role assignment by ID
       description: Remove a role assignment using its ID.
+      operationId: AuthorizationRoleAssignmentsController_removeRoleById
       parameters:
         - name: organization_membership_id
           required: true
@@ -1913,13 +1877,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Remove a role assignment by ID
       tags:
         - authorization
   /authorization/organizations/{organizationId}/roles:
     post:
-      operationId: AuthorizationOrganizationRolesController_create
-      summary: Create a custom role
       description: Create a new custom role for this organization.
+      operationId: AuthorizationOrganizationRolesController_create
       parameters:
         - name: organizationId
           required: true
@@ -2085,14 +2049,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create a custom role
       tags:
         - authorization
     get:
-      operationId: AuthorizationOrganizationRolesController_list
-      summary: List custom roles
       description: >-
         Get a list of all roles that apply to an organization. This includes
         both environment roles and custom roles, returned in priority order.
+      operationId: AuthorizationOrganizationRolesController_list
       parameters:
         - name: organizationId
           required: true
@@ -2134,15 +2098,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List custom roles
       tags:
         - authorization
   /authorization/organizations/{organizationId}/roles/{slug}:
     get:
-      operationId: AuthorizationOrganizationRolesController_get
-      summary: Get a custom role
       description: >-
         Retrieve a role that applies to an organization by its slug. This can
         return either an environment role or a custom role.
+      operationId: AuthorizationOrganizationRolesController_get
       parameters:
         - name: organizationId
           required: true
@@ -2258,14 +2222,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a custom role
       tags:
         - authorization
     patch:
-      operationId: AuthorizationOrganizationRolesController_update
-      summary: Update a custom role
       description: >-
         Update an existing custom role. Only the fields provided in the request
         body will be updated.
+      operationId: AuthorizationOrganizationRolesController_update
       parameters:
         - name: organizationId
           required: true
@@ -2419,12 +2383,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update a custom role
       tags:
         - authorization
     delete:
-      operationId: AuthorizationOrganizationRolesController_delete
-      summary: Delete a custom role
       description: Delete an existing custom role.
+      operationId: AuthorizationOrganizationRolesController_delete
       parameters:
         - name: organizationId
           required: true
@@ -2522,13 +2486,13 @@ paths:
                     required:
                       - code
                       - message
+      summary: Delete a custom role
       tags:
         - authorization
   /authorization/organizations/{organizationId}/roles/{slug}/permissions:
     put:
-      operationId: AuthorizationOrganizationRolePermissionsController_setPermissions
-      summary: Set permissions for a custom role
       description: Replace all permissions on a custom role with the provided list.
+      operationId: AuthorizationOrganizationRolePermissionsController_setPermissions
       parameters:
         - name: organizationId
           required: true
@@ -2665,14 +2629,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Set permissions for a custom role
       tags:
         - authorization
     post:
-      operationId: AuthorizationOrganizationRolePermissionsController_addPermission
-      summary: Add a permission to a custom role
       description: >-
         Add a single permission to a custom role. If the permission is already
         assigned to the role, this operation has no effect.
+      operationId: AuthorizationOrganizationRolePermissionsController_addPermission
       parameters:
         - name: organizationId
           required: true
@@ -2825,13 +2789,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Add a permission to a custom role
       tags:
         - authorization
   /authorization/organizations/{organizationId}/roles/{slug}/permissions/{permissionSlug}:
     delete:
-      operationId: AuthorizationOrganizationRolePermissionsController_removePermission
-      summary: Remove a permission from a custom role
       description: Remove a single permission from a custom role by its slug.
+      operationId: AuthorizationOrganizationRolePermissionsController_removePermission
       parameters:
         - name: organizationId
           required: true
@@ -2887,17 +2851,17 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Remove a permission from a custom role
       tags:
         - authorization
   /authorization/organizations/{organization_id}/resources/{resource_type_slug}/{external_id}:
     get:
-      operationId: AuthorizationResourcesByExternalIdController_getByExternalId
-      summary: Get a resource by external ID
       description: >-
         Retrieve the details of an authorization resource by its external ID,
         organization, and resource type. This is useful when you only have the
         external ID from your system and need to fetch the full resource
         details.
+      operationId: AuthorizationResourcesByExternalIdController_getByExternalId
       parameters:
         - name: organization_id
           required: true
@@ -2953,12 +2917,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a resource by external ID
       tags:
         - authorization
     patch:
-      operationId: AuthorizationResourcesByExternalIdController_updateByExternalId
-      summary: Update a resource by external ID
       description: Update an existing authorization resource using its external ID.
+      operationId: AuthorizationResourcesByExternalIdController_updateByExternalId
       parameters:
         - name: organization_id
           required: true
@@ -3132,6 +3096,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update a resource by external ID
       tags:
         - authorization
       x-mutually-exclusive-body-groups: &ref_0
@@ -3144,11 +3109,10 @@ paths:
               - parent_resource_external_id
               - parent_resource_type_slug
     delete:
-      operationId: AuthorizationResourcesByExternalIdController_deleteByExternalId
-      summary: Delete an authorization resource by external ID
       description: >-
         Delete an authorization resource by organization, resource type, and
         external ID. This also deletes all descendant resources.
+      operationId: AuthorizationResourcesByExternalIdController_deleteByExternalId
       parameters:
         - name: organization_id
           required: true
@@ -3264,18 +3228,18 @@ paths:
                     required:
                       - code
                       - message
+      summary: Delete an authorization resource by external ID
       tags:
         - authorization
   /authorization/organizations/{organization_id}/resources/{resource_type_slug}/{external_id}/organization_memberships:
     get:
-      operationId: >-
-        AuthorizationResourcesByExternalIdController_listOrganizationMembershipsForResourceByExternalId
-      summary: List memberships for a resource by external ID
       description: >-
         Returns all organization memberships that have a specific permission on
         a resource, using the resource's external ID. This is useful for
         answering "Who can access this resource?" when you only have the
         external ID.
+      operationId: >-
+        AuthorizationResourcesByExternalIdController_listOrganizationMembershipsForResourceByExternalId
       parameters:
         - name: organization_id
           required: true
@@ -3343,13 +3307,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: permission_slug
           required: true
           in: query
@@ -3437,13 +3395,125 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List memberships for a resource by external ID
+      tags:
+        - authorization
+  /authorization/organizations/{organization_id}/resources/{resource_type_slug}/{external_id}/role_assignments:
+    get:
+      description: >-
+        List all role assignments granted on a resource, identified by its
+        external ID. Each assignment includes the organization membership it was
+        granted to.
+      operationId: >-
+        AuthorizationRoleAssignmentsController_listRoleAssignmentsForResourceByExternalId
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization that owns the resource.
+          schema:
+            type: string
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        - name: resource_type_slug
+          required: true
+          in: path
+          description: The slug of the resource type.
+          schema:
+            type: string
+            example: project
+        - name: external_id
+          required: true
+          in: path
+          description: An identifier you provide to reference the resource in your system.
+          schema:
+            type: string
+            example: proj-456
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to descending.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRoleAssignmentList'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List role assignments for a resource by external ID
       tags:
         - authorization
   /authorization/permissions:
     get:
-      operationId: AuthorizationPermissionsController_list
-      summary: List permissions
       description: Get a list of all permissions in your WorkOS environment.
+      operationId: AuthorizationPermissionsController_list
       parameters:
         - name: before
           required: false
@@ -3490,13 +3560,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -3517,14 +3581,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List permissions
       tags:
         - permissions
     post:
-      operationId: AuthorizationPermissionsController_create
-      summary: Create a permission
       description: >-
         Create a new permission in your WorkOS environment. The permission can
         then be assigned to environment roles and custom roles.
+      operationId: AuthorizationPermissionsController_create
       parameters: []
       requestBody:
         required: true
@@ -3662,13 +3726,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create a permission
       tags:
         - permissions
   /authorization/permissions/{slug}:
     get:
-      operationId: AuthorizationPermissionsController_find
-      summary: Get a permission
       description: Retrieve a permission by its unique slug.
+      operationId: AuthorizationPermissionsController_find
       parameters:
         - name: slug
           required: true
@@ -3700,14 +3764,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a permission
       tags:
         - permissions
     patch:
-      operationId: AuthorizationPermissionsController_update
-      summary: Update a permission
       description: >-
         Update an existing permission. Only the fields provided in the request
         body will be updated.
+      operationId: AuthorizationPermissionsController_update
       parameters:
         - name: slug
           required: true
@@ -3771,12 +3835,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update a permission
       tags:
         - permissions
     delete:
-      operationId: AuthorizationPermissionsController_delete
-      summary: Delete a permission
       description: Delete an existing permission. System permissions cannot be deleted.
+      operationId: AuthorizationPermissionsController_delete
       parameters:
         - name: slug
           required: true
@@ -3817,13 +3881,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a permission
       tags:
         - permissions
   /authorization/resources:
     get:
-      operationId: AuthorizationResourcesController_list
-      summary: List resources
       description: Get a paginated list of authorization resources.
+      operationId: AuthorizationResourcesController_list
       parameters:
         - name: before
           required: false
@@ -3870,13 +3934,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
           required: false
           in: query
@@ -3966,6 +4024,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List resources
       tags:
         - authorization
       x-mutually-exclusive-parameter-groups:
@@ -3978,9 +4037,8 @@ paths:
               - parent_resource_type_slug
               - parent_external_id
     post:
-      operationId: AuthorizationResourcesController_create
-      summary: Create an authorization resource
       description: Create a new authorization resource.
+      operationId: AuthorizationResourcesController_create
       parameters: []
       requestBody:
         required: true
@@ -4163,6 +4221,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create an authorization resource
       tags:
         - authorization
       x-mutually-exclusive-body-groups: &ref_6
@@ -4176,9 +4235,8 @@ paths:
               - parent_resource_type_slug
   /authorization/resources/{resource_id}:
     get:
-      operationId: AuthorizationResourcesController_findById
-      summary: Get a resource
       description: Retrieve the details of an authorization resource by its ID.
+      operationId: AuthorizationResourcesController_findById
       parameters:
         - name: resource_id
           required: true
@@ -4233,12 +4291,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a resource
       tags:
         - authorization
     patch:
-      operationId: AuthorizationResourcesController_update
-      summary: Update a resource
       description: Update an existing authorization resource.
+      operationId: AuthorizationResourcesController_update
       parameters:
         - name: resource_id
           required: true
@@ -4398,13 +4456,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update a resource
       tags:
         - authorization
       x-mutually-exclusive-body-groups: *ref_0
     delete:
-      operationId: AuthorizationResourcesController_delete
-      summary: Delete an authorization resource
       description: Delete an authorization resource and all its descendants.
+      operationId: AuthorizationResourcesController_delete
       parameters:
         - name: resource_id
           required: true
@@ -4506,16 +4564,16 @@ paths:
                     required:
                       - code
                       - message
+      summary: Delete an authorization resource
       tags:
         - authorization
   /authorization/resources/{resource_id}/organization_memberships:
     get:
-      operationId: AuthorizationResourcesController_listOrganizationMembershipsForResource
-      summary: List organization memberships for resource
       description: >-
         Returns all organization memberships that have a specific permission on
         a resource instance. This is useful for answering "Who can access this
         resource?".
+      operationId: AuthorizationResourcesController_listOrganizationMembershipsForResource
       parameters:
         - name: resource_id
           required: true
@@ -4569,13 +4627,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: permission_slug
           required: true
           in: query
@@ -4663,13 +4715,109 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List organization memberships for resource
+      tags:
+        - authorization
+  /authorization/resources/{resource_id}/role_assignments:
+    get:
+      description: >-
+        List all role assignments granted on a specific resource instance. Each
+        assignment includes the organization membership it was granted to.
+      operationId: AuthorizationRoleAssignmentsController_listRoleAssignmentsForResource
+      parameters:
+        - name: resource_id
+          required: true
+          in: path
+          description: The ID of the authorization resource.
+          schema:
+            type: string
+            example: authz_resource_01HXYZ123456789ABCDEFGHIJ
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to descending.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRoleAssignmentList'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List role assignments for a resource
       tags:
         - authorization
   /authorization/roles:
     post:
-      operationId: AuthorizationRolesController_create
-      summary: Create an environment role
       description: Create a new environment role.
+      operationId: AuthorizationRolesController_create
       parameters: []
       requestBody:
         required: true
@@ -4828,12 +4976,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create an environment role
       tags:
         - authorization
     get:
-      operationId: AuthorizationRolesController_list
-      summary: List environment roles
       description: List all environment roles in priority order.
+      operationId: AuthorizationRolesController_list
       parameters: []
       responses:
         '200':
@@ -4855,13 +5003,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List environment roles
       tags:
         - authorization
   /authorization/roles/{slug}:
     get:
-      operationId: AuthorizationRolesController_get
-      summary: Get an environment role
       description: Get an environment role by its slug.
+      operationId: AuthorizationRolesController_get
       parameters:
         - name: slug
           required: true
@@ -4903,12 +5051,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an environment role
       tags:
         - authorization
     patch:
-      operationId: AuthorizationRolesController_update
-      summary: Update an environment role
       description: Update an existing environment role.
+      operationId: AuthorizationRolesController_update
       parameters:
         - name: slug
           required: true
@@ -5055,13 +5203,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update an environment role
       tags:
         - authorization
   /authorization/roles/{slug}/permissions:
     put:
-      operationId: AuthorizationRolePermissionsController_setPermissions
-      summary: Set permissions for an environment role
       description: Replace all permissions on an environment role with the provided list.
+      operationId: AuthorizationRolePermissionsController_setPermissions
       parameters:
         - name: slug
           required: true
@@ -5210,14 +5358,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Set permissions for an environment role
       tags:
         - authorization
     post:
-      operationId: AuthorizationRolePermissionsController_addPermission
-      summary: Add a permission to an environment role
       description: >-
         Add a single permission to an environment role. If the permission is
         already assigned to the role, this operation has no effect.
+      operationId: AuthorizationRolePermissionsController_addPermission
       parameters:
         - name: slug
           required: true
@@ -5363,15 +5511,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Add a permission to an environment role
       tags:
         - authorization
   /connect/applications:
     get:
-      operationId: ApplicationsController_list
-      summary: List Connect Applications
       description: >-
         List all Connect Applications in the current environment with optional
         filtering.
+      operationId: ApplicationsController_list
       parameters:
         - name: before
           required: false
@@ -5418,13 +5566,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
           required: false
           in: query
@@ -5452,14 +5594,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Connect Applications
       tags:
         - applications
     post:
-      operationId: ApplicationsController_create
-      summary: Create a Connect Application
       description: >-
         Create a new Connect Application. Supports both OAuth and
         Machine-to-Machine (M2M) application types.
+      operationId: ApplicationsController_create
       parameters: []
       requestBody:
         required: true
@@ -5502,13 +5644,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create a Connect Application
       tags:
         - applications
   /connect/applications/{id}:
     get:
-      operationId: ApplicationsController_find
-      summary: Get a Connect Application
       description: Retrieve details for a specific Connect Application by ID or client ID.
+      operationId: ApplicationsController_find
       parameters:
         - name: id
           required: true
@@ -5537,15 +5679,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a Connect Application
       tags:
         - applications
     put:
-      operationId: ApplicationsController_update
-      summary: Update a Connect Application
       description: >-
         Update an existing Connect Application. For OAuth applications, you can
         update redirect URIs. For all applications, you can update the name,
         description, and scopes.
+      operationId: ApplicationsController_update
       parameters:
         - name: id
           required: true
@@ -5593,12 +5735,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update a Connect Application
       tags:
         - applications
     delete:
-      operationId: ApplicationsController_delete
-      summary: Delete a Connect Application
       description: Delete an existing Connect Application.
+      operationId: ApplicationsController_delete
       parameters:
         - name: id
           required: true
@@ -5623,13 +5765,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a Connect Application
       tags:
         - applications
   /connect/applications/{id}/client_secrets:
     get:
-      operationId: ApplicationCredentialsController_list
-      summary: List Client Secrets for a Connect Application
       description: List all client secrets associated with a Connect Application.
+      operationId: ApplicationCredentialsController_list
       parameters:
         - name: id
           required: true
@@ -5700,12 +5842,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Client Secrets for a Connect Application
       tags:
         - application.client-secrets
     post:
-      operationId: ApplicationCredentialsController_create
-      summary: Create a new client secret for a Connect Application
       description: Create new secrets for a Connect Application.
+      operationId: ApplicationCredentialsController_create
       parameters:
         - name: id
           required: true
@@ -5753,13 +5895,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create a new client secret for a Connect Application
       tags:
         - application.client-secrets
   /connect/client_secrets/{id}:
     delete:
-      operationId: ApplicationCredentialsController_delete
-      summary: Delete a Client Secret
       description: Delete (revoke) an existing client secret.
+      operationId: ApplicationCredentialsController_delete
       parameters:
         - name: id
           required: true
@@ -5784,15 +5926,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a Client Secret
       tags:
         - application.client-secrets
   /connections:
     get:
-      operationId: ConnectionsController_list
-      summary: List Connections
       description: >-
         Get a list of all of your existing connections matching the criteria
         specified.
+      operationId: ConnectionsController_list
       parameters:
         - name: before
           required: false
@@ -5829,13 +5971,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: connection_type
           required: false
           in: query
@@ -5946,13 +6082,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Connections
       tags:
         - connections
   /connections/{id}:
     get:
-      operationId: ConnectionsController_find
-      summary: Get a Connection
       description: Get the details of an existing connection.
+      operationId: ConnectionsController_find
       parameters:
         - name: id
           required: true
@@ -5994,12 +6130,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a Connection
       tags:
         - connections
     delete:
-      operationId: ConnectionsController_delete
-      summary: Delete a Connection
       description: Permanently deletes an existing connection. It cannot be undone.
+      operationId: ConnectionsController_delete
       parameters:
         - name: id
           required: true
@@ -6039,16 +6175,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a Connection
       tags:
         - connections
   /data-integrations/{slug}/authorize:
     post:
-      operationId: DataIntegrationsController_getDataIntegrationAuthorizeUrl
-      summary: Get authorization URL
       description: >-
         Generates an OAuth authorization URL to initiate the connection flow for
         a user. Redirect the user to the returned URL to begin the OAuth flow
         with the third-party provider.
+      operationId: DataIntegrationsController_getDataIntegrationAuthorizeUrl
       parameters:
         - name: slug
           required: true
@@ -6131,16 +6267,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get authorization URL
       tags:
         - pipes
   /data-integrations/{slug}/token:
     post:
-      operationId: DataIntegrationsController_getUserlandUserToken
-      summary: Get an access token for a connected account
       description: >-
         Fetches a valid OAuth access token for a user's connected account.
         WorkOS automatically handles token refresh, ensuring you always receive
         a valid, non-expired token.
+      operationId: DataIntegrationsController_getUserlandUserToken
       parameters:
         - name: slug
           required: true
@@ -6204,15 +6340,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an access token for a connected account
       tags:
         - pipes
   /directories:
     get:
-      operationId: DirectoriesController_list
-      summary: List Directories
       description: >-
         Get a list of all of your existing directories matching the criteria
         specified.
+      operationId: DirectoriesController_list
       parameters:
         - name: before
           required: false
@@ -6249,13 +6385,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
           required: false
           in: query
@@ -6311,13 +6441,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Directories
       tags:
         - directories
   /directories/{id}:
     get:
-      operationId: DirectoriesController_find
-      summary: Get a Directory
       description: Get the details of an existing directory.
+      operationId: DirectoriesController_find
       parameters:
         - name: id
           required: true
@@ -6359,12 +6489,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a Directory
       tags:
         - directories
     delete:
-      operationId: DirectoriesController_deleteDirectory
-      summary: Delete a Directory
       description: Permanently deletes an existing directory. It cannot be undone.
+      operationId: DirectoriesController_deleteDirectory
       parameters:
         - name: id
           required: true
@@ -6394,15 +6524,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a Directory
       tags:
         - directories
   /directory_groups:
     get:
-      operationId: DirectoryGroupsController_list
-      summary: List Directory Groups
       description: >-
         Get a list of all of existing directory groups matching the criteria
         specified.
+      operationId: DirectoryGroupsController_list
       parameters:
         - name: before
           required: false
@@ -6449,13 +6579,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: directory
           required: false
           in: query
@@ -6520,13 +6644,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Directory Groups
       tags:
         - directory-groups
   /directory_groups/{id}:
     get:
-      operationId: DirectoryGroupsController_find
-      summary: Get a Directory Group
       description: Get the details of an existing Directory Group.
+      operationId: DirectoryGroupsController_find
       parameters:
         - name: id
           required: true
@@ -6568,15 +6692,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a Directory Group
       tags:
         - directory-groups
   /directory_users:
     get:
-      operationId: DirectoryUsersController_list
-      summary: List Directory Users
       description: >-
         Get a list of all of existing Directory Users matching the criteria
         specified.
+      operationId: DirectoryUsersController_list
       parameters:
         - name: before
           required: false
@@ -6623,13 +6747,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: directory
           required: false
           in: query
@@ -6701,13 +6819,13 @@ paths:
               schema:
                 type: string
                 const: Ratelimited
+      summary: List Directory Users
       tags:
         - directory-users
   /directory_users/{id}:
     get:
-      operationId: DirectoryUsersController_find
-      summary: Get a Directory User
       description: Get the details of an existing Directory User.
+      operationId: DirectoryUsersController_find
       parameters:
         - name: id
           required: true
@@ -6749,13 +6867,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a Directory User
       tags:
         - directory-users
   /events:
     get:
-      operationId: EventsController_list
-      summary: List events
       description: List events for the current environment.
+      operationId: EventsController_list
       parameters:
         - name: before
           required: false
@@ -6802,13 +6920,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: events
           required: false
           in: query
@@ -6898,15 +7010,15 @@ paths:
                 required:
                   - errors
                   - message
+      summary: List events
       tags:
         - events
   /feature-flags:
     get:
-      operationId: FeatureFlagsController_list
-      summary: List feature flags
       description: >-
         Get a list of all of your existing feature flags matching the criteria
         specified.
+      operationId: FeatureFlagsController_list
       parameters:
         - name: before
           required: false
@@ -6943,13 +7055,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -7002,13 +7108,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List feature flags
       tags:
         - feature-flags
   /feature-flags/{slug}:
     get:
-      operationId: FeatureFlagsController_findBySlug
-      summary: Get a feature flag
       description: Get the details of an existing feature flag by its slug.
+      operationId: FeatureFlagsController_findBySlug
       parameters:
         - name: slug
           required: true
@@ -7037,13 +7143,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a feature flag
       tags:
         - feature-flags
   /feature-flags/{slug}/disable:
     put:
-      operationId: FeatureFlagsController_disableFlag
-      summary: Disable a feature flag
       description: Disables a feature flag in the current environment.
+      operationId: FeatureFlagsController_disableFlag
       parameters:
         - name: slug
           required: true
@@ -7167,13 +7273,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Disable a feature flag
       tags:
         - feature-flags
   /feature-flags/{slug}/enable:
     put:
-      operationId: FeatureFlagsController_enableFlag
-      summary: Enable a feature flag
       description: Enables a feature flag in the current environment.
+      operationId: FeatureFlagsController_enableFlag
       parameters:
         - name: slug
           required: true
@@ -7297,15 +7403,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Enable a feature flag
       tags:
         - feature-flags
   /feature-flags/{slug}/targets/{resourceId}:
     post:
-      operationId: FlagTargetsController_createTarget
-      summary: Add a feature flag target
       description: >-
         Enables a feature flag for a specific target in the current environment.
         Currently, supported targets include users and organizations.
+      operationId: FlagTargetsController_createTarget
       parameters:
         - name: resourceId
           required: true
@@ -7369,15 +7475,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Add a feature flag target
       tags:
         - feature-flags.targets
     delete:
-      operationId: FlagTargetsController_deleteTarget
-      summary: Remove a feature flag target
       description: >-
         Removes a target from the feature flag's target list in the current
         environment. Currently, supported targets include users and
         organizations.
+      operationId: FlagTargetsController_deleteTarget
       parameters:
         - name: resourceId
           required: true
@@ -7441,13 +7547,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Remove a feature flag target
       tags:
         - feature-flags.targets
   /organization_domains:
     post:
-      operationId: OrganizationDomainsController_create
-      summary: Create an Organization Domain
       description: Creates a new Organization Domain.
+      operationId: OrganizationDomainsController_create
       parameters: []
       requestBody:
         required: true
@@ -7540,13 +7646,13 @@ paths:
                 required:
                   - code
                   - message
+      summary: Create an Organization Domain
       tags:
         - organization-domains
   /organization_domains/{id}:
     get:
-      operationId: OrganizationDomainsController_get
-      summary: Get an Organization Domain
       description: Get the details of an existing organization domain.
+      operationId: OrganizationDomainsController_get
       parameters:
         - name: id
           required: true
@@ -7575,12 +7681,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an Organization Domain
       tags:
         - organization-domains
     delete:
-      operationId: OrganizationDomainsController_delete
-      summary: Delete an Organization Domain
       description: Permanently deletes an organization domain. It cannot be undone.
+      operationId: OrganizationDomainsController_delete
       parameters:
         - name: id
           required: true
@@ -7605,13 +7711,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete an Organization Domain
       tags:
         - organization-domains
   /organization_domains/{id}/verify:
     post:
-      operationId: OrganizationDomainsController_verify
-      summary: Verify an Organization Domain
       description: Initiates verification process for an Organization Domain.
+      operationId: OrganizationDomainsController_verify
       parameters:
         - name: id
           required: true
@@ -7645,15 +7751,15 @@ paths:
                 required:
                   - code
                   - message
+      summary: Verify an Organization Domain
       tags:
         - organization-domains
   /organizations:
     get:
-      operationId: OrganizationsController_list
-      summary: List Organizations
       description: >-
         Get a list of all of your existing organizations matching the criteria
         specified.
+      operationId: OrganizationsController_list
       parameters:
         - name: before
           required: false
@@ -7700,13 +7806,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: domains
           required: false
           in: query
@@ -7750,12 +7850,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Organizations
       tags:
         - organizations
     post:
-      operationId: OrganizationsController_create
-      summary: Create an Organization
       description: Creates a new organization in the current environment.
+      operationId: OrganizationsController_create
       parameters: []
       requestBody:
         required: true
@@ -7852,15 +7952,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create an Organization
       tags:
         - organizations
   /organizations/external_id/{external_id}:
     get:
-      operationId: OrganizationsController_getByExternalId
-      summary: Get an Organization by External ID
       description: >-
         Get the details of an existing organization by an [external
         identifier](/authkit/metadata/external-identifiers).
+      operationId: OrganizationsController_getByExternalId
       parameters:
         - name: external_id
           required: true
@@ -7889,13 +7989,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an Organization by External ID
       tags:
         - organizations
   /organizations/{id}:
     get:
-      operationId: OrganizationsController_find
-      summary: Get an Organization
       description: Get the details of an existing organization.
+      operationId: OrganizationsController_find
       parameters:
         - name: id
           required: true
@@ -7924,12 +8024,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an Organization
       tags:
         - organizations
     put:
-      operationId: OrganizationsController_updateOrganization
-      summary: Update an Organization
       description: Updates an organization in the current environment.
+      operationId: OrganizationsController_updateOrganization
       parameters:
         - name: id
           required: true
@@ -8073,14 +8173,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update an Organization
       tags:
         - organizations
     delete:
-      operationId: OrganizationsController_deleteOrganization
-      summary: Delete an Organization
       description: >-
         Permanently deletes an organization in the current environment. It
         cannot be undone.
+      operationId: OrganizationsController_deleteOrganization
       parameters:
         - name: id
           required: true
@@ -8107,15 +8207,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete an Organization
       tags:
         - organizations
   /organizations/{id}/audit_log_configuration:
     get:
-      operationId: OrganizationsController_getAuditLogConfiguration
-      summary: Get Audit Log Configuration
       description: >-
         Get the unified view of audit log trail and stream configuration for an
         organization.
+      operationId: OrganizationsController_getAuditLogConfiguration
       parameters:
         - name: id
           required: true
@@ -8144,13 +8244,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get Audit Log Configuration
       tags:
         - organizations
   /organizations/{id}/audit_logs_retention:
     get:
-      operationId: AuditLogsRetentionController_auditLogsRetention
-      summary: Get Retention
       description: Get the configured event retention period for the given Organization.
+      operationId: AuditLogsRetentionController_auditLogsRetention
       parameters:
         - name: id
           required: true
@@ -8179,12 +8279,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get Retention
       tags:
         - audit-logs
     put:
-      operationId: AuditLogsRetentionController_updateAuditLogsRetention
-      summary: Set Retention
       description: Set the event retention period for the given Organization.
+      operationId: AuditLogsRetentionController_updateAuditLogsRetention
       parameters:
         - name: id
           required: true
@@ -8232,13 +8332,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Set Retention
       tags:
         - audit-logs
   /organizations/{organizationId}/api_keys:
     get:
-      operationId: OrganizationApiKeysController_list
-      summary: List API keys for an organization
       description: Get a list of all API keys for an organization.
+      operationId: OrganizationApiKeysController_list
       parameters:
         - name: organizationId
           required: true
@@ -8282,13 +8382,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -8309,12 +8403,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List API keys for an organization
       tags:
         - organizations.api_keys
     post:
-      operationId: OrganizationApiKeysController_create
-      summary: Create an API key for an organization
       description: Create a new API key for an organization.
+      operationId: OrganizationApiKeysController_create
       parameters:
         - name: organizationId
           required: true
@@ -8380,13 +8474,13 @@ paths:
                 required:
                   - message
                   - errors
+      summary: Create an API key for an organization
       tags:
         - organizations.api_keys
   /organizations/{organizationId}/feature-flags:
     get:
-      operationId: OrganizationFeatureFlagsController_list
-      summary: List enabled feature flags for an organization
       description: Get a list of all enabled feature flags for an organization.
+      operationId: OrganizationFeatureFlagsController_list
       parameters:
         - name: organizationId
           required: true
@@ -8430,13 +8524,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -8457,13 +8545,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List enabled feature flags for an organization
       tags:
         - organizations.feature-flags
   /organizations/{organizationId}/groups:
     post:
-      operationId: GroupsController_create
-      summary: Create a group
       description: Create a new group within an organization.
+      operationId: GroupsController_create
       parameters:
         - name: organizationId
           required: true
@@ -8543,13 +8631,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create a group
       tags:
         - groups
       x-feature-flag: user-groups-enabled
     get:
-      operationId: GroupsController_list
-      summary: List groups
       description: Get a paginated list of groups within an organization.
+      operationId: GroupsController_list
       parameters:
         - name: organizationId
           required: true
@@ -8603,13 +8691,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -8643,14 +8725,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List groups
       tags:
         - groups
       x-feature-flag: user-groups-enabled
   /organizations/{organizationId}/groups/{groupId}:
     get:
-      operationId: GroupsController_get
-      summary: Get a group
       description: Retrieve a group by its ID within an organization.
+      operationId: GroupsController_get
       parameters:
         - name: organizationId
           required: true
@@ -8699,15 +8781,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a group
       tags:
         - groups
       x-feature-flag: user-groups-enabled
     patch:
-      operationId: GroupsController_update
-      summary: Update a group
       description: >-
         Update an existing group. Only the fields provided in the request body
         will be updated.
+      operationId: GroupsController_update
       parameters:
         - name: organizationId
           required: true
@@ -8794,13 +8876,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update a group
       tags:
         - groups
       x-feature-flag: user-groups-enabled
     delete:
-      operationId: GroupsController_delete
-      summary: Delete a group
       description: Delete a group from an organization.
+      operationId: GroupsController_delete
       parameters:
         - name: organizationId
           required: true
@@ -8845,14 +8927,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a group
       tags:
         - groups
       x-feature-flag: user-groups-enabled
   /organizations/{organizationId}/groups/{groupId}/organization-memberships:
     post:
-      operationId: GroupMembershipsController_addMember
-      summary: Add a member to a Group
       description: Add an organization membership to a group.
+      operationId: GroupMembershipsController_addMember
       parameters:
         - name: organizationId
           required: true
@@ -8920,13 +9002,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Add a member to a Group
       tags:
         - groups
       x-feature-flag: user-groups-enabled
     get:
-      operationId: GroupMembershipsController_listMembers
-      summary: List Group members
       description: Get a list of organization memberships in a group.
+      operationId: GroupMembershipsController_listMembers
       parameters:
         - name: organizationId
           required: true
@@ -8987,13 +9069,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -9028,14 +9104,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List Group members
       tags:
         - groups
       x-feature-flag: user-groups-enabled
   /organizations/{organizationId}/groups/{groupId}/organization-memberships/{omId}:
     delete:
-      operationId: GroupMembershipsController_removeMember
-      summary: Remove a member from a Group
       description: Remove an organization membership from a group.
+      operationId: GroupMembershipsController_removeMember
       parameters:
         - name: organizationId
           required: true
@@ -9087,14 +9163,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Remove a member from a Group
       tags:
         - groups
       x-feature-flag: user-groups-enabled
   /portal/generate_link:
     post:
-      operationId: PortalSessionsController_create
-      summary: Generate a Portal Link
       description: Generate a Portal Link scoped to an Organization.
+      operationId: PortalSessionsController_create
       parameters: []
       requestBody:
         required: true
@@ -9161,13 +9237,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Generate a Portal Link
       tags:
         - admin-portal
   /radar/attempts:
     post:
-      operationId: RadarStandaloneController_assess
-      summary: Create an attempt
       description: Assess a request for risk using the Radar engine and receive a verdict.
+      operationId: RadarStandaloneController_assess
       parameters: []
       requestBody:
         required: true
@@ -9249,16 +9325,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create an attempt
       tags:
         - radar
   /radar/attempts/{id}:
     put:
-      operationId: RadarStandaloneController_updateRadarAttempt
-      summary: Update a Radar attempt
       description: >-
         You may optionally inform Radar that an authentication attempt or
         challenge was successful using this endpoint. Some Radar controls depend
         on tracking recent successful attempts, such as impossible travel.
+      operationId: RadarStandaloneController_updateRadarAttempt
       parameters:
         - name: id
           required: true
@@ -9315,13 +9391,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Update a Radar attempt
       tags:
         - radar
   /radar/lists/{type}/{action}:
     post:
-      operationId: RadarStandaloneController_updateRadarList
-      summary: Add an entry to a Radar list
       description: Add an entry to a Radar list.
+      operationId: RadarStandaloneController_updateRadarList
       parameters:
         - name: type
           required: true
@@ -9390,12 +9466,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Add an entry to a Radar list
       tags:
         - radar
     delete:
-      operationId: RadarStandaloneController_deleteRadarListEntry
-      summary: Remove an entry from a Radar list
       description: Remove an entry from a Radar list.
+      operationId: RadarStandaloneController_deleteRadarListEntry
       parameters:
         - name: type
           required: true
@@ -9468,14 +9544,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Remove an entry from a Radar list
       tags:
         - radar
   /sso/authorize:
     get:
-      operationId: SsoController_authorize
-      summary: Initiate SSO
       description: Initiates the single sign-on flow.
-      security: []
+      operationId: SsoController_authorize
       parameters:
         - name: provider_scopes
           required: false
@@ -9658,15 +9733,16 @@ paths:
                 type: string
                 format: uri
           description: ''
+      security: []
+      summary: Initiate SSO
       tags:
         - sso
   /sso/jwks/{clientId}:
     get:
-      operationId: SsoController_jsonWebKeySet
-      summary: Get JWKS
       description: >-
         Returns the JSON Web Key Set (JWKS) containing the public keys used for
         verifying access tokens.
+      operationId: SsoController_jsonWebKeySet
       parameters:
         - name: clientId
           required: true
@@ -9698,14 +9774,11 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get JWKS
       tags:
         - user-management.session-tokens
   /sso/logout:
     get:
-      operationId: SsoController_logout
-      summary: Logout Redirect
-      servers:
-        - url: https://auth.workos.com
       description: >-
         Logout allows to sign out a user from your application by triggering the
         identity provider sign out flow. This `GET` endpoint should be a
@@ -9716,7 +9789,7 @@ paths:
         Before redirecting to this endpoint, you need to generate a short-lived
         logout token using the [Logout
         Authorize](/reference/sso/logout/authorize) endpoint.
-      security: []
+      operationId: SsoController_logout
       parameters:
         - name: token
           required: true
@@ -9751,18 +9824,19 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      security: []
+      servers:
+        - url: https://auth.workos.com
+      summary: Logout Redirect
       tags:
         - sso
   /sso/logout/authorize:
     post:
-      operationId: SsoController_logoutAuthorize
-      summary: Logout Authorize
-      servers:
-        - url: https://auth.workos.com
       description: >-
         You should call this endpoint from your server to generate a logout
         token which is required for the [Logout Redirect](/reference/sso/logout)
         endpoint.
+      operationId: SsoController_logoutAuthorize
       parameters: []
       requestBody:
         required: true
@@ -9831,14 +9905,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      servers:
+        - url: https://auth.workos.com
+      summary: Logout Authorize
       tags:
         - sso
   /sso/profile:
     get:
-      operationId: SsoController_getProfile
-      summary: Get a User Profile
-      security:
-        - access_token: []
       description: >-
         Exchange an access token for a user's [Profile](/reference/sso/profile).
         Because this profile is returned in the [Get a Profile and Token
@@ -9846,6 +9919,7 @@ paths:
         usually does not need to call this endpoint. It is available for any
         authentication flows that require an additional endpoint to retrieve a
         user's profile.
+      operationId: SsoController_getProfile
       parameters: []
       responses:
         '200':
@@ -9879,17 +9953,18 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      security:
+        - access_token: []
+      summary: Get a User Profile
       tags:
         - sso
   /sso/token:
     post:
-      operationId: SsoController_token
-      summary: Get a Profile and Token
       description: >-
         Get an access token along with the user
         [Profile](/reference/sso/profile) using the code passed to your
         [Redirect URI](/reference/sso/get-authorization-url/redirect-uri).
-      security: []
+      operationId: SsoController_token
       parameters:
         - name: client_id
           required: true
@@ -10015,15 +10090,16 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      security: []
+      summary: Get a Profile and Token
       tags:
         - sso
   /user_management/authenticate:
     post:
-      operationId: UserlandSessionsController_authenticate
-      summary: Authenticate
       description: >-
         Authenticate a user with a specified [authentication
         method](/reference/authkit/authentication).
+      operationId: UserlandSessionsController_authenticate[0]
       parameters: []
       requestBody:
         required: true
@@ -11052,16 +11128,15 @@ paths:
                 required:
                   - code
                   - message
+      summary: Authenticate
       tags:
         - user-management.authentication
   /user_management/authorize:
     get:
-      operationId: UserlandSsoController_authorize
-      summary: Get an authorization URL
       description: >-
         Generates an OAuth 2.0 authorization URL to authenticate a user with
         AuthKit or SSO.
-      security: []
+      operationId: UserlandSsoController_authorize
       parameters:
         - name: code_challenge_method
           required: false
@@ -11239,19 +11314,19 @@ paths:
                 type: string
                 format: uri
           description: ''
+      security: []
+      summary: Get an authorization URL
       tags:
         - user-management.authentication
   /user_management/authorize/device:
     post:
-      operationId: UserlandSsoController_deviceAuthorization
-      summary: Get device authorization URL
       description: >-
         Initiates the CLI Auth flow by requesting a device code and verification
         URLs. This endpoint implements the OAuth 2.0 Device Authorization Flow
         ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)) and is
         designed for command-line applications or other devices with limited
         input capabilities.
-      security: []
+      operationId: UserlandSsoController_deviceAuthorization
       parameters: []
       requestBody:
         required: true
@@ -11309,15 +11384,16 @@ paths:
                 required:
                   - error
                   - error_description
+      security: []
+      summary: Get device authorization URL
       tags:
         - user-management.authentication
   /user_management/cors_origins:
     post:
-      operationId: CorsOriginsController_createCorsOrigin
-      summary: Create a CORS origin
       description: >-
         Creates a new CORS origin for the current environment. CORS origins
         allow browser-based applications to make requests to the WorkOS API.
+      operationId: CorsOriginsController_createCorsOrigin
       parameters: []
       requestBody:
         required: true
@@ -11370,15 +11446,15 @@ paths:
                           example: origin
                         constraints:
                           type: object
+      summary: Create a CORS origin
       tags:
         - user-management.cors-origins
   /user_management/email_verification/{id}:
     get:
-      operationId: UserlandUsersController_getEmailVerification
-      summary: Get an email verification code
       description: >-
         Get the details of an existing email verification code that can be used
         to send an email to a user for verification.
+      operationId: UserlandUsersController_getEmailVerification
       parameters:
         - name: id
           required: true
@@ -11407,13 +11483,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an email verification code
       tags:
         - user-management.users
   /user_management/invitations:
     get:
-      operationId: UserlandUserInvitesController_list
-      summary: List invitations
       description: Get a list of all of invitations matching the criteria specified.
+      operationId: UserlandUserInvitesController_list
       parameters:
         - name: before
           required: false
@@ -11460,13 +11536,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
           required: false
           in: query
@@ -11481,6 +11551,7 @@ paths:
           in: query
           description: The email address of the recipient.
           schema:
+            format: email
             example: marcelina.davis@example.com
             type: string
       responses:
@@ -11549,12 +11620,12 @@ paths:
                 required:
                   - code
                   - message
+      summary: List invitations
       tags:
         - user-management.invitations
     post:
-      operationId: UserlandUserInvitesController_create
-      summary: Send an invitation
       description: Sends an invitation email to the recipient.
+      operationId: UserlandUserInvitesController_create
       parameters: []
       requestBody:
         required: true
@@ -11705,14 +11776,14 @@ paths:
                 required:
                   - code
                   - message
+      summary: Send an invitation
       tags:
         - user-management.invitations
       x-sends-email: true
   /user_management/invitations/by_token/{token}:
     get:
-      operationId: UserlandUserInvitesController_getByToken
-      summary: Find an invitation by token
       description: Retrieve an existing invitation using the token.
+      operationId: UserlandUserInvitesController_getByToken
       parameters:
         - name: token
           required: true
@@ -11741,13 +11812,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Find an invitation by token
       tags:
         - user-management.invitations
   /user_management/invitations/{id}:
     get:
-      operationId: UserlandUserInvitesController_get
-      summary: Get an invitation
       description: Get the details of an existing invitation.
+      operationId: UserlandUserInvitesController_get
       parameters:
         - name: id
           required: true
@@ -11776,15 +11847,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an invitation
       tags:
         - user-management.invitations
   /user_management/invitations/{id}/accept:
     post:
-      operationId: UserlandUserInvitesController_accept
-      summary: Accept an invitation
       description: >-
         Accepts an invitation and, if linked to an organization, activates the
         user's membership in that organization.
+      operationId: UserlandUserInvitesController_accept
       parameters:
         - name: id
           required: true
@@ -11946,15 +12017,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Accept an invitation
       tags:
         - user-management.invitations
   /user_management/invitations/{id}/resend:
     post:
-      operationId: UserlandUserInvitesController_resend
-      summary: Resend an invitation
       description: >-
         Resends an invitation email to the recipient. The invitation must be in
         a pending state.
+      operationId: UserlandUserInvitesController_resend
       parameters:
         - name: id
           required: true
@@ -12050,14 +12121,14 @@ paths:
                 required:
                   - code
                   - message
+      summary: Resend an invitation
       tags:
         - user-management.invitations
       x-sends-email: true
   /user_management/invitations/{id}/revoke:
     post:
-      operationId: UserlandUserInvitesController_revoke
-      summary: Revoke an invitation
       description: Revokes an existing invitation.
+      operationId: UserlandUserInvitesController_revoke
       parameters:
         - name: id
           required: true
@@ -12205,13 +12276,13 @@ paths:
                 required:
                   - code
                   - message
+      summary: Revoke an invitation
       tags:
         - user-management.invitations
   /user_management/jwt_template:
     get:
-      operationId: JwtTemplatesController_getJwtTemplate
-      summary: Get JWT template
       description: Get the JWT template for the current environment.
+      operationId: JwtTemplatesController_getJwtTemplate
       parameters: []
       responses:
         '200':
@@ -12233,12 +12304,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get JWT template
       tags:
         - user-management.jwt-template
     put:
-      operationId: JwtTemplatesController_updateJwtTemplate
-      summary: Update JWT template
       description: Update the JWT template for the current environment.
+      operationId: JwtTemplatesController_updateJwtTemplate
       parameters: []
       requestBody:
         required: true
@@ -12272,17 +12343,17 @@ paths:
                 required:
                   - code
                   - message
+      summary: Update JWT template
       tags:
         - user-management.jwt-template
   /user_management/magic_auth:
     post:
-      operationId: UserlandMagicAuthController_sendMagicAuthCodeAndReturn
-      summary: Create a Magic Auth code
       description: >-
         Creates a one-time authentication code that can be sent to the user's
         email address. The code expires in 10 minutes. To verify the code,
         [authenticate the user with Magic
         Auth](/reference/authkit/authentication/magic-auth).
+      operationId: UserlandMagicAuthController_sendMagicAuthCodeAndReturn
       parameters: []
       requestBody:
         required: true
@@ -12379,17 +12450,17 @@ paths:
                 required:
                   - code
                   - message
+      summary: Create a Magic Auth code
       tags:
         - user-management.magic-auth
       x-sends-email: true
   /user_management/magic_auth/{id}:
     get:
-      operationId: UserlandMagicAuthController_get
-      summary: Get Magic Auth code details
       description: >-
         Get the details of an existing [Magic
         Auth](/reference/authkit/magic-auth) code that can be used to send an
         email to a user for authentication.
+      operationId: UserlandMagicAuthController_get
       parameters:
         - name: id
           required: true
@@ -12418,17 +12489,17 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get Magic Auth code details
       tags:
         - user-management.magic-auth
   /user_management/organization_memberships:
     get:
-      operationId: UserlandUserOrganizationMembershipsController_list
-      summary: List organization memberships
       description: >-
         Get a list of all organization memberships matching the criteria
         specified. At least one of `user_id` or `organization_id` must be
         provided. By default only active memberships are returned. Use the
         `statuses` parameter to filter by other statuses.
+      operationId: UserlandUserOrganizationMembershipsController_list
       parameters:
         - name: before
           required: false
@@ -12475,13 +12546,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
           required: false
           in: query
@@ -12624,11 +12689,10 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List organization memberships
       tags:
         - user-management.organization-membership
     post:
-      operationId: UserlandUserOrganizationMembershipsController_create
-      summary: Create an organization membership
       description: >-
         Creates a new `active` organization membership for the given
         organization and user.
@@ -12637,6 +12701,7 @@ paths:
         Calling this API with an organization and user that match an `inactive`
         organization membership will activate the membership with the specified
         role(s).
+      operationId: UserlandUserOrganizationMembershipsController_create
       parameters: []
       requestBody:
         required: true
@@ -12836,6 +12901,7 @@ paths:
                       - message
                       - code
                       - role_slug
+      summary: Create an organization membership
       tags:
         - user-management.organization-membership
       x-mutually-exclusive-body-groups: &ref_9
@@ -12848,9 +12914,8 @@ paths:
               - role_slugs
   /user_management/organization_memberships/{id}:
     get:
-      operationId: UserlandUserOrganizationMembershipsController_get
-      summary: Get an organization membership
       description: Get the details of an existing organization membership.
+      operationId: UserlandUserOrganizationMembershipsController_get
       parameters:
         - name: id
           required: true
@@ -12879,14 +12944,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get an organization membership
       tags:
         - user-management.organization-membership
     delete:
-      operationId: UserlandUserOrganizationMembershipsController_delete
-      summary: Delete an organization membership
       description: >-
         Permanently deletes an existing organization membership. It cannot be
         undone.
+      operationId: UserlandUserOrganizationMembershipsController_delete
       parameters:
         - name: id
           required: true
@@ -12911,12 +12976,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete an organization membership
       tags:
         - user-management.organization-membership
     put:
-      operationId: UserlandUserOrganizationMembershipsController_update
-      summary: Update an organization membership
       description: Update the details of an existing organization membership.
+      operationId: UserlandUserOrganizationMembershipsController_update
       parameters:
         - name: id
           required: true
@@ -13020,6 +13085,7 @@ paths:
                       - message
                       - code
                       - role_slug
+      summary: Update an organization membership
       tags:
         - user-management.organization-membership
       x-mutually-exclusive-body-groups: &ref_10
@@ -13032,8 +13098,6 @@ paths:
               - role_slugs
   /user_management/organization_memberships/{id}/deactivate:
     put:
-      operationId: UserlandUserOrganizationMembershipsController_deactivate
-      summary: Deactivate an organization membership
       description: >-
         Deactivates an `active` organization membership. Emits an
         [organization_membership.updated](/events/organization-membership) event
@@ -13051,6 +13115,7 @@ paths:
         See the [membership management
         documentation](/authkit/users-organizations/organizations/membership-management)
         for additional details.
+      operationId: UserlandUserOrganizationMembershipsController_deactivate
       parameters:
         - name: id
           required: true
@@ -13201,12 +13266,11 @@ paths:
                 required:
                   - code
                   - message
+      summary: Deactivate an organization membership
       tags:
         - user-management.organization-membership
   /user_management/organization_memberships/{id}/reactivate:
     put:
-      operationId: UserlandUserOrganizationMembershipsController_reactivate
-      summary: Reactivate an organization membership
       description: >-
         Reactivates an `inactive` organization membership, retaining the
         pre-existing role(s). Emits an
@@ -13224,6 +13288,7 @@ paths:
         See the [membership management
         documentation](/authkit/users-organizations/organizations/membership-management)
         for additional details.
+      operationId: UserlandUserOrganizationMembershipsController_reactivate
       parameters:
         - name: id
           required: true
@@ -13292,13 +13357,13 @@ paths:
                 required:
                   - code
                   - message
+      summary: Reactivate an organization membership
       tags:
         - user-management.organization-membership
   /user_management/organization_memberships/{omId}/groups:
     get:
-      operationId: OrganizationMembershipGroupsController_listGroups
-      summary: List groups
       description: Get a list of groups that an organization membership belongs to.
+      operationId: OrganizationMembershipGroupsController_listGroups
       parameters:
         - name: omId
           required: true
@@ -13352,13 +13417,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -13379,14 +13438,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List groups
       tags:
         - user-management.organization-membership.groups
       x-feature-flag: user-groups-enabled
   /user_management/password_reset:
     post:
-      operationId: UserlandUsersController_createPasswordResetToken
-      summary: Create a password reset token
       description: Creates a one-time token that can be used to reset a user's password.
+      operationId: UserlandUsersController_createPasswordResetToken
       parameters: []
       requestBody:
         required: true
@@ -13486,17 +13545,17 @@ paths:
                 required:
                   - code
                   - message
+      summary: Create a password reset token
       tags:
         - user-management.users
       x-sends-email: true
   /user_management/password_reset/confirm:
     post:
-      operationId: UserlandUsersController_resetPassword
-      summary: Reset the password
       description: >-
         Sets a new password using the `token` query parameter from the link that
         the user received. Successfully resetting the password will verify a
         user's email, if it hasn't been verified yet.
+      operationId: UserlandUsersController_resetPassword[0]
       parameters: []
       requestBody:
         required: true
@@ -13601,15 +13660,15 @@ paths:
                 required:
                   - code
                   - message
+      summary: Reset the password
       tags:
         - user-management.users
   /user_management/password_reset/{id}:
     get:
-      operationId: UserlandUsersController_getPasswordReset
-      summary: Get a password reset token
       description: >-
         Get the details of an existing password reset token that can be used to
         reset a user's password.
+      operationId: UserlandUsersController_getPasswordReset
       parameters:
         - name: id
           required: true
@@ -13638,13 +13697,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a password reset token
       tags:
         - user-management.users
   /user_management/redirect_uris:
     post:
-      operationId: RedirectUrisController_create
-      summary: Create a redirect URI
       description: Creates a new redirect URI for an environment.
+      operationId: RedirectUrisController_create
       parameters: []
       requestBody:
         required: true
@@ -13711,14 +13770,13 @@ paths:
                   - message
               example:
                 message: Redirect URI 'https://example.com/callback' already exists.
+      summary: Create a redirect URI
       tags:
         - user-management.redirect-uris
   /user_management/sessions/logout:
     get:
-      operationId: UserlandSessionsController_logout
-      summary: Logout
-      security: []
       description: Logout a user from the current [session](/reference/authkit/session).
+      operationId: UserlandSessionsController_logout
       parameters:
         - name: session_id
           required: true
@@ -13764,13 +13822,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      security: []
+      summary: Logout
       tags:
         - user-management.authentication
   /user_management/sessions/revoke:
     post:
-      operationId: UserlandSessionsController_revokeSession
-      summary: Revoke Session
       description: Revoke a [user session](/reference/authkit/session).
+      operationId: UserlandSessionsController_revokeSession
       parameters: []
       requestBody:
         required: true
@@ -13794,15 +13853,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Revoke Session
       tags:
         - user-management.authentication
   /user_management/users:
     get:
-      operationId: UserlandUsersController_list
-      summary: List users
       description: >-
         Get a list of all of your existing users matching the criteria
         specified.
+      operationId: UserlandUsersController_list[0]
       parameters:
         - name: before
           required: false
@@ -13849,13 +13908,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: organization
           required: false
           in: query
@@ -13900,12 +13953,12 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List users
       tags:
         - user-management.users
     post:
-      operationId: UserlandUsersController_create
-      summary: Create a user
       description: Create a new user in the current environment.
+      operationId: UserlandUsersController_create[0]
       parameters: []
       requestBody:
         required: true
@@ -14082,6 +14135,7 @@ paths:
                 required:
                   - code
                   - message
+      summary: Create a user
       tags:
         - user-management.users
       x-mutually-exclusive-body-groups: &ref_11
@@ -14095,11 +14149,10 @@ paths:
               - password_hash_type
   /user_management/users/external_id/{external_id}:
     get:
-      operationId: UserlandUsersController_getByExternalId
-      summary: Get a user by external ID
       description: >-
         Get the details of an existing user by an [external
         identifier](/authkit/metadata/external-identifiers).
+      operationId: UserlandUsersController_getByExternalId
       parameters:
         - name: external_id
           required: true
@@ -14128,15 +14181,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a user by external ID
       tags:
         - user-management.users
   /user_management/users/{id}:
     put:
-      operationId: UserlandUsersController_update
-      summary: Update a user
       description: >-
         Updates properties of a user. The omitted properties will be left
         unchanged.
+      operationId: UserlandUsersController_update[0]
       parameters:
         - name: id
           required: true
@@ -14357,6 +14410,7 @@ paths:
                 required:
                   - code
                   - message
+      summary: Update a user
       tags:
         - user-management.users
       x-mutually-exclusive-body-groups: &ref_14
@@ -14369,9 +14423,8 @@ paths:
               - password_hash
               - password_hash_type
     get:
-      operationId: UserlandUsersController_get
-      summary: Get a user
       description: Get the details of an existing user.
+      operationId: UserlandUsersController_get[0]
       parameters:
         - name: id
           required: true
@@ -14400,14 +14453,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a user
       tags:
         - user-management.users
     delete:
-      operationId: UserlandUsersController_delete
-      summary: Delete a user
       description: >-
         Permanently deletes a user in the current environment. It cannot be
         undone.
+      operationId: UserlandUsersController_delete[0]
       parameters:
         - name: id
           required: true
@@ -14432,13 +14485,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a user
       tags:
         - user-management.users
   /user_management/users/{id}/email_change/confirm:
     post:
-      operationId: UserlandUsersController_confirmEmailChange
-      summary: Confirm email change
       description: Confirms an email change using the one-time code received by the user.
+      operationId: UserlandUsersController_confirmEmailChange
       parameters:
         - name: id
           required: true
@@ -14723,15 +14776,15 @@ paths:
                 required:
                   - code
                   - message
+      summary: Confirm email change
       tags:
         - user-management.users
   /user_management/users/{id}/email_change/send:
     post:
-      operationId: UserlandUsersController_sendEmailChange
-      summary: Send email change code
       description: >-
         Sends an email that contains a one-time code used to change a user's
         email address.
+      operationId: UserlandUsersController_sendEmailChange
       parameters:
         - name: id
           required: true
@@ -14867,14 +14920,14 @@ paths:
                 required:
                   - code
                   - message
+      summary: Send email change code
       tags:
         - user-management.users
       x-sends-email: true
   /user_management/users/{id}/email_verification/confirm:
     post:
-      operationId: UserlandUsersController_emailVerification
-      summary: Verify email
       description: Verifies an email address using the one-time code received by the user.
+      operationId: UserlandUsersController_emailVerification[0]
       parameters:
         - name: id
           required: true
@@ -14990,15 +15043,15 @@ paths:
                 required:
                   - code
                   - message
+      summary: Verify email
       tags:
         - user-management.users
   /user_management/users/{id}/email_verification/send:
     post:
-      operationId: UserlandUsersController_sendVerificationEmail
-      summary: Send verification email
       description: >-
         Sends an email that contains a one-time code used to verify a user’s
         email address.
+      operationId: UserlandUsersController_sendVerificationEmail[0]
       parameters:
         - name: id
           required: true
@@ -15065,17 +15118,17 @@ paths:
                 required:
                   - code
                   - message
+      summary: Send verification email
       tags:
         - user-management.users
   /user_management/users/{id}/identities:
     get:
-      operationId: UserlandUserIdentitiesController_get
-      summary: Get user identities
       description: >-
         Get a list of identities associated with the user. A user can have
         multiple associated identities after going through [identity
         linking](/authkit/identity-linking). Currently only OAuth identities are
         supported. More provider types may be added in the future.
+      operationId: UserlandUserIdentitiesController_get
       parameters:
         - name: id
           required: true
@@ -15140,13 +15193,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get user identities
       tags:
         - user-management.users
   /user_management/users/{id}/sessions:
     get:
-      operationId: UserlandUserSessionsController_list
-      summary: List sessions
       description: Get a list of all active sessions for a specific user.
+      operationId: UserlandUserSessionsController_list
       parameters:
         - name: id
           required: true
@@ -15200,13 +15253,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -15407,13 +15454,13 @@ paths:
                 required:
                   - code
                   - message
+      summary: List sessions
       tags:
         - user-management.users
   /user_management/users/{userId}/api_keys:
     get:
-      operationId: UserApiKeysController_list
-      summary: List API keys for a user
       description: Get a list of API keys owned by a specific user.
+      operationId: UserApiKeysController_list
       parameters:
         - name: userId
           required: true
@@ -15457,13 +15504,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
           required: false
           in: query
@@ -15494,15 +15535,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List API keys for a user
       tags:
         - api_keys
       x-feature-flag: user-api-keys
     post:
-      operationId: UserApiKeysController_create
-      summary: Create an API key for a user
       description: >-
         Create a new API key owned by a user. The user must have an active
         membership in the specified organization.
+      operationId: UserApiKeysController_create
       parameters:
         - name: userId
           required: true
@@ -15581,17 +15622,17 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Create an API key for a user
       tags:
         - api_keys
       x-feature-flag: user-api-keys
   /user_management/users/{userId}/feature-flags:
     get:
-      operationId: UserlandUserFeatureFlagsController_list
-      summary: List enabled feature flags for a user
       description: >-
         Get a list of all enabled feature flags for the provided user. This
         includes feature flags enabled specifically for the user as well as any
         organizations that the user is a member of.
+      operationId: UserlandUserFeatureFlagsController_list
       parameters:
         - name: userId
           required: true
@@ -15635,13 +15676,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -15662,13 +15697,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List enabled feature flags for a user
       tags:
         - user-management.users.feature-flags
   /user_management/users/{user_id}/authorized_applications:
     get:
-      operationId: AuthorizedApplicationsController_list
-      summary: List authorized applications
       description: Get a list of all Connect applications that the user has authorized.
+      operationId: AuthorizedApplicationsController_list
       parameters:
         - name: user_id
           required: true
@@ -15722,13 +15757,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -15762,13 +15791,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List authorized applications
       tags:
         - user-management.users.authorized-applications
   /user_management/users/{user_id}/authorized_applications/{application_id}:
     delete:
-      operationId: AuthorizedApplicationsController_delete
-      summary: Delete an authorized application
       description: Delete an existing Authorized Connect Application.
+      operationId: AuthorizedApplicationsController_delete
       parameters:
         - name: application_id
           required: true
@@ -15800,15 +15829,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete an authorized application
       tags:
         - user-management.users.authorized-applications
   /user_management/users/{user_id}/connected_accounts/{slug}:
     get:
-      operationId: DataIntegrationsUserManagementController_getUserDataInstallation
-      summary: Get a connected account
       description: >-
         Retrieves a user's [connected
         account](/reference/pipes/connected-account) for a specific provider.
+      operationId: DataIntegrationsUserManagementController_getUserDataInstallation
       parameters:
         - name: user_id
           required: true
@@ -15857,15 +15886,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Get a connected account
       tags:
         - user-management.data-providers
     delete:
-      operationId: DataIntegrationsUserManagementController_deleteUserDataInstallation
-      summary: Delete a connected account
       description: >-
         Disconnects WorkOS's account for the user, including removing any stored
         access and refresh tokens. The user will need to reauthorize if they
         want to reconnect. This does not revoke access on the provider side.
+      operationId: DataIntegrationsUserManagementController_deleteUserDataInstallation
       parameters:
         - name: user_id
           required: true
@@ -15910,17 +15939,17 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Delete a connected account
       tags:
         - user-management.data-providers
   /user_management/users/{user_id}/data_providers:
     get:
-      operationId: DataIntegrationsUserManagementController_getUserDataIntegrations
-      summary: List providers
       description: >-
         Retrieves a list of available providers and the user's connection status
         for each. Returns all providers configured for your environment, along
         with the user's [connected account](/reference/pipes/connected-account)
         information where applicable.
+      operationId: DataIntegrationsUserManagementController_getUserDataIntegrations
       parameters:
         - name: user_id
           required: true
@@ -15962,15 +15991,15 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List providers
       tags:
         - user-management.data-providers
   /user_management/users/{userlandUserId}/auth_factors:
     post:
-      operationId: UserlandUserAuthenticationFactorsController_create
-      summary: Enroll an authentication factor
       description: >-
         Enrolls a user in a new [authentication
         factor](/reference/authkit/mfa/authentication-factor).
+      operationId: UserlandUserAuthenticationFactorsController_create[0]
       parameters:
         - name: userlandUserId
           required: true
@@ -16006,14 +16035,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Enroll an authentication factor
       tags:
         - user-management.multi-factor-authentication
     get:
-      operationId: UserlandUserAuthenticationFactorsController_list
-      summary: List authentication factors
       description: >-
         Lists the [authentication
         factors](/reference/authkit/mfa/authentication-factor) for a user.
+      operationId: UserlandUserAuthenticationFactorsController_list[0]
       parameters:
         - name: userlandUserId
           required: true
@@ -16057,13 +16086,7 @@ paths:
           in: query
           description: Order the results by the creation time.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: OK
@@ -16084,13 +16107,13 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: List authentication factors
       tags:
         - user-management.multi-factor-authentication
   /webhook_endpoints:
     get:
-      operationId: WebhookEndpointsController_list
-      summary: List Webhook Endpoints
       description: Get a list of all of your existing webhook endpoints.
+      operationId: WebhookEndpointsController_list
       parameters:
         - name: before
           required: false
@@ -16137,13 +16160,7 @@ paths:
             reversed cursor semantics where `before` fetches older records and
             `after` fetches newer records). Defaults to descending.
           schema:
-            default: desc
-            example: desc
-            enum:
-              - normal
-              - desc
-              - asc
-            type: string
+            $ref: '#/components/schemas/PaginationOrder'
       responses:
         '200':
           description: List of webhook endpoints.
@@ -16151,12 +16168,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WebhookEndpointList'
+      summary: List Webhook Endpoints
       tags:
         - webhooks
     post:
-      operationId: WebhookEndpointsController_create
-      summary: Create a Webhook Endpoint
       description: Create a new webhook endpoint to receive event notifications.
+      operationId: WebhookEndpointsController_create
       parameters: []
       requestBody:
         required: true
@@ -16244,13 +16261,13 @@ paths:
                       - code
                       - message
                       - errors
+      summary: Create a Webhook Endpoint
       tags:
         - webhooks
   /webhook_endpoints/{id}:
     patch:
-      operationId: WebhookEndpointsController_update
-      summary: Update a Webhook Endpoint
       description: Update the properties of an existing webhook endpoint.
+      operationId: WebhookEndpointsController_update
       parameters:
         - name: id
           required: true
@@ -16364,12 +16381,12 @@ paths:
                       - code
                       - message
                       - errors
+      summary: Update a Webhook Endpoint
       tags:
         - webhooks
     delete:
-      operationId: WebhookEndpointsController_delete
-      summary: Delete a Webhook Endpoint
       description: Delete an existing webhook endpoint.
+      operationId: WebhookEndpointsController_delete
       parameters:
         - name: id
           required: true
@@ -16400,15 +16417,15 @@ paths:
                 required:
                   - code
                   - message
+      summary: Delete a Webhook Endpoint
       tags:
         - webhooks
   /widgets/token:
     post:
-      operationId: WidgetsPublicController_issueWidgetSessionToken
-      summary: Generate a widget token
       description: >-
         Generate a widget token scoped to an organization and user with the
         specified scopes.
+      operationId: WidgetsPublicController_issueWidgetSessionToken
       parameters: []
       requestBody:
         required: true
@@ -16481,6 +16498,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      summary: Generate a widget token
       tags:
         - widgets
 info:
@@ -16703,6 +16721,14 @@ components:
           example: sk_example_1234567890abcdef
       required:
         - value
+    PaginationOrder:
+      type: string
+      enum:
+        - normal
+        - desc
+        - asc
+      example: desc
+      default: desc
     RedirectUriDto:
       type: object
       properties:
@@ -17078,6 +17104,7 @@ components:
           description: The metadata schema for the actor.
           $ref: '#/components/schemas/AuditLogSchemaActorDto'
         targets:
+          minItems: 1
           description: The list of targets for the schema.
           type: array
           items:
@@ -17529,6 +17556,7 @@ components:
             external_id:
               type: string
               maxLength: 128
+              pattern: ^[\x00-\x7F]+$
               description: An external identifier for the resource.
               example: my-workspace-01
             name:
@@ -17785,6 +17813,7 @@ components:
             - string
             - 'null'
           maxLength: 128
+          pattern: ^[\x00-\x7F]+$
           example: ext_12345
           description: An external identifier for the Organization.
       required:
@@ -17840,6 +17869,7 @@ components:
             - string
             - 'null'
           maxLength: 128
+          pattern: ^[\x00-\x7F]+$
           example: 2fe01467-f7ea-4dd2-8b79-c2b4f56d0191
           description: An external identifier for the Organization.
     SsoIntentOptions:
@@ -17929,6 +17959,7 @@ components:
           maxItems: 20
           items:
             type: string
+            format: email
           type: array
       required:
         - organization
@@ -17975,6 +18006,7 @@ components:
       properties:
         email:
           type: string
+          format: email
           description: The email address to send the magic code to.
           example: marcelina.davis@example.com
         invitation_token:
@@ -17988,6 +18020,7 @@ components:
       properties:
         email:
           type: string
+          format: email
           description: The email address of the recipient.
           example: marcelina.davis@example.com
         organization_id:
@@ -18368,6 +18401,7 @@ components:
           properties:
             email:
               type: string
+              format: email
               description: The email address of the user.
               example: marcelina.davis@example.com
             first_name:
@@ -18406,6 +18440,7 @@ components:
                 - string
                 - 'null'
               maxLength: 128
+              pattern: ^[\x00-\x7F]+$
               description: The external ID of the user.
               example: f1ffa2b2-c20b-4d39-be5c-212726e11222
           required:
@@ -18492,6 +18527,7 @@ components:
           properties:
             email:
               type: string
+              format: email
               description: The email address of the user.
               example: marcelina.davis@example.com
             first_name:
@@ -18523,6 +18559,7 @@ components:
                 - string
                 - 'null'
               maxLength: 128
+              pattern: ^[\x00-\x7F]+$
               description: The external ID of the user.
               example: f1ffa2b2-c20b-4d39-be5c-212726e11222
             locale:
@@ -18613,6 +18650,7 @@ components:
       properties:
         email:
           type: string
+          format: email
           description: The email address of the user requesting a password reset.
           example: marcelina.davis@example.com
       required:
@@ -19865,7 +19903,7 @@ components:
       required:
         - slug
       description: The primary role assigned to the user.
-    RoleAssignment:
+    UserRoleAssignment:
       type: object
       properties:
         object:
@@ -19876,6 +19914,10 @@ components:
           type: string
           description: Unique identifier of the role assignment.
           example: role_assignment_01HXYZ123456789ABCDEFGH
+        organization_membership_id:
+          type: string
+          description: The ID of the organization membership the role is assigned to.
+          example: om_01HXYZ123456789ABCDEFGHIJ
         role:
           $ref: '#/components/schemas/SlimRole'
           description: The role included in the assignment.
@@ -19900,7 +19942,7 @@ components:
             - id
             - external_id
             - resource_type_slug
-          description: The resource to which the role is assigned.
+          description: The resource the role is assigned on.
         created_at:
           format: date-time
           type: string
@@ -19914,11 +19956,12 @@ components:
       required:
         - object
         - id
+        - organization_membership_id
         - role
         - resource
         - created_at
         - updated_at
-    RoleAssignmentList:
+    UserRoleAssignmentList:
       type: object
       properties:
         object:
@@ -19928,7 +19971,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/RoleAssignment'
+            $ref: '#/components/schemas/UserRoleAssignment'
           description: The list of records for the current page.
         list_metadata:
           type: object
@@ -21302,6 +21345,14 @@ components:
         - custom_attributes
         - created_at
         - updated_at
+    VaultByokKeyProvider:
+      type: string
+      enum:
+        - AWS_KMS
+        - GCP_KMS
+        - AZURE_KEY_VAULT
+      example: AWS_KMS
+      description: The external key provider used for BYOK.
     WaitlistUser:
       type: object
       properties:
@@ -28598,13 +28649,7 @@ components:
                       description: The unique identifier of the organization.
                       example: org_01EHT88Z8J8795GZNQ4ZP1J81T
                     key_provider:
-                      type: string
-                      enum:
-                        - AWS_KMS
-                        - GCP_KMS
-                        - AZURE_KEY_VAULT
-                      description: The external key provider used for BYOK.
-                      example: AWS_KMS
+                      $ref: '#/components/schemas/VaultByokKeyProvider'
                   required:
                     - organization_id
                     - key_provider
@@ -28643,13 +28688,7 @@ components:
                       description: The unique identifier of the organization.
                       example: org_01EHT88Z8J8795GZNQ4ZP1J81T
                     key_provider:
-                      type: string
-                      enum:
-                        - AWS_KMS
-                        - GCP_KMS
-                        - AZURE_KEY_VAULT
-                      description: The external key provider used for BYOK.
-                      example: AWS_KMS
+                      $ref: '#/components/schemas/VaultByokKeyProvider'
                     verified:
                       type: boolean
                       description: >-
