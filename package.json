@@ -29,8 +29,8 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.6.0",
-    "@workos/oagen": "^0.17.3",
-    "@workos/oagen-emitters": "^0.9.1",
+    "@workos/oagen": "^0.18.1",
+    "@workos/oagen-emitters": "^0.10.0",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.1",
