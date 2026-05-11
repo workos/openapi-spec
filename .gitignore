@@ -3,3 +3,5 @@ dist/
 *.local.json
 .oagen
 compat-report.md
+
+workos-ir.json
