@@ -5,17 +5,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PARENT_DIR=""
 
+usage() {
+  echo "Usage: sdk-generate-all.sh --parent-dir <path>" >&2
+  echo "  <path> is the directory containing workos-{lang} SDK repos" >&2
+  exit 1
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --parent-dir) PARENT_DIR="$2"; shift 2 ;;
-    *) echo "Unknown option: $1" >&2; exit 1 ;;
+    --parent-dir)
+      if [[ $# -lt 2 || -z "${2:-}" ]]; then
+        echo "Error: --parent-dir requires a path argument" >&2
+        usage
+      fi
+      PARENT_DIR="$2"; shift 2 ;;
+    *) echo "Unknown option: $1" >&2; usage ;;
   esac
 done
 
 if [[ -z "$PARENT_DIR" ]]; then
-  echo "Usage: sdk-generate-all.sh --parent-dir <path>" >&2
-  echo "  <path> is the directory containing workos-{lang} SDK repos" >&2
-  exit 1
+  usage
 fi
 
 PARENT_DIR="$(cd "$PARENT_DIR" && pwd)"
