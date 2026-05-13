@@ -1,32 +1,30 @@
 [
   {
     "language": "dotnet",
-    "sdk_repo": "workos/workos-dotnet",
-    "sdk_checkout_path": "backend/workos-dotnet"
+    "sdk_repo": "workos/workos-dotnet"
   },
   {
     "language": "go",
-    "sdk_repo": "workos/workos-go",
-    "sdk_checkout_path": "backend/workos-go"
+    "sdk_repo": "workos/workos-go"
   },
   {
     "language": "kotlin",
-    "sdk_repo": "workos/workos-kotlin",
-    "sdk_checkout_path": "backend/workos-kotlin"
+    "sdk_repo": "workos/workos-kotlin"
   },
   {
     "language": "php",
-    "sdk_repo": "workos/workos-php",
-    "sdk_checkout_path": "backend/workos-php"
+    "sdk_repo": "workos/workos-php"
   },
   {
     "language": "python",
-    "sdk_repo": "workos/workos-python",
-    "sdk_checkout_path": "backend/workos-python"
+    "sdk_repo": "workos/workos-python"
   },
   {
     "language": "ruby",
-    "sdk_repo": "workos/workos-ruby",
-    "sdk_checkout_path": "backend/workos-ruby"
+    "sdk_repo": "workos/workos-ruby"
+  },
+  {
+    "language": "rust",
+    "sdk_repo": "workos/workos-rust"
   }
 ]

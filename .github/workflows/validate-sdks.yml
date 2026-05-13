@@ -45,6 +45,9 @@ jobs:
         include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
 
     steps:
+      - name: Resolve SDK checkout path
+        run: echo "SDK_CHECKOUT_PATH=backend/$(basename ${{ matrix.sdk_repo }})" >> "$GITHUB_ENV"
+
       - name: Checkout openapi-spec
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -54,7 +57,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ matrix.sdk_repo }}
-          path: ${{ matrix.sdk_checkout_path }}
+          path: ${{ env.SDK_CHECKOUT_PATH }}
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -71,21 +74,21 @@ jobs:
         uses: ./openapi-spec/.github/actions/setup-sdk-runtime
         with:
           language: ${{ matrix.language }}
-          sdk-path: ${{ matrix.sdk_checkout_path }}
+          sdk-path: ${{ env.SDK_CHECKOUT_PATH }}
 
       - name: Extract baseline snapshot
         working-directory: openapi-spec
         run: |
           npm run sdk:compat-extract -- \
             --lang ${{ matrix.language }} \
-            --sdk-root "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+            --sdk-root "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}"
 
       - name: Generate SDK
         working-directory: openapi-spec
-        run: npm run sdk:generate -- --lang ${{ matrix.language }} --output "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}"
+        run: npm run sdk:generate -- --lang ${{ matrix.language }} --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}"
 
       - name: Run SDK CI
-        working-directory: ${{ matrix.sdk_checkout_path }}
+        working-directory: ${{ env.SDK_CHECKOUT_PATH }}
         run: |
           if [ -x script/ci ]; then
             script/ci
@@ -97,7 +100,7 @@ jobs:
 
       - name: Capture SDK code diff
         if: always()
-        working-directory: ${{ matrix.sdk_checkout_path }}
+        working-directory: ${{ env.SDK_CHECKOUT_PATH }}
         run: |
           mkdir -p "$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}"
           # intent-to-add so untracked generated files appear in the diff
@@ -112,7 +115,7 @@ jobs:
         run: |
           npm run sdk:compat-extract -- \
             --lang ${{ matrix.language }} \
-            --sdk-root "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}" \
+            --sdk-root "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
             --output .oagen/${{ matrix.language }}/sdk
 
       - name: Copy manifest for diagnostics
@@ -120,7 +123,7 @@ jobs:
         working-directory: openapi-spec
         run: |
           mkdir -p .oagen/${{ matrix.language }}/sdk
-          cp "$GITHUB_WORKSPACE/${{ matrix.sdk_checkout_path }}/.oagen-manifest.json" \
+          cp "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}/.oagen-manifest.json" \
              .oagen/${{ matrix.language }}/sdk/ 2>/dev/null || true
 
       - name: Compat diff
