@@ -462,18 +462,25 @@ const config: OagenConfig = {
   mountRules,
   modelHints: {
     // `UserlandUser` (→ `User`) is referenced from both UserManagement and
-    // Authorization paths; pin it to UserManagement so hand-written imports
-    // in `workos-python` (e.g. `from workos.user_management.models import User`)
-    // keep resolving.
-    User: 'UserManagement',
-    // `UserApiKeyOwner` is the auto-named user-variant of `ApiKey.owner`'s
-    // discriminated union (in the api_keys-tagged ops) AND the inline owner
-    // of `UserApiKey.owner` (in the user_management-prefixed ops). Without a
-    // hint, `assignModelsToServices` picks the first service in spec order —
-    // `ApiKeys` — and the file lands in `lib/workos/api_keys/`, splitting it
-    // from its sibling user_api_key_*_owner aliases that all live under
-    // user_management/. Pin it so the family stays together.
-    UserApiKeyOwner: 'UserManagement',
+    // Authorization paths; pin it to the IR service that mounts onto
+    // UserManagement so hand-written imports in existing SDKs keep resolving.
+    User: 'UserManagementUsers',
+    // Keep this family pinned for non-Node SDKs that rely on existing
+    // user-management model placement. Node freshens newly-adopted API key
+    // method models in the emitter, so this global hint does not force the
+    // generated Node user API key payloads into UserManagement.
+    UserApiKeyOwner: 'UserManagementUsers',
+  },
+  emitterOptions: {
+    node: {
+      // Existing workos-node services remain hand-maintained unless their
+      // files were already oagen-managed. Missing generated surfaces are
+      // adopted from the spec automatically so new APIs don't require a
+      // service-by-service allowlist.
+      adoptMissingServices: true,
+      ownedServices: ['Groups'],
+      regenerateOwnedTests: true,
+    },
   },
   transformSpec,
 };
