@@ -28,14 +28,14 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.8.0",
-    "@workos/oagen": "^0.19.0",
-    "@workos/oagen-emitters": "^0.12.2",
+    "@types/node": "^25.9.0",
+    "@workos/oagen": "^0.19.1",
+    "@workos/oagen-emitters": "^0.12.3",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.1",
     "openapi-to-postmanv2": "^6.0.1",
-    "tsx": "^4.22.0",
+    "tsx": "^4.22.2",
     "typescript": "^6.0.3"
   },
   "dependencies": {
