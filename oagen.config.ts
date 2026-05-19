@@ -479,7 +479,7 @@ const config: OagenConfig = {
       // adopted from the spec automatically so new APIs don't require a
       // service-by-service allowlist.
       adoptMissingServices: true,
-      ownedServices: ['Groups'],
+      ownedServices: ['Groups', 'Webhooks'],
       regenerateOwnedTests: true,
     },
   },
