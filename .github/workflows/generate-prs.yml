@@ -19,6 +19,7 @@ on:
           - php
           - python
           - ruby
+          - rust
       dry_run:
         description: Run generation and classification without creating PRs
         type: boolean

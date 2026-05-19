@@ -456,6 +456,7 @@ const config: OagenConfig = {
     return name
       .replace(/Dto/g, '')
       .replace(/DTO/g, '')
+      .replace(/Json$/, '')
       .replace(/^Urn(?:IetfParams|Workos)O[Aa]uthGrantType/, '');
   },
   operationHints,
