@@ -266,9 +266,14 @@ jobs:
                               description: {
                                 type: "string",
                                 description: "2-6 markdown bullets detailing the changes in this service for the PR body. Be specific about classes/methods/fields added, removed, or changed."
+                              },
+                              file_paths: {
+                                type: "array",
+                                items: { type: "string" },
+                                description: "List of file paths from the SDK diff that implement THIS entry's change. Use paths EXACTLY as they appear in the diff (relative to SDK repo root, no leading `a/` or `b/`). Each file should be claimed by at most one entry — if multiple entries touch the same file, attribute it to the entry where the change is the dominant reason the file changed. Files that don't cleanly belong to any entry (shared types, helpers, cross-cutting boilerplate, behavior-change ripple) MUST be omitted — they will be committed under a catch-all `chore(generated): shared regenerated files` commit. Empty array is allowed for entries whose changes are spread across shared files."
                               }
                             },
-                            required: ["prefix", "scope", "summary", "description"]
+                            required: ["prefix", "scope", "summary", "description", "file_paths"]
                           }
                         }
                       },
@@ -278,7 +283,7 @@ jobs:
                   tool_choice: {type: "tool", name: "classify_changes"},
                   messages: [{
                     role: "user",
-                    content: ("Classify this generated " + $lang + " SDK diff into per-service changelog entries.\n\nGrounding rules:\n- The structured oagen spec diff is authoritative for what changed at the IR level. If a field/model/operation does not appear in spec_diff.changes, then no source-level type/signature change happened — the SDK-side textual diff is cosmetic (struct tags, docstrings, formatting). Such changes are `chore`, never `feat!`.\n- Behavior changes (spec_diff.behaviorChanges) are pre-rendered as separate commit-override lines by the workflow. Do NOT include them in your entries.\n- For Go struct fields specifically: adding/changing tag content like `url:\"-\"` or `json:\"name,omitempty\"` is a tag change, not a type change. Do not headline these as \"Change … field type\".\n\n## oagen spec diff\n```json\n" + ($spec_diff | tojson) + "\n```\n\n## SDK diff\n" + $diff)
+                    content: ("Classify this generated " + $lang + " SDK diff into per-service changelog entries.\n\nGrounding rules:\n- The structured oagen spec diff is authoritative for what changed at the IR level. If a field/model/operation does not appear in spec_diff.changes, then no source-level type/signature change happened — the SDK-side textual diff is cosmetic (struct tags, docstrings, formatting). Such changes are `chore`, never `feat!`.\n- Behavior changes (spec_diff.behaviorChanges) are pre-rendered as separate commit-override lines by the workflow. Do NOT include them in your entries.\n- For Go struct fields specifically: adding/changing tag content like `url:\"-\"` or `json:\"name,omitempty\"` is a tag change, not a type change. Do not headline these as \"Change … field type\".\n- file_paths grounding: use ONLY paths that appear in the SDK diff (as `--- a/<path>` / `+++ b/<path>` lines). Strip the `a/` or `b/` prefix. A file should be claimed by at most one entry — pick the entry where this file's change is the dominant reason it changed. Omit files that are shared/cross-cutting/behavior-change ripple; they will be committed under a catch-all.\n\n## oagen spec diff\n```json\n" + ($spec_diff | tojson) + "\n```\n\n## SDK diff\n" + $diff)
                   }]
                 }' | curl -s https://api.anthropic.com/v1/messages \
               -H "content-type: application/json" \
@@ -374,6 +379,78 @@ jobs:
             DESCRIPTIONS="Regenerated SDK from spec changes."
           fi
 
+          # ── Changelog sub-bullets ───────────────────────────────────────
+          # Rendered for the SDK repo's release workflow to consume as
+          # `.changelog-pending/<id>.md` fragments. Each fragment becomes a
+          # top-level "* [#NN](url) ..." bullet (added in the Create PR
+          # step) with type-grouped sub-content under bolded sub-labels:
+          # **⚠️ Breaking**, **Features**, **Fixes**.
+          BREAKING_LINES=""
+          if [ "${BEHAVIOR_COUNT:-0}" -gt 0 ]; then
+            BREAKING_LINES=$(echo "$BEHAVIOR_CHANGES" | jq -r '
+              group_by(.paramName) |
+              .[] |
+              (.[0].paramName) as $param |
+              (.[0].oldDefault // "<unset>") as $old |
+              (.[0].newDefault // "<unset>") as $new |
+              (length) as $count |
+              ([.[] | (.serviceName | gsub("(?<a>[a-z])(?<b>[A-Z])"; .a + "_" + .b) | ascii_downcase)] | unique) as $scopes |
+              if $count > 1 then
+                "  * Change default for `\($param)` in list operations (`\($old)` → `\($new)`)"
+              else
+                "  * **\($scopes[0]):** Change default for `\($param)` (`\($old)` → `\($new)`)"
+              end
+            ')
+          fi
+          FEATURE_LINES=""
+          FIX_LINES=""
+          if [ -n "${ENTRIES:-}" ] && [ "${ENTRY_COUNT:-0}" -gt 0 ]; then
+            # Render one entry: top-level "  * **scope:** summary" plus the
+            # Claude-authored description re-indented as 4-space sub-bullets.
+            ENTRY_FILTER='
+              def format_detail(d):
+                (d // "")
+                | split("\n")
+                | map(select(test("\\S")))
+                | map(if test("^\\s*[-*]\\s+") then sub("^\\s*[-*]\\s+"; "    * ") else "      " + . end)
+                | join("\n");
+              .[] | select(.prefix == $kind)
+                  | "  * **\(.scope):** \(.summary)" as $head
+                  | format_detail(.description) as $detail
+                  | if $detail == "" then $head else "\($head)\n\($detail)" end
+            '
+            CLAUDE_BREAKING=$(echo "$ENTRIES" | jq -r --arg kind "feat!" "$ENTRY_FILTER")
+            if [ -n "$CLAUDE_BREAKING" ]; then
+              BREAKING_LINES=$(printf '%s\n%s' "$BREAKING_LINES" "$CLAUDE_BREAKING" | sed '/^$/d')
+            fi
+            FEATURE_LINES=$(echo "$ENTRIES" | jq -r --arg kind "feat" "$ENTRY_FILTER")
+            FIX_LINES=$(echo "$ENTRIES" | jq -r --arg kind "fix" "$ENTRY_FILTER")
+          fi
+
+          # Assemble fragment body. Only non-empty groups appear. Blank
+          # line between groups so markdown renders each sub-label as its
+          # own paragraph inside the parent list item.
+          CHANGELOG_BULLETS=""
+          if [ -n "$BREAKING_LINES" ]; then
+            CHANGELOG_BULLETS=$(printf '  **⚠️ Breaking**\n%s' "$BREAKING_LINES")
+          fi
+          if [ -n "$FEATURE_LINES" ]; then
+            block=$(printf '  **Features**\n%s' "$FEATURE_LINES")
+            if [ -n "$CHANGELOG_BULLETS" ]; then
+              CHANGELOG_BULLETS=$(printf '%s\n\n%s' "$CHANGELOG_BULLETS" "$block")
+            else
+              CHANGELOG_BULLETS="$block"
+            fi
+          fi
+          if [ -n "$FIX_LINES" ]; then
+            block=$(printf '  **Fixes**\n%s' "$FIX_LINES")
+            if [ -n "$CHANGELOG_BULLETS" ]; then
+              CHANGELOG_BULLETS=$(printf '%s\n\n%s' "$CHANGELOG_BULLETS" "$block")
+            else
+              CHANGELOG_BULLETS="$block"
+            fi
+          fi
+
           {
             echo "rollup_type=$ROLLUP_TYPE"
             echo "rollup_bang=$ROLLUP_BANG"
@@ -384,6 +461,12 @@ jobs:
             echo "descriptions<<DESCRIPTIONS_EOF"
             printf '%s\n' "$DESCRIPTIONS"
             echo "DESCRIPTIONS_EOF"
+            echo "changelog_bullets<<BULLETS_EOF"
+            printf '%s\n' "$CHANGELOG_BULLETS"
+            echo "BULLETS_EOF"
+            echo "entries_json<<ENTRIES_EOF"
+            printf '%s\n' "${ENTRIES:-[]}"
+            echo "ENTRIES_EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create PR on live SDK
@@ -396,6 +479,8 @@ jobs:
           SUMMARY: ${{ steps.classify.outputs.rollup_summary }}
           DESCRIPTIONS: ${{ steps.classify.outputs.descriptions }}
           OVERRIDE_BLOCK: ${{ steps.classify.outputs.override_block }}
+          CHANGELOG_BULLETS: ${{ steps.classify.outputs.changelog_bullets }}
+          ENTRIES_JSON: ${{ steps.classify.outputs.entries_json }}
         run: |
           BRANCH="oagen/spec-update-${{ github.sha }}"
 
@@ -418,7 +503,64 @@ jobs:
             exit 0
           fi
 
-          git commit -m "${TYPE}(generated)${BANG}: ${SUMMARY}"
+          # Build per-entry commits using Claude's file_paths attribution so
+          # PR reviewers see small focused diffs in the Commits tab. This is
+          # purely a review-UX improvement: the PR is still squash-merged to
+          # main, so release-please / CHANGELOG plumbing (BEGIN_COMMIT_OVERRIDE,
+          # (#NN) refs, .changelog-pending fragment) is unchanged.
+          # Order: feat! → feat → fix → chore. Any files not attributed to
+          # any entry become a final `chore(generated): shared regenerated files`
+          # commit. Behavior changes (spec-wide default flips) don't have
+          # file_paths in ENTRIES and naturally fall into the catch-all.
+          INITIAL_SET="|$(printf '%s|' "${CHANGED_FILES[@]}")"
+          ORDERED_ENTRIES=$(echo "${ENTRIES_JSON:-[]}" | jq -c '
+            ([.[] | select(.prefix == "feat!")] +
+             [.[] | select(.prefix == "feat")] +
+             [.[] | select(.prefix == "fix")] +
+             [.[] | select(.prefix == "chore")]) | .[]
+          ')
+          if [ -n "$ORDERED_ENTRIES" ]; then
+            while IFS= read -r entry; do
+              prefix=$(echo "$entry" | jq -r '.prefix')
+              scope=$(echo "$entry" | jq -r '.scope')
+              summary=$(echo "$entry" | jq -r '.summary')
+              type_part="${prefix%!}"
+              bang_part=""
+              [[ "$prefix" == *"!" ]] && bang_part="!"
+              headline="${type_part}(${scope})${bang_part}: ${summary}"
+
+              entry_files=()
+              while IFS= read -r path; do
+                [ -z "$path" ] && continue
+                if [[ "$INITIAL_SET" == *"|${path}|"* ]]; then
+                  entry_files+=("$path")
+                fi
+              done < <(echo "$entry" | jq -r '.file_paths[]?')
+
+              if [ ${#entry_files[@]} -eq 0 ]; then
+                echo "Entry '$headline' has no attributed files; deferring to catch-all"
+                continue
+              fi
+
+              git restore --staged .
+              git add -- "${entry_files[@]}"
+
+              if git diff --cached --quiet; then
+                # Listed files were already committed under a prior entry; skip.
+                git add -A
+                continue
+              fi
+
+              git commit -m "$headline"
+              git add -A
+            done <<< "$ORDERED_ENTRIES"
+          fi
+
+          # Catch-all: behavior-change ripple + any files Claude didn't attribute.
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(generated): shared regenerated files"
+          fi
+
           git push origin "$BRANCH"
 
           # The BEGIN_COMMIT_OVERRIDE block tells release-please to treat this
@@ -435,10 +577,47 @@ jobs:
             fi
           } > /tmp/pr-body.md
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --title "${TYPE}(generated)${BANG}: ${SUMMARY}" \
             --label "autogenerated" \
-            --body-file /tmp/pr-body.md
+            --body-file /tmp/pr-body.md)
+          PR_NUMBER="${PR_URL##*/}"
+
+          # Append (#NN) to each conventional-commit headline inside the
+          # BEGIN_COMMIT_OVERRIDE block so release-please renders a PR link
+          # alongside each entry in CHANGELOG.md and the GitHub Release.
+          # Awk tracks the block so we never touch headline-shaped text that
+          # might appear in Claude-authored description prose.
+          awk -v pr="$PR_NUMBER" '
+            /^BEGIN_COMMIT_OVERRIDE$/ { inblock=1; print; next }
+            /^END_COMMIT_OVERRIDE$/   { inblock=0; print; next }
+            inblock && /^(feat|fix|chore)(\([^)]+\))?!?: / {
+              sub(/$/, " (#" pr ")")
+            }
+            { print }
+          ' /tmp/pr-body.md > /tmp/pr-body-with-refs.md
+          mv /tmp/pr-body-with-refs.md /tmp/pr-body.md
+          gh pr edit "$PR_NUMBER" --body-file /tmp/pr-body.md
+
+          # Write a changelog fragment into the SDK repo. The SDK's release
+          # workflow (pilot rollout pending) concatenates all
+          # .changelog-pending/*.md under a new version heading in
+          # CHANGELOG.md and uses the same content as the GitHub Release
+          # body, then deletes the consumed fragments. Until that workflow
+          # lands per-SDK these fragments accumulate harmlessly on main.
+          if [ -n "$CHANGELOG_BULLETS" ]; then
+            FRAGMENT_DIR=".changelog-pending"
+            mkdir -p "$FRAGMENT_DIR"
+            FRAGMENT_PATH="$FRAGMENT_DIR/$(date -u +%Y-%m-%dT%H-%M-%S)-${{ github.sha }}.md"
+            {
+              echo "* [#${PR_NUMBER}](${PR_URL}) Update generated SDK code"
+              echo
+              printf '%s\n' "$CHANGELOG_BULLETS"
+            } > "$FRAGMENT_PATH"
+            git add "$FRAGMENT_PATH"
+            git commit -m "chore(generated): add release notes fragment"
+            git push origin "$BRANCH"
+          fi
 
       - name: Upload diagnostics
         if: always()
