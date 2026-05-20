@@ -49,14 +49,6 @@ const operationHints: Record<string, OperationHint> = {
   },
   'GET /user_management/sessions/logout': { name: 'get_logout_url', urlBuilder: true },
 
-  // -- User Management -- org membership actions --------------------------------
-  'PUT /user_management/organization_memberships/{id}/deactivate': {
-    name: 'deactivate_organization_membership',
-  },
-  'PUT /user_management/organization_memberships/{id}/reactivate': {
-    name: 'reactivate_organization_membership',
-  },
-
   // -- Admin Portal -------------------------------------------------------------
   'POST /portal/generate_link': { name: 'generate_link' },
 
@@ -152,9 +144,6 @@ const operationHints: Record<string, OperationHint> = {
 
   // -- User Management -- singularized/shortened names --------------------------
   'POST /user_management/users': { name: 'create_user' },
-  'POST /user_management/organization_memberships': {
-    name: 'create_organization_membership',
-  },
   'POST /user_management/invitations': { name: 'send_invitation' },
   'GET /user_management/invitations/by_token/{token}': {
     name: 'find_invitation_by_token',
@@ -351,7 +340,8 @@ const mountRules: Record<string, string> = {
   UserManagementInvitations: 'UserManagement',
   UserManagementJWTTemplate: 'UserManagement',
   UserManagementMagicAuth: 'UserManagement',
-  UserManagementOrganizationMembership: 'UserManagement',
+  UserManagementOrganizationMembership: 'OrganizationMembership',
+  UserManagementOrganizationMembershipGroups: 'OrganizationMembership',
   UserManagementRedirectUris: 'UserManagement',
   UserManagementUsersAuthorizedApplications: 'UserManagement',
 
