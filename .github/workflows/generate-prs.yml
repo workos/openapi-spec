@@ -101,12 +101,35 @@ jobs:
           language: ${{ matrix.language }}
           sdk-path: ${{ env.SDK_CHECKOUT_PATH }}
 
+      - name: Extract baseline SDK snapshot
+        continue-on-error: true
+        working-directory: openapi-spec
+        run: |
+          npm run sdk:compat-extract -- \
+            --lang ${{ matrix.language }} \
+            --sdk-root "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}"
+
       - name: Generate SDK
         working-directory: openapi-spec
         run: |
           npm run sdk:generate -- \
             --lang ${{ matrix.language }} \
             --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}"
+
+      - name: Extract candidate SDK snapshot
+        continue-on-error: true
+        working-directory: openapi-spec
+        run: |
+          npm run sdk:compat-extract -- \
+            --lang ${{ matrix.language }} \
+            --sdk-root "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
+            --output .oagen/${{ matrix.language }}/sdk
+
+      - name: SDK compat diff
+        id: compat-diff
+        continue-on-error: true
+        working-directory: openapi-spec
+        run: npm run sdk:compat-diff -- --lang ${{ matrix.language }}
 
       - name: Export previous spec snapshot
         id: prev-spec
@@ -184,6 +207,23 @@ jobs:
             BEHAVIOR_CHANGES=$(echo "$SPEC_DIFF" | jq -c '.behaviorChanges // []')
           fi
 
+          # SDK-shape compat-diff signal. The spec diff only sees operations,
+          # fields, params, models — it is blind to SDK-side reshaping like
+          # service splits, accessor renames, or *Json → bare model
+          # consolidation. compat-diff extracts the generated SDK's surface and
+          # diffs it, so removed/renamed callables and removed accessors show up
+          # here even when the spec is unchanged.
+          COMPAT_REPORT_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/compat-report.json"
+          COMPAT_BREAKING="[]"
+          COMPAT_BREAKING_SCOPES="[]"
+          if [ -f "$COMPAT_REPORT_PATH" ]; then
+            COMPAT_BREAKING=$(jq -c '[.changes[]? | select(.severity == "breaking") | {category, symbol, message: (.message // "")}]' "$COMPAT_REPORT_PATH")
+            # Map each breaking symbol's root (UserManagement, SSO, Client, …)
+            # to a snake_case scope for matching against Claude entries below.
+            COMPAT_BREAKING_SCOPES=$(echo "$COMPAT_BREAKING" | jq -c '[.[] | .symbol | split(".")[0] | gsub("(?<a>[a-z0-9])(?<b>[A-Z])"; .a + "_" + .b) | ascii_downcase] | unique')
+            echo "Compat breaking count: $(echo "$COMPAT_BREAKING" | jq 'length'), scopes: $COMPAT_BREAKING_SCOPES"
+          fi
+
           OVERRIDE_BLOCK=""
           DESCRIPTIONS=""
           BEHAVIOR_OVERRIDE_LINES=""
@@ -234,6 +274,7 @@ jobs:
             RESPONSE=$(jq -n \
                 --rawfile diff /tmp/sdk-diff-truncated.txt \
                 --argjson spec_diff "$SPEC_DIFF" \
+                --argjson compat_breaking "$COMPAT_BREAKING" \
                 --arg lang "${{ matrix.language }}" \
                 '{
                   model: "claude-haiku-4-5-20251001",
@@ -253,7 +294,7 @@ jobs:
                               prefix: {
                                 type: "string",
                                 enum: ["feat!", "feat", "fix", "chore"],
-                                description: "feat! ONLY for source-level breaking changes that are present in the structured oagen spec diff: a `field-type-changed`, `field-removed`, `model-removed`, `enum-removed`, `param-removed`, `param-type-changed`, `operation-removed`, or `param-required-changed` (optional → required) event. feat for additive changes (new methods, new classes, new fields, new optional params). fix for non-breaking observable modifications. chore for changes that do not affect the public API surface — including struct-tag-only changes (adding `url:\"-\"`, toggling `omitempty`), formatting, comment edits, or reordering. CRITICAL: a Go field gaining `url:\"-\"` is NOT a field-type change — its Go type did not change. If the structured oagen diff does NOT list the field in `field-type-changed`, the headline must NOT use \"Change ... field type\" wording, and prefix MUST NOT be feat!."
+                                description: "feat! when the change is breaking. Two authoritative signals: (A) the structured oagen spec diff lists the field/model/operation in `field-type-changed`, `field-removed`, `model-removed`, `enum-removed`, `param-removed`, `param-type-changed`, `operation-removed`, or `param-required-changed` (optional → required); OR (B) the compat_breaking list reports a breaking SDK-shape change on a symbol that belongs to this entry — e.g. a removed/renamed callable, a removed accessor, or a removed parameter on an SDK method. Either signal is sufficient. feat for additive changes (new methods, new classes, new fields, new optional params). fix for non-breaking observable modifications. chore for changes that do not affect the public API surface — including struct-tag-only changes (adding `url:\"-\"`, toggling `omitempty`), formatting, comment edits, or reordering. CRITICAL: a Go field gaining `url:\"-\"` is NOT a field-type change — its Go type did not change. If neither signal flags the change as breaking, prefix MUST NOT be feat!."
                               },
                               scope: {
                                 type: "string",
@@ -283,7 +324,7 @@ jobs:
                   tool_choice: {type: "tool", name: "classify_changes"},
                   messages: [{
                     role: "user",
-                    content: ("Classify this generated " + $lang + " SDK diff into per-service changelog entries.\n\nGrounding rules:\n- The structured oagen spec diff is authoritative for what changed at the IR level. If a field/model/operation does not appear in spec_diff.changes, then no source-level type/signature change happened — the SDK-side textual diff is cosmetic (struct tags, docstrings, formatting). Such changes are `chore`, never `feat!`.\n- Behavior changes (spec_diff.behaviorChanges) are pre-rendered as separate commit-override lines by the workflow. Do NOT include them in your entries.\n- For Go struct fields specifically: adding/changing tag content like `url:\"-\"` or `json:\"name,omitempty\"` is a tag change, not a type change. Do not headline these as \"Change … field type\".\n- file_paths grounding: use ONLY paths that appear in the SDK diff (as `--- a/<path>` / `+++ b/<path>` lines). Strip the `a/` or `b/` prefix. A file should be claimed by at most one entry — pick the entry where the change to this file is the dominant reason it changed. Omit files that are shared/cross-cutting/behavior-change ripple; they will be committed under a catch-all.\n\n## oagen spec diff\n```json\n" + ($spec_diff | tojson) + "\n```\n\n## SDK diff\n" + $diff)
+                    content: ("Classify this generated " + $lang + " SDK diff into per-service changelog entries.\n\nGrounding rules:\n- The structured oagen spec diff is authoritative for what changed at the IR level. If a field/model/operation does not appear in spec_diff.changes, then no source-level type/signature change happened — the SDK-side textual diff is cosmetic (struct tags, docstrings, formatting). Such changes are `chore`, never `feat!`.\n- compat_breaking is the second authoritative breaking-change signal. Each entry is an SDK-shape breaking change detected by diffing the previous and regenerated SDK surfaces (e.g. a removed callable, a removed accessor, a removed parameter). The `symbol` is dotted IR-style (e.g. `UserManagement.list_organization_memberships`, `Client.user_management_organization_membership_groups`). Whichever per-service entry covers that symbol MUST be prefix=feat!. If the symbol is the *removal side* of a service split (operations moved to a new service), attribute the breaking marker to the entry that describes the split — even if its scope names the new service.\n- Behavior changes (spec_diff.behaviorChanges) are pre-rendered as separate commit-override lines by the workflow. Do NOT include them in your entries.\n- For Go struct fields specifically: adding/changing tag content like `url:\"-\"` or `json:\"name,omitempty\"` is a tag change, not a type change. Do not headline these as \"Change … field type\".\n- file_paths grounding: use ONLY paths that appear in the SDK diff (as `--- a/<path>` / `+++ b/<path>` lines). Strip the `a/` or `b/` prefix. A file should be claimed by at most one entry — pick the entry where the change to this file is the dominant reason it changed. Omit files that are shared/cross-cutting/behavior-change ripple; they will be committed under a catch-all.\n\n## oagen spec diff\n```json\n" + ($spec_diff | tojson) + "\n```\n\n## compat_breaking (SDK-shape breaking changes)\n```json\n" + ($compat_breaking | tojson) + "\n```\n\n## SDK diff\n" + $diff)
                   }]
                 }' | curl -s https://api.anthropic.com/v1/messages \
               -H "content-type: application/json" \
@@ -299,6 +340,16 @@ jobs:
             ENTRIES=$(echo "${RESPONSE:-}" | jq -c '.content[0].input.entries // []')
             ENTRY_COUNT=$(echo "$ENTRIES" | jq 'length')
             echo "Got ${ENTRY_COUNT} classification entr(y|ies)"
+
+            # Promote any entry whose scope matches a compat-diff breaking
+            # symbol root to feat!. Safety net for when Claude underrates an
+            # SDK-shape break (service split, accessor rename) the spec diff
+            # cannot see.
+            if [ "$ENTRY_COUNT" -gt 0 ] && [ "$(echo "$COMPAT_BREAKING_SCOPES" | jq 'length')" -gt 0 ]; then
+              ENTRIES=$(echo "$ENTRIES" | jq -c --argjson scopes "$COMPAT_BREAKING_SCOPES" '
+                map(if (.scope as $s | $scopes | index($s)) and .prefix != "feat!" then .prefix = "feat!" else . end)
+              ')
+            fi
 
             if [ "$ENTRY_COUNT" -gt 0 ]; then
               # Render breaking changes as `feat(scope)!:` (bang after scope, per
@@ -333,6 +384,15 @@ jobs:
           # order`) are always breaking, so they force the rollup to feat! and
           # take precedence over any softer rollup Claude inferred.
           if [ -n "$BEHAVIOR_OVERRIDE_LINES" ]; then
+            ROLLUP_TYPE="feat"
+            ROLLUP_BANG="!"
+          fi
+
+          # Any SDK-shape break in compat-diff forces the rollup to feat! too,
+          # ensuring the PR title carries the `!` even if Claude failed to
+          # promote a matching per-service entry.
+          COMPAT_BREAKING_COUNT=$(echo "$COMPAT_BREAKING" | jq 'length')
+          if [ "${COMPAT_BREAKING_COUNT:-0}" -gt 0 ]; then
             ROLLUP_TYPE="feat"
             ROLLUP_BANG="!"
           fi
@@ -610,7 +670,7 @@ jobs:
             mkdir -p "$FRAGMENT_DIR"
             FRAGMENT_PATH="$FRAGMENT_DIR/$(date -u +%Y-%m-%dT%H-%M-%S)-${{ github.sha }}.md"
             {
-              echo "* [#${PR_NUMBER}](${PR_URL}) Update generated SDK code"
+              echo "* [#${PR_NUMBER}](${PR_URL}) ${TYPE}(generated)${BANG}: ${SUMMARY}"
               echo
               printf '%s\n' "$CHANGELOG_BULLETS"
             } > "$FRAGMENT_PATH"
