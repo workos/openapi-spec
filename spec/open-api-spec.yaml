@@ -5833,6 +5833,7 @@ paths:
                         value.
                       example: abc123
                     last_used_at:
+                      format: date-time
                       type:
                         - string
                         - 'null'
@@ -9326,26 +9327,12 @@ paths:
                   description: The authentication method being used.
                   example: Password
                 action:
+                  description: The action being performed.
+                  example: sign-in
                   type: string
                   enum:
-                    - login
-                    - signup
                     - sign-up
                     - sign-in
-                    - sign_up
-                    - sign_in
-                    - sign in
-                    - sign up
-                  description: The action being performed.
-                  example: login
-                device_fingerprint:
-                  type: string
-                  description: An optional device fingerprint for the request.
-                  example: fp_abc123
-                bot_score:
-                  type: string
-                  description: An optional bot detection score for the request.
-                  example: '0.1'
               required:
                 - ip_address
                 - user_agent
@@ -9821,6 +9808,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+      security: []
       summary: Get JWKS
       tags:
         - user-management.session-tokens
@@ -16157,6 +16145,432 @@ paths:
       summary: List authentication factors
       tags:
         - user-management.multi-factor-authentication
+  /vault/v1/keys/data-key:
+    post:
+      description: Generate an isolated encryption key for local encryption operations.
+      operationId: JumpWireWeb.KeyController.create_data_key
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDataKeyRequest'
+        description: Data key request.
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDataKeyResponse'
+          description: Data key.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Validation error.
+      summary: Create a data key
+      tags:
+        - vault
+  /vault/v1/keys/decrypt:
+    post:
+      description: Decrypt a previously encrypted data key from WorkOS Vault.
+      operationId: JumpWireWeb.KeyController.decrypt
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecryptRequest'
+        description: Decrypt request.
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecryptResponse'
+          description: Decrypted key.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+      summary: Decrypt a data key
+      tags:
+        - vault
+  /vault/v1/keys/rekey:
+    post:
+      description: Decrypt an existing data key and re-encrypt it under a new key context.
+      operationId: JumpWireWeb.KeyController.rekey
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RekeyRequest'
+        description: Rekey request.
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDataKeyResponse'
+          description: Re-encrypted key.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Validation error.
+      summary: Re-encrypt a data key
+      tags:
+        - vault
+  /vault/v1/kv:
+    get:
+      description: List all encrypted objects with cursor-based pagination.
+      operationId: JumpWireWeb.DataVaultController.index
+      parameters:
+        - description: Upper limit on the number of objects to return.
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 10
+            example: 10
+            minimum: 1
+            type: integer
+        - description: Cursor for the previous page of results.
+          in: query
+          name: before
+          required: false
+          schema:
+            example: b21f3a8c-7e4d-4b1a-9c5e-2d8f6a7b3c4e
+            type: string
+        - description: Cursor for the next page of results.
+          in: query
+          name: after
+          required: false
+          schema:
+            example: a10e2b7d-6c3f-4a2b-8d1e-3f9a5b8c7d6e
+            type: string
+        - description: Sort direction for results.
+          in: query
+          name: order
+          required: false
+          schema:
+            enum:
+              - asc
+              - desc
+            example: desc
+            type: string
+        - description: Filter results by name or structured search JSON.
+          in: query
+          name: search
+          required: false
+          schema:
+            example: my-secret
+            type: string
+        - description: ISO 8601 timestamp to filter by last modified time.
+          in: query
+          name: updatedAfter
+          required: false
+          schema:
+            example: '2024-01-01T00:00:00Z'
+            format: date-time
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectListResponse'
+          description: Object list.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+      summary: List objects
+      tags:
+        - vault
+    post:
+      description: Encrypt and store a new key-value object.
+      operationId: JumpWireWeb.DataVaultController.create
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjectRequest'
+        description: Create object.
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectMetadata'
+          description: Object created.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Conflict.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Validation error.
+      summary: Create an object
+      tags:
+        - vault
+  /vault/v1/kv/name/{name}:
+    get:
+      description: Fetch and decrypt an object by its unique name.
+      operationId: JumpWireWeb.DataVaultController.show_by_name
+      parameters:
+        - description: Unique name of the object.
+          in: path
+          name: name
+          required: true
+          schema:
+            example: my-secret
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          description: Object.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not found.
+      summary: Read an object by name
+      tags:
+        - vault
+  /vault/v1/kv/{id}:
+    delete:
+      description: Delete an encrypted object.
+      operationId: JumpWireWeb.DataVaultController.delete
+      parameters:
+        - description: Unique identifier of the object.
+          in: path
+          name: id
+          required: true
+          schema:
+            example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            type: string
+        - description: Expected current version for optimistic locking.
+          in: query
+          name: version_check
+          required: false
+          schema:
+            example: c3d4e5f6-7890-abcd-ef12-34567890abcd
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteObjectResponse'
+          description: Deletion result.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Version mismatch.
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal error.
+      summary: Delete an object
+      tags:
+        - vault
+    get:
+      description: Fetch and decrypt an object by its unique identifier.
+      operationId: JumpWireWeb.DataVaultController.show_by_id
+      parameters:
+        - description: Unique identifier of the object.
+          in: path
+          name: id
+          required: true
+          schema:
+            example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          description: Object.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not found.
+      summary: Read an object by ID
+      tags:
+        - vault
+    put:
+      description: Update the value of an existing encrypted object.
+      operationId: JumpWireWeb.DataVaultController.update
+      parameters:
+        - description: Unique identifier of the object.
+          in: path
+          name: id
+          required: true
+          schema:
+            example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateObjectRequest'
+        description: Update object.
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithoutValue'
+          description: Object updated.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Version mismatch.
+      summary: Update an object
+      tags:
+        - vault
+  /vault/v1/kv/{id}/metadata:
+    get:
+      description: Fetch metadata for an object without decrypting it.
+      operationId: JumpWireWeb.DataVaultController.describe
+      parameters:
+        - description: Unique identifier of the object.
+          in: path
+          name: id
+          required: true
+          schema:
+            example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithoutValue'
+          description: Object metadata.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not found.
+      summary: Describe an object
+      tags:
+        - vault
+  /vault/v1/kv/{id}/versions:
+    get:
+      description: Retrieve all versions for a specific object.
+      operationId: JumpWireWeb.DataVaultController.versions
+      parameters:
+        - description: Unique identifier of the object.
+          in: path
+          name: id
+          required: true
+          schema:
+            example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionListResponse'
+          description: Version list.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad request.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not found.
+      summary: List object versions
+      tags:
+        - vault
   /webhook_endpoints:
     get:
       description: Get a list of all of your existing webhook endpoints.
@@ -16636,6 +17050,8 @@ tags:
     description: Manage authorized applications for users.
   - name: user-management.users.feature-flags
     description: Manage user-scoped feature flags.
+  - name: vault
+    description: Vault data encryption endpoints.
   - name: webhooks
     description: Manage webhooks.
   - name: widgets
@@ -17792,6 +18208,13 @@ components:
           type: array
           items:
             type: string
+        expires_at:
+          format: date-time
+          type: string
+          description: >-
+            The timestamp when the API key should expire. Must be a future
+            timestamp. If omitted, the key does not expire.
+          example: '2030-01-01T00:00:00.000Z'
       required:
         - name
     OrganizationDomainDataDto:
@@ -18439,6 +18862,13 @@ components:
           type: array
           items:
             type: string
+        expires_at:
+          format: date-time
+          type: string
+          description: >-
+            The timestamp when the API key should expire. Must be a future
+            timestamp. If omitted, the key does not expire.
+          example: '2030-01-01T00:00:00.000Z'
       required:
         - name
         - organization_id
@@ -18834,6 +19264,9 @@ components:
               - permission.created
               - permission.deleted
               - permission.updated
+              - pipes.connected_account.connected
+              - pipes.connected_account.disconnected
+              - pipes.connected_account.reauthorization_needed
               - session.created
               - session.revoked
               - waitlist_user.approved
@@ -18920,6 +19353,368 @@ components:
         - client_secret
         - code
         - grant_type
+    Actor:
+      description: The user or API key that performed an action.
+      properties:
+        id:
+          description: Unique identifier of the actor.
+          example: key_01K8ZYT4AWJ6XP0E0S8CTBHE3P
+          type: string
+        name:
+          description: Display name of the actor.
+          example: My API Key
+          type: string
+      required:
+        - id
+        - name
+      title: Actor
+      type: object
+    CreateDataKeyRequest:
+      properties:
+        context:
+          additionalProperties:
+            maxLength: 500
+            type: string
+          description: Map of values used to determine the encryption key.
+          example:
+            organization_id: org_01K8ZYT4AWJ6XP0E0S8CTBHE3P
+          maxProperties: 10
+          type: object
+      required:
+        - context
+      title: CreateDataKeyRequest
+      type: object
+    CreateDataKeyResponse:
+      properties:
+        context:
+          additionalProperties:
+            type: string
+          description: Map of values used to determine the encryption key.
+          example:
+            organization_id: org_01K8ZYT4AWJ6XP0E0S8CTBHE3P
+          type: object
+        data_key:
+          description: Base64-encoded data encryption key.
+          example: DR9idtey9MpMrA1VRFrz30HB1yNgL2PoHZyjAkFeWgg=
+          type: string
+        encrypted_keys:
+          description: Base64-encoded encrypted data key blob.
+          example: >-
+            V09TLkVLTS52MQBiZjUxY2NlYy03OGI0LTUyMDAtYjM4My0zNTczMGU3MWVmNjEBATEBJGJmNjVlMzI2LTQzYTAtNGIyMC04OGM0LTA3ZmYzZGU1NDM0YwF0YmY2NWUzMjYtNDNhMC00YjIwLTg4YzQtMDdmZjNkZTU0MzRj
+          type: string
+        id:
+          description: Unique identifier for the generated data key.
+          example: bf51ccec-78b4-5200-b383-35730e71ef61
+          type: string
+      required:
+        - id
+        - data_key
+        - encrypted_keys
+        - context
+      title: CreateDataKeyResponse
+      type: object
+    CreateObjectRequest:
+      properties:
+        key_context:
+          additionalProperties:
+            maxLength: 500
+            type: string
+          description: Map of values used to determine the encryption key.
+          example:
+            organization_id: org_01K8ZYT4AWJ6XP0E0S8CTBHE3P
+          maxProperties: 10
+          type: object
+        name:
+          description: Unique name for the object.
+          example: my-secret
+          maxLength: 200
+          type: string
+        value:
+          description: Plaintext data to encrypt and store.
+          example: s3cr3t-v4lu3
+          type: string
+      required:
+        - name
+        - value
+        - key_context
+      title: CreateObjectRequest
+      type: object
+    DecryptRequest:
+      properties:
+        keys:
+          description: Base64-encoded encrypted data key to decrypt.
+          example: >-
+            V09TLkVLTS52MQBiZjUxY2NlYy03OGI0LTUyMDAtYjM4My0zNTczMGU3MWVmNjEBATEBJGJmNjVlMzI2LTQzYTAtNGIyMC04OGM0LTA3ZmYzZGU1NDM0YwF0YmY2NWUzMjYtNDNhMC00YjIwLTg4YzQtMDdmZjNkZTU0MzRj
+          type: string
+      required:
+        - keys
+      title: DecryptRequest
+      type: object
+    DecryptResponse:
+      properties:
+        data_key:
+          description: Base64-encoded decrypted data key.
+          example: DR9idtey9MpMrA1VRFrz30HB1yNgL2PoHZyjAkFeWgg=
+          type: string
+        id:
+          description: Unique identifier of the decrypted data key.
+          example: bf51ccec-78b4-5200-b383-35730e71ef61
+          type: string
+      required:
+        - id
+        - data_key
+      title: DecryptResponse
+      type: object
+    DeleteObjectResponse:
+      properties:
+        name:
+          description: Name of the deleted object.
+          example: my-secret
+          type: string
+        success:
+          description: Whether the deletion succeeded.
+          example: true
+          type: boolean
+      required:
+        - success
+        - name
+      title: DeleteObjectResponse
+      type: object
+    Error:
+      description: Error response body.
+      properties:
+        error:
+          description: A human-readable description of the error.
+          example: Invalid request parameters.
+          type: string
+      required:
+        - error
+      title: Error
+      type: object
+    ListMetadata:
+      description: Cursor-based pagination metadata.
+      properties:
+        after:
+          description: Cursor for the next page of results.
+          example: b21f3a8c-7e4d-4b1a-9c5e-2d8f6a7b3c4e
+          type:
+            - string
+            - 'null'
+        before:
+          description: Cursor for the previous page of results.
+          example: a10e2b7d-6c3f-4a2b-8d1e-3f9a5b8c7d6e
+          type:
+            - string
+            - 'null'
+      title: ListMetadata
+      type: object
+    Object:
+      description: An encrypted object with its decrypted value and metadata.
+      properties:
+        id:
+          description: Unique identifier of the object.
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          type: string
+        metadata:
+          $ref: '#/components/schemas/ObjectMetadata'
+        name:
+          description: Unique name of the object.
+          example: my-secret
+          type: string
+        value:
+          description: Decrypted plaintext value.
+          example: s3cr3t-v4lu3
+          type: string
+      required:
+        - id
+        - name
+        - value
+        - metadata
+      title: Object
+      type: object
+    ObjectListResponse:
+      properties:
+        data:
+          description: List of object summaries.
+          items:
+            $ref: '#/components/schemas/ObjectSummary'
+          type: array
+        list_metadata:
+          $ref: '#/components/schemas/ListMetadata'
+      required:
+        - data
+        - list_metadata
+      title: ObjectListResponse
+      type: object
+    ObjectMetadata:
+      description: Metadata for a stored encrypted object.
+      properties:
+        context:
+          additionalProperties:
+            type: string
+          description: Map of values used to determine the encryption key.
+          example:
+            organization_id: org_01K8ZYT4AWJ6XP0E0S8CTBHE3P
+          type: object
+        environment_id:
+          description: Environment the object belongs to.
+          example: environment_01K8ZYT4AWJ6XP0E0S8CTBHE3P
+          type: string
+        id:
+          description: Unique identifier of the object.
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          type: string
+        key_id:
+          description: Encryption key identifier.
+          example: bf65e326-43a0-4b20-88c4-07ff3de5434c
+          type: string
+        updated_at:
+          description: Timestamp of the last update.
+          example: '2024-06-15T10:30:00Z'
+          format: date-time
+          type: string
+        updated_by:
+          $ref: '#/components/schemas/Actor'
+        version_id:
+          description: Current version identifier of the object.
+          example: c3d4e5f6-7890-abcd-ef12-34567890abcd
+          type:
+            - string
+            - 'null'
+      required:
+        - id
+        - environment_id
+        - key_id
+        - updated_by
+        - updated_at
+        - context
+      title: ObjectMetadata
+      type: object
+    ObjectSummary:
+      description: Summary of an encrypted object returned in list responses.
+      properties:
+        id:
+          description: Unique identifier of the object.
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          type: string
+        name:
+          description: Unique name of the object.
+          example: my-secret
+          type: string
+        updated_at:
+          description: Timestamp of the last update.
+          example: '2024-06-15T10:30:00Z'
+          format: date-time
+          type:
+            - string
+            - 'null'
+      required:
+        - id
+        - name
+      title: ObjectSummary
+      type: object
+    ObjectVersion:
+      description: A static snapshot of an encrypted object.
+      properties:
+        created_at:
+          description: Timestamp when the version was created.
+          example: '2024-06-15T10:30:00Z'
+          format: date-time
+          type: string
+        current_version:
+          description: Whether this is the active version.
+          example: true
+          type: boolean
+        etag:
+          description: Hash of the object value.
+          example: d41d8cd98f00b204e9800998ecf8427e
+          type: string
+        id:
+          description: Unique identifier of the version.
+          example: c3d4e5f6-7890-abcd-ef12-34567890abcd
+          type: string
+        size:
+          description: Number of bytes of stored data.
+          example: 256
+          type: integer
+      required:
+        - id
+        - created_at
+        - current_version
+        - size
+        - etag
+      title: ObjectVersion
+      type: object
+    ObjectWithoutValue:
+      description: An encrypted object's metadata (value excluded).
+      properties:
+        id:
+          description: Unique identifier of the object.
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          type: string
+        metadata:
+          $ref: '#/components/schemas/ObjectMetadata'
+        name:
+          description: Unique name of the object.
+          example: my-secret
+          type: string
+      required:
+        - id
+        - name
+        - metadata
+      title: ObjectWithoutValue
+      type: object
+    RekeyRequest:
+      properties:
+        context:
+          additionalProperties:
+            maxLength: 500
+            type: string
+          description: Map of values used to determine the new encryption key.
+          example:
+            organization_id: org_01K8ZYT4AWJ6XP0E0S8CTBHE3P
+          maxProperties: 10
+          type: object
+        encrypted_keys:
+          description: Base64-encoded encrypted data key blob to re-encrypt.
+          example: >-
+            V09TLkVLTS52MQBiZjUxY2NlYy03OGI0LTUyMDAtYjM4My0zNTczMGU3MWVmNjEBATEBJGJmNjVlMzI2LTQzYTAtNGIyMC04OGM0LTA3ZmYzZGU1NDM0YwF0YmY2NWUzMjYtNDNhMC00YjIwLTg4YzQtMDdmZjNkZTU0MzRj
+          type: string
+      required:
+        - encrypted_keys
+        - context
+      title: RekeyRequest
+      type: object
+    UpdateObjectRequest:
+      properties:
+        value:
+          description: New plaintext value.
+          example: upd4t3d-v4lu3
+          type: string
+        version_check:
+          description: ID of the expected current version for optimistic locking.
+          example: c3d4e5f6-7890-abcd-ef12-34567890abcd
+          type:
+            - string
+            - 'null'
+      required:
+        - value
+      title: UpdateObjectRequest
+      type: object
+    VersionListResponse:
+      properties:
+        data:
+          description: List of object versions.
+          items:
+            $ref: '#/components/schemas/ObjectVersion'
+          type: array
+        list_metadata:
+          $ref: '#/components/schemas/ListMetadata'
+      required:
+        - data
+        - list_metadata
+      title: VersionListResponse
+      type: object
     ExternalAuthCompleteResponse:
       type: object
       properties:
@@ -18999,6 +19794,15 @@ components:
           format: date-time
           description: Timestamp of when the API Key was last used.
           example: null
+        expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Timestamp when the API Key expires. Null means the key does not
+            expire.
+          example: null
         permissions:
           type: array
           items:
@@ -19024,6 +19828,7 @@ components:
         - name
         - obfuscated_value
         - last_used_at
+        - expires_at
         - permissions
         - created_at
         - updated_at
@@ -19317,6 +20122,7 @@ components:
           description: A hint showing the last few characters of the secret value.
           example: abc123
         last_used_at:
+          format: date-time
           type:
             - string
             - 'null'
@@ -21392,6 +22198,74 @@ components:
         - custom_attributes
         - created_at
         - updated_at
+    PipesConnectedAccount:
+      type: object
+      properties:
+        object:
+          type: string
+          description: The connected account object.
+          example: connected_account
+          const: connected_account
+        id:
+          type: string
+          description: The unique ID of the connected account.
+          example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+        data_integration_id:
+          type: string
+          description: The unique ID of the data integration.
+          example: data_integration_01EHZNVPK3SFK441A1RGBFSHRT
+        provider_slug:
+          type: string
+          description: The provider slug for this connected account.
+          example: github
+        user_id:
+          type:
+            - string
+            - 'null'
+          description: The ID of the User the connected account belongs to.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        organization_id:
+          type:
+            - string
+            - 'null'
+          description: The ID of the Organization the connected account belongs to.
+          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        scopes:
+          type: array
+          items:
+            type: string
+          description: The OAuth scopes granted for this connected account.
+          example:
+            - repo
+            - user:email
+        state:
+          type: string
+          enum:
+            - connected
+            - needs_reauthorization
+          description: The state of the connected account.
+          example: connected
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - data_integration_id
+        - provider_slug
+        - user_id
+        - organization_id
+        - scopes
+        - state
+        - created_at
+        - updated_at
     VaultByokKeyProvider:
       type: string
       enum:
@@ -21744,6 +22618,15 @@ components:
                         - 'null'
                       description: The timestamp when the API key was last used.
                       example: '2026-01-15T12:00:00.000Z'
+                    expires_at:
+                      type:
+                        - string
+                        - 'null'
+                      format: date-time
+                      description: >-
+                        Timestamp when the API Key expires. Null means the key
+                        does not expire.
+                      example: null
                     permissions:
                       type: array
                       items:
@@ -21860,6 +22743,15 @@ components:
                         - 'null'
                       description: The timestamp when the API key was last used.
                       example: '2026-01-15T12:00:00.000Z'
+                    expires_at:
+                      type:
+                        - string
+                        - 'null'
+                      format: date-time
+                      description: >-
+                        Timestamp when the API Key expires. Null means the key
+                        does not expire.
+                      example: null
                     permissions:
                       type: array
                       items:
@@ -28118,6 +29010,93 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: pipes.connected_account.connected
+                data:
+                  $ref: '#/components/schemas/PipesConnectedAccount'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: pipes.connected_account.disconnected
+                data:
+                  $ref: '#/components/schemas/PipesConnectedAccount'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: pipes.connected_account.reauthorization_needed
+                data:
+                  $ref: '#/components/schemas/PipesConnectedAccount'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: role.created
                 data:
                   type: object
@@ -29652,6 +30631,15 @@ components:
           format: date-time
           description: Timestamp of when the API Key was last used.
           example: null
+        expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Timestamp when the API Key expires. Null means the key does not
+            expire.
+          example: null
         permissions:
           type: array
           items:
@@ -29677,6 +30665,7 @@ components:
         - name
         - obfuscated_value
         - last_used_at
+        - expires_at
         - permissions
         - created_at
         - updated_at
@@ -29761,6 +30750,15 @@ components:
           format: date-time
           description: Timestamp of when the API Key was last used.
           example: null
+        expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Timestamp when the API Key expires. Null means the key does not
+            expire.
+          example: '2030-01-01T00:00:00.000Z'
         permissions:
           type: array
           items:
@@ -29790,6 +30788,7 @@ components:
         - name
         - obfuscated_value
         - last_used_at
+        - expires_at
         - permissions
         - created_at
         - updated_at
@@ -30446,9 +31445,7 @@ components:
           enum:
             - bot_detection
             - brute_force_attack
-            - credential_stuffing
             - domain_sign_up_rate_limit
-            - ip_sign_up_rate_limit
             - impossible_travel
             - repeat_sign_up
             - stale_account
@@ -30860,6 +31857,15 @@ components:
           format: date-time
           description: Timestamp of when the API Key was last used.
           example: null
+        expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Timestamp when the API Key expires. Null means the key does not
+            expire.
+          example: null
         permissions:
           type: array
           items:
@@ -30885,6 +31891,7 @@ components:
         - name
         - obfuscated_value
         - last_used_at
+        - expires_at
         - permissions
         - created_at
         - updated_at
@@ -30974,6 +31981,15 @@ components:
           format: date-time
           description: Timestamp of when the API Key was last used.
           example: null
+        expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Timestamp when the API Key expires. Null means the key does not
+            expire.
+          example: '2030-01-01T00:00:00.000Z'
         permissions:
           type: array
           items:
@@ -31003,6 +32019,7 @@ components:
         - name
         - obfuscated_value
         - last_used_at
+        - expires_at
         - permissions
         - created_at
         - updated_at
@@ -31531,7 +32548,7 @@ components:
             - VMwareSAML
             - XeroOAuth
           description: The type of SSO connection.
-          example: GoogleOAuth
+          example: OktaSAML
         idp_id:
           type: string
           description: The user's unique identifier from the identity provider.
