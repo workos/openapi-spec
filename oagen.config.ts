@@ -434,6 +434,7 @@ const config: OagenConfig = {
   schemaNameTransform: (name: string) => {
     // Explicit renames for Dto models that collide with response models
     const COLLISION_RENAMES: Record<string, string> = {
+      Error: 'ErrorResponse',
       OrganizationDto: 'OrganizationInput',
       RedirectUriDto: 'RedirectUriInput',
       // Generic list-derived names that need domain-specific identifiers
