@@ -351,6 +351,36 @@ jobs:
               ')
             fi
 
+            # Demotion safety net: demote feat! entries whose scope appears in
+            # neither the spec-diff breaking operations/services nor the
+            # compat-diff breaking symbols. Catches Claude over-classifying
+            # additive changes (e.g. new optional fields) as breaking.
+            if [ "$ENTRY_COUNT" -gt 0 ]; then
+              SPEC_BREAKING_SCOPES="[]"
+              if [ -f /tmp/diff-report.json ]; then
+                SPEC_BREAKING_SCOPES=$(jq -c '[
+                  .changes[]? |
+                  select(.classification == "breaking") |
+                  if .kind == "service-removed" then .name
+                  elif .serviceName then .serviceName
+                  else empty
+                  end
+                ] | unique' /tmp/diff-report.json)
+              fi
+              ALL_BREAKING_SCOPES=$(jq -nc \
+                --argjson spec "$SPEC_BREAKING_SCOPES" \
+                --argjson compat "$COMPAT_BREAKING_SCOPES" \
+                '$spec + $compat | unique')
+              BEFORE=$(echo "$ENTRIES" | jq '[.[] | select(.prefix == "feat!")] | length')
+              ENTRIES=$(echo "$ENTRIES" | jq -c --argjson scopes "$ALL_BREAKING_SCOPES" '
+                map(if .prefix == "feat!" and (.scope as $s | $scopes | index($s) | not) then .prefix = "feat" else . end)
+              ')
+              AFTER=$(echo "$ENTRIES" | jq '[.[] | select(.prefix == "feat!")] | length')
+              if [ "$BEFORE" -ne "$AFTER" ]; then
+                echo "Demotion safety net: demoted $(($BEFORE - $AFTER)) entry/entries from feat! to feat (scopes not in: $(echo "$ALL_BREAKING_SCOPES" | jq -r 'join(", ")'))"
+              fi
+            fi
+
             if [ "$ENTRY_COUNT" -gt 0 ]; then
               # Render breaking changes as `feat(scope)!:` (bang after scope, per
               # Conventional Commits) rather than `feat!(scope):`.
