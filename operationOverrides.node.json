@@ -1,0 +1,122 @@
+{
+  "POST /organizations/{organizationId}/groups": {
+    "methodName": "create_group",
+    "optionsType": "CreateGroupOptions"
+  },
+  "GET /organizations/{organizationId}/groups": {
+    "methodName": "list_groups",
+    "optionsType": "ListGroupsOptions"
+  },
+  "GET /organizations/{organizationId}/groups/{groupId}": {
+    "methodName": "get_group",
+    "optionsType": "GetGroupOptions"
+  },
+  "PATCH /organizations/{organizationId}/groups/{groupId}": {
+    "methodName": "update_group",
+    "optionsType": "UpdateGroupOptions"
+  },
+  "DELETE /organizations/{organizationId}/groups/{groupId}": {
+    "methodName": "delete_group",
+    "optionsType": "DeleteGroupOptions"
+  },
+  "POST /organizations/{organizationId}/groups/{groupId}/organization-memberships": {
+    "methodName": "add_organization_membership",
+    "optionsType": "AddGroupOrganizationMembershipOptions"
+  },
+  "GET /organizations/{organizationId}/groups/{groupId}/organization-memberships": {
+    "methodName": "list_organization_memberships",
+    "optionsType": "ListGroupOrganizationMembershipsOptions"
+  },
+  "DELETE /organizations/{organizationId}/groups/{groupId}/organization-memberships/{omId}": {
+    "methodName": "remove_organization_membership",
+    "optionsType": "RemoveGroupOrganizationMembershipOptions"
+  },
+  "GET /user_management/organization_memberships": {
+    "methodName": "list_organization_memberships",
+    "mountOn": "UserManagement"
+  },
+  "POST /user_management/organization_memberships": {
+    "methodName": "create_organization_membership",
+    "mountOn": "UserManagement"
+  },
+  "GET /user_management/organization_memberships/{id}": {
+    "methodName": "get_organization_membership",
+    "mountOn": "UserManagement"
+  },
+  "PUT /user_management/organization_memberships/{id}": {
+    "methodName": "update_organization_membership",
+    "mountOn": "UserManagement"
+  },
+  "DELETE /user_management/organization_memberships/{id}": {
+    "methodName": "delete_organization_membership",
+    "mountOn": "UserManagement"
+  },
+  "PUT /user_management/organization_memberships/{id}/deactivate": {
+    "methodName": "deactivate_organization_membership",
+    "mountOn": "UserManagement"
+  },
+  "PUT /user_management/organization_memberships/{id}/reactivate": {
+    "methodName": "reactivate_organization_membership",
+    "mountOn": "UserManagement"
+  },
+  "GET /user_management/organization_memberships/{omId}/groups": {
+    "methodName": "list_groups_for_organization_membership",
+    "mountOn": "UserManagement"
+  },
+  "POST /vault/v1/kv": {
+    "methodName": "create_object",
+    "optionsType": "CreateObjectOptions",
+    "bodyFieldMap": {
+      "context": "keyContext"
+    }
+  },
+  "GET /vault/v1/kv": {
+    "methodName": "list_objects"
+  },
+  "GET /vault/v1/kv/{id}": {
+    "methodName": "read_object",
+    "optionsType": "ReadObjectOptions"
+  },
+  "GET /vault/v1/kv/name/{name}": {
+    "methodName": "read_object_by_name"
+  },
+  "GET /vault/v1/kv/{id}/metadata": {
+    "methodName": "describe_object",
+    "optionsType": "ReadObjectOptions",
+    "returnType": "Promise<VaultObject>",
+    "returnExpression": "({ ...result, value: undefined })"
+  },
+  "PUT /vault/v1/kv/{id}": {
+    "methodName": "update_object",
+    "optionsType": "UpdateObjectOptions",
+    "returnType": "Promise<VaultObject>",
+    "returnExpression": "({ ...result, value: undefined })"
+  },
+  "DELETE /vault/v1/kv/{id}": {
+    "methodName": "delete_object",
+    "optionsType": "DeleteObjectOptions"
+  },
+  "GET /vault/v1/kv/{id}/versions": {
+    "methodName": "list_object_versions",
+    "optionsType": "ReadObjectOptions",
+    "returnType": "Promise<VersionListResponse['data']>",
+    "returnDataProperty": "data"
+  },
+  "POST /vault/v1/keys/data-key": {
+    "optionsType": "CreateDataKeyOptions",
+    "returnType": "Promise<DataKeyPair>",
+    "returnTypeImports": [
+      "DataKeyPair"
+    ],
+    "returnExpression": "({ context: result.context, dataKey: { key: result.dataKey!, id: result.id }, encryptedKeys: result.encryptedKeys! })"
+  },
+  "POST /vault/v1/keys/decrypt": {
+    "methodName": "decrypt_data_key",
+    "optionsType": "DecryptDataKeyOptions",
+    "returnType": "Promise<DataKey>",
+    "returnTypeImports": [
+      "DataKey"
+    ],
+    "returnExpression": "({ key: result.dataKey, id: result.id })"
+  }
+}
