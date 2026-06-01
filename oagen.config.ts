@@ -1,6 +1,22 @@
 import type { OagenConfig, OpenApiDocument, OperationHint } from '@workos/oagen';
 import { toCamelCase } from '@workos/oagen';
 import { workosEmittersPlugin } from '@workos/oagen-emitters';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const nodeOperationOverrides = require('./operationOverrides.node.json') as Record<
+  string,
+  {
+    methodName?: string;
+    mountOn?: string;
+    optionsType?: string;
+    bodyFieldMap?: Record<string, string>;
+    returnType?: string;
+    returnDataProperty?: string;
+    returnTypeImports?: string[];
+    returnExpression?: string;
+  }
+>;
 
 /**
  * NestJS-style operationId transform. Strips "Controller" and extracts the
@@ -385,12 +401,12 @@ function transformSpec(spec: OpenApiDocument): OpenApiDocument {
   const baseList = schemas['UserlandUserOrganizationMembershipBaseList'];
   const itemProps = (
     baseList as
-      | {
-          properties?: {
-            data?: { items?: { properties?: Record<string, unknown>; required?: string[] } };
-          };
-        }
-      | undefined
+    | {
+      properties?: {
+        data?: { items?: { properties?: Record<string, unknown>; required?: string[] } };
+      };
+    }
+    | undefined
   )?.properties?.data?.items;
   if (itemProps?.properties && !itemProps.properties.user) {
     itemProps.properties.user = {
@@ -435,13 +451,19 @@ const config: OagenConfig = {
     // Explicit renames for Dto models that collide with response models
     const COLLISION_RENAMES: Record<string, string> = {
       Error: 'ErrorResponse',
+      Object: 'VaultObject',
       OrganizationDto: 'OrganizationInput',
       RedirectUriDto: 'RedirectUriInput',
+      AuditLogSchemaDto: 'AuditLogSchemaInput',
+      AuditLogSchemaActorDto: 'AuditLogSchemaActorInput',
+      AuditLogSchemaTargetDto: 'AuditLogSchemaTargetInput',
       // Generic list-derived names that need domain-specific identifiers
       ListData: 'Role',
       ListModel: 'RoleList',
       // Double-List naming artifact
       EventListListMetadata: 'EventListMetadata',
+      RadarAction: 'RadarListAction',
+      RadarType: 'RadarListType',
     };
     if (COLLISION_RENAMES[name]) return COLLISION_RENAMES[name];
     return name
@@ -457,6 +479,7 @@ const config: OagenConfig = {
     // Authorization paths; pin it to the IR service that mounts onto
     // UserManagement so hand-written imports in existing SDKs keep resolving.
     User: 'UserManagementUsers',
+    UserOrganizationMembershipBaseListData: 'Groups',
     // Keep this family pinned for non-Node SDKs that rely on existing
     // user-management model placement. Node freshens newly-adopted API key
     // method models in the emitter, so this global hint does not force the
@@ -470,8 +493,9 @@ const config: OagenConfig = {
       // adopted from the spec automatically so new APIs don't require a
       // service-by-service allowlist.
       adoptMissingServices: true,
-      ownedServices: ['Groups', 'Webhooks'],
+      ownedServices: ['Groups', 'Webhooks', 'Radar', 'Connect', 'Vault'],
       regenerateOwnedTests: true,
+      operationOverrides: nodeOperationOverrides,
     },
   },
   transformSpec,
