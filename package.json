@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "build:policy": "tsdown",
     "generate:postman": "tsx scripts/postman/generate.ts",
     "generate:postman:local": "tsx scripts/postman/generate.ts --local",
     "sdk:resolve": "npx oagen resolve --spec spec/open-api-spec.yaml",
@@ -35,6 +36,7 @@
     "husky": "^9.1.7",
     "js-yaml": "^4.2.0",
     "openapi-to-postmanv2": "^6.0.1",
+    "tsdown": "^0.22.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   },

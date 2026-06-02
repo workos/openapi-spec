@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'spec/open-api-spec.yaml'
+      - 'src/policy.ts'
+      - 'operationOverrides.node.json'
+      - 'tsdown.config.ts'
   workflow_dispatch:
 
 concurrency:
@@ -45,23 +48,40 @@ jobs:
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "Current: $current → Next: $next"
 
+      - name: Install dependencies
+        run: npm ci
+
+      # Build policy first — tsdown clears dist/ — then layer the spec-derived
+      # types.d.ts on top so both end up in the final assembled package.
+      - name: Build policy module
+        run: npm run build:policy
+
       - name: Generate TypeScript types
         run: |
           set -euo pipefail
           mkdir -p dist
           npx -y openapi-typescript@7 spec/open-api-spec.yaml -o dist/types.d.ts
 
+      - name: Resolve oagen runtime version
+        id: oagen
+        run: |
+          set -euo pipefail
+          version="$(node -e "console.log(require('./package.json').devDependencies['@workos/oagen'])")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Pinning published package's @workos/oagen dep to: $version"
+
       - name: Assemble package
         run: |
           set -euo pipefail
           cp spec/open-api-spec.yaml dist/
+          cp operationOverrides.node.json dist/
           cp LICENSE.txt dist/ 2>/dev/null || true
           cp README.md dist/ 2>/dev/null || true
           cat > dist/package.json <<EOF
           {
             "name": "${PACKAGE_NAME}",
             "version": "${{ steps.version.outputs.next }}",
-            "description": "WorkOS OpenAPI specification and TypeScript types",
+            "description": "WorkOS OpenAPI specification, TypeScript types, and SDK resolution policy",
             "license": "MIT",
             "repository": {
               "type": "git",
@@ -69,15 +89,26 @@ jobs:
             },
             "files": [
               "open-api-spec.yaml",
-              "types.d.ts"
+              "types.d.ts",
+              "policy.mjs",
+              "policy.d.mts",
+              "operationOverrides.node.json"
             ],
             "types": "types.d.ts",
+            "dependencies": {
+              "@workos/oagen": "${{ steps.oagen.outputs.version }}"
+            },
             "exports": {
               ".": {
                 "types": "./types.d.ts",
                 "default": "./open-api-spec.yaml"
               },
               "./spec": "./open-api-spec.yaml",
+              "./policy": {
+                "types": "./policy.d.mts",
+                "import": "./policy.mjs"
+              },
+              "./operation-overrides/node": "./operationOverrides.node.json",
               "./package.json": "./package.json"
             }
           }
