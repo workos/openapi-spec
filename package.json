@@ -1,9 +1,35 @@
 {
-  "name": "workos-openapi-spec",
-  "private": true,
-  "version": "0.0.1",
+  "name": "@workos/openapi-spec",
+  "version": "0.4.0",
   "type": "module",
+  "description": "WorkOS OpenAPI specification, TypeScript types, and SDK resolution policy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/workos/openapi-spec.git"
+  },
+  "types": "./dist/types.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/open-api-spec.yaml"
+    },
+    "./spec": "./dist/open-api-spec.yaml",
+    "./policy": {
+      "types": "./dist/policy.d.mts",
+      "import": "./dist/policy.mjs"
+    },
+    "./operation-overrides/node": "./dist/operationOverrides.node.json",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@workos/oagen": "^0.22.0"
+  },
   "scripts": {
+    "build:policy": "tsdown",
     "generate:postman": "tsx scripts/postman/generate.ts",
     "generate:postman:local": "tsx scripts/postman/generate.ts --local",
     "sdk:resolve": "npx oagen resolve --spec spec/open-api-spec.yaml",
@@ -29,17 +55,13 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.1",
-    "@workos/oagen": "^0.21.1",
-    "@workos/oagen-emitters": "^0.15.2",
+    "@workos/oagen-emitters": "^0.16.0",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^4.2.0",
     "openapi-to-postmanv2": "^6.0.1",
+    "tsdown": "^0.22.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
-  },
-  "dependencies": {
-    "package-lock.json": "^1.0.0",
-    "package.json": "^2.0.1"
   }
 }

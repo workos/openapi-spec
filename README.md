@@ -22,7 +22,9 @@ The WorkOS API provides a comprehensive platform for enterprise-ready features i
 
 ## SDK Generation
 
-This repository is the canonical source for SDK generation. The consumer config at `oagen.config.ts` defines spec interpretation policy (operation hints, mount rules, transforms) and imports the plugin bundle from `@workos/oagen-emitters`.
+This repository is the canonical source for SDK generation. The consumer policy lives under [`src/policy/`](src/policy/) — split into focused modules ([`operation-hints.ts`](src/policy/operation-hints.ts), [`mount-rules.ts`](src/policy/mount-rules.ts), [`model-hints.ts`](src/policy/model-hints.ts), [`transforms.ts`](src/policy/transforms.ts) for the NestJS `operationId` transform / schema-name transform / pre-IR spec overlay, and [`types.ts`](src/policy/types.ts) for vendored type definitions). The barrel [`src/policy/index.ts`](src/policy/index.ts) re-exports the whole thing and is published as `@workos/openapi-spec/policy` so downstream consumers (the WorkOS docs build's snippet generators, partner tooling) can apply the exact same naming conventions the SDKs use.
+
+`oagen.config.ts` at the repo root is a thin shim that combines that policy with the `workosEmittersPlugin` bundle from `@workos/oagen-emitters` and feeds the whole thing to `npx oagen generate`.
 
 ### Orchestration scripts
 
@@ -122,10 +124,12 @@ node scripts/sdk-compat-pr-comment.mjs \
 ### Typical workflow
 
 1. Edit `spec/open-api-spec.yaml`
-2. Update `oagen.config.ts` if the change needs new hints, mount rules, or transforms
+2. Update the relevant file under [`src/policy/`](src/policy/) if the change needs new operation hints, mount rules, model hints, schema renames, or pre-IR transforms (only touch `oagen.config.ts` for changes that affect emitter wiring, e.g. `emitterOptions`)
 3. `npm run sdk:resolve` to inspect naming
 4. `npm run sdk:generate -- --lang <lang> --output .oagen/<lang>/sdk` to generate
 5. `npm run sdk:verify -- --lang <lang> --output .oagen/<lang>/sdk` to verify
+
+Changes to any file under `src/policy/` (or to `operationOverrides.node.json` or `tsdown.config.ts`) trigger a new release of `@workos/openapi-spec` the same way changes to the spec YAML do — see the publish workflow at `.github/workflows/release.yml`.
 
 ## Grabbing from npm
 
@@ -137,7 +141,14 @@ npm install @workos/openapi-spec
 
 ### Usage
 
-The package ships TypeScript types generated from the spec, plus the raw `open-api-spec.yaml` file.
+The package ships TypeScript types generated from the spec, the raw `open-api-spec.yaml` file, the SDK resolution policy module, and the Node-specific operation overrides.
+
+| Export                                | What it gives you                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `@workos/openapi-spec`                | Generated TypeScript `paths` / `components` / `operations` types (default), spec YAML as file. |
+| `@workos/openapi-spec/spec`           | Path to the bundled `open-api-spec.yaml`.                                                      |
+| `@workos/openapi-spec/policy`         | Operation hints, mount rules, model hints, and transform functions used by SDK generation.    |
+| `@workos/openapi-spec/operation-overrides/node` | JSON path for the Node-emitter-specific operation overrides.                            |
 
 **TypeScript types:**
 
@@ -188,6 +199,34 @@ const spec = yaml.load(readFileSync(specPath, "utf8"));
 ```ts
 import spec from "@workos/openapi-spec/spec";
 ```
+
+**Applying the SDK resolution policy (e.g. for docs code snippets):**
+
+The `/policy` export exposes the same hints, mount rules, and transforms that drive SDK generation, so downstream tooling can resolve operations against the WorkOS spec with method names, mount targets, and parameter shapes that match the published SDKs.
+
+```ts
+import { parseSpec, resolveOperations } from "@workos/oagen";
+import {
+  operationHints,
+  mountRules,
+  modelHints,
+  nestjsOperationIdTransform,
+  schemaNameTransform,
+  transformSpec,
+} from "@workos/openapi-spec/policy";
+
+const spec = await parseSpec("./open-api-spec.yaml", {
+  operationIdTransform: nestjsOperationIdTransform,
+  schemaNameTransform,
+  transformSpec,
+});
+
+const resolved = resolveOperations(spec, operationHints, mountRules);
+```
+
+`@workos/oagen` is installed transitively when you install `@workos/openapi-spec` — no separate add needed.
+
+The vendored type aliases (`OperationHint`, `SplitHint`, `OpenApiDocument`) are inlined into the published `policy.d.mts`, so TypeScript users get full autocomplete without having to import types from `@workos/oagen` themselves.
 
 ## Generating Postman Collections
 
