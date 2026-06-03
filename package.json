@@ -1,8 +1,33 @@
 {
-  "name": "workos-openapi-spec",
-  "private": true,
-  "version": "0.0.1",
+  "name": "@workos/openapi-spec",
+  "version": "0.4.0",
   "type": "module",
+  "description": "WorkOS OpenAPI specification, TypeScript types, and SDK resolution policy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/workos/openapi-spec.git"
+  },
+  "types": "./dist/types.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/open-api-spec.yaml"
+    },
+    "./spec": "./dist/open-api-spec.yaml",
+    "./policy": {
+      "types": "./dist/policy.d.mts",
+      "import": "./dist/policy.mjs"
+    },
+    "./operation-overrides/node": "./dist/operationOverrides.node.json",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@workos/oagen": "^0.22.0"
+  },
   "scripts": {
     "build:policy": "tsdown",
     "generate:postman": "tsx scripts/postman/generate.ts",
@@ -30,7 +55,6 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.1",
-    "@workos/oagen": "^0.22.0",
     "@workos/oagen-emitters": "^0.16.0",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",

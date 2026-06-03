@@ -9,13 +9,20 @@ on:
       - 'operationOverrides.node.json'
       - 'tsdown.config.ts'
   workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 concurrency:
   group: publish-spec
   cancel-in-progress: false
-
-env:
-  PACKAGE_NAME: '@workos/openapi-spec'
 
 jobs:
   publish:
@@ -33,26 +40,21 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Determine next version
-        id: version
-        run: |
-          set -euo pipefail
-          current="$(npm view "$PACKAGE_NAME" version 2>/dev/null || true)"
-          if [ -z "$current" ]; then
-            echo "ERROR: $PACKAGE_NAME not found on npm. Bootstrap a 0.0.1 publish manually before enabling this workflow." >&2
-            exit 1
-          fi
-          IFS='.' read -r major minor patch <<< "$current"
-          next="${major}.$((minor + 1)).0"
-          echo "current=$current" >> "$GITHUB_OUTPUT"
-          echo "next=$next" >> "$GITHUB_OUTPUT"
-          echo "Current: $current → Next: $next"
-
       - name: Install dependencies
         run: npm ci
 
-      # Build policy first — tsdown clears dist/ — then layer the spec-derived
-      # types.d.ts on top so both end up in the final assembled package.
+      - name: Bump version
+        id: version
+        run: |
+          set -euo pipefail
+          bump="${{ github.event.inputs.bump || 'minor' }}"
+          current="$(node -p "require('./package.json').version")"
+          npm version "$bump" --no-git-tag-version
+          next="$(node -p "require('./package.json').version")"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "Bump: $bump | $current → $next"
+
       - name: Build policy module
         run: npm run build:policy
 
@@ -62,68 +64,29 @@ jobs:
           mkdir -p dist
           npx -y openapi-typescript@7 spec/open-api-spec.yaml -o dist/types.d.ts
 
-      - name: Resolve oagen runtime version
-        id: oagen
-        run: |
-          set -euo pipefail
-          version="$(node -e "console.log(require('./package.json').devDependencies['@workos/oagen'])")"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Pinning published package's @workos/oagen dep to: $version"
-
-      - name: Assemble package
+      - name: Stage dist assets
         run: |
           set -euo pipefail
           cp spec/open-api-spec.yaml dist/
           cp operationOverrides.node.json dist/
-          cp LICENSE.txt dist/ 2>/dev/null || true
-          cp README.md dist/ 2>/dev/null || true
-          cat > dist/package.json <<EOF
-          {
-            "name": "${PACKAGE_NAME}",
-            "version": "${{ steps.version.outputs.next }}",
-            "description": "WorkOS OpenAPI specification, TypeScript types, and SDK resolution policy",
-            "license": "MIT",
-            "repository": {
-              "type": "git",
-              "url": "git+https://github.com/${{ github.repository }}.git"
-            },
-            "files": [
-              "open-api-spec.yaml",
-              "types.d.ts",
-              "policy.mjs",
-              "policy.d.mts",
-              "operationOverrides.node.json"
-            ],
-            "types": "types.d.ts",
-            "dependencies": {
-              "@workos/oagen": "${{ steps.oagen.outputs.version }}"
-            },
-            "exports": {
-              ".": {
-                "types": "./types.d.ts",
-                "default": "./open-api-spec.yaml"
-              },
-              "./spec": "./open-api-spec.yaml",
-              "./policy": {
-                "types": "./policy.d.mts",
-                "import": "./policy.mjs"
-              },
-              "./operation-overrides/node": "./operationOverrides.node.json",
-              "./package.json": "./package.json"
-            }
-          }
-          EOF
 
       - name: Publish to npm
-        working-directory: dist
         run: npm publish --access public --provenance
+
+      - name: Commit version bump
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: release v${{ steps.version.outputs.next }}"
+          git push origin main
 
       - name: Tag release
         run: |
           set -euo pipefail
           tag="v${{ steps.version.outputs.next }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$tag" -m "Release $tag"
           git push origin "$tag"
 
@@ -132,14 +95,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: v${{ steps.version.outputs.next }}
           VERSION: ${{ steps.version.outputs.next }}
-          PREVIOUS: ${{ steps.version.outputs.current }}
+          PREVIOUS: v${{ steps.version.outputs.current }}
         run: |
           set -euo pipefail
           notes_file="$(mktemp)"
           {
-            echo "Published [\`${PACKAGE_NAME}@${VERSION}\`](https://www.npmjs.com/package/${PACKAGE_NAME}/v/${VERSION}) to npm."
+            echo "Published [\`@workos/openapi-spec@${VERSION}\`](https://www.npmjs.com/package/@workos/openapi-spec/v/${VERSION}) to npm."
             echo
-            echo "**Changes:** [\`v${PREVIOUS}...${TAG}\`](https://github.com/${GITHUB_REPOSITORY}/compare/v${PREVIOUS}...${TAG})"
+            echo "**Changes:** [\`${PREVIOUS}...${TAG}\`](https://github.com/${GITHUB_REPOSITORY}/compare/${PREVIOUS}...${TAG})"
           } > "$notes_file"
           gh release create "$TAG" \
             --title "$TAG" \
