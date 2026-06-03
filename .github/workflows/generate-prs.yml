@@ -178,10 +178,11 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Classify changes with Claude
-        id: classify
+        id: classify-raw
         working-directory: ${{ env.SDK_CHECKOUT_PATH }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SDK_LANGUAGE: ${{ matrix.language }}
         run: |
           # Stage everything so new (untracked) files appear in the diff
           git add -A
@@ -213,7 +214,7 @@ jobs:
           # consolidation. compat-diff extracts the generated SDK's surface and
           # diffs it, so removed/renamed callables and removed accessors show up
           # here even when the spec is unchanged.
-          COMPAT_REPORT_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/compat-report.json"
+          COMPAT_REPORT_PATH="$GITHUB_WORKSPACE/openapi-spec/.oagen/$SDK_LANGUAGE/compat-report.json"
           COMPAT_BREAKING="[]"
           COMPAT_BREAKING_SCOPES="[]"
           if [ -f "$COMPAT_REPORT_PATH" ]; then
@@ -275,7 +276,7 @@ jobs:
                 --rawfile diff /tmp/sdk-diff-truncated.txt \
                 --argjson spec_diff "$SPEC_DIFF" \
                 --argjson compat_breaking "$COMPAT_BREAKING" \
-                --arg lang "${{ matrix.language }}" \
+                --arg lang "$SDK_LANGUAGE" \
                 '{
                   model: "claude-haiku-4-5-20251001",
                   max_tokens: 4096,
@@ -408,6 +409,34 @@ jobs:
             CLAUDE_DESCRIPTIONS=""
             echo "Skipping classification: diff is empty or no API key"
           fi
+
+          # Persist intermediate state for the compose step
+          echo "${ENTRIES:-[]}" > /tmp/classify-entries.json
+          echo "${BEHAVIOR_CHANGES:-[]}" > /tmp/classify-behavior-changes.json
+          echo "${COMPAT_BREAKING:-[]}" > /tmp/classify-compat-breaking.json
+          printf '%s' "${BEHAVIOR_OVERRIDE_LINES:-}" > /tmp/classify-behavior-overrides.txt
+          printf '%s' "${BEHAVIOR_DESCRIPTIONS:-}" > /tmp/classify-behavior-descs.txt
+          printf '%s' "${CLAUDE_OVERRIDE_LINES:-}" > /tmp/classify-claude-overrides.txt
+          printf '%s' "${CLAUDE_DESCRIPTIONS:-}" > /tmp/classify-claude-descs.txt
+          printf '%s' "${ROLLUP_TYPE:-}" > /tmp/classify-rollup-type.txt
+          printf '%s' "${ROLLUP_BANG:-}" > /tmp/classify-rollup-bang.txt
+          echo "${ENTRY_COUNT:-0}" > /tmp/classify-entry-count.txt
+          echo "${BEHAVIOR_COUNT:-0}" > /tmp/classify-behavior-count.txt
+
+      - name: Compose PR metadata
+        id: classify
+        run: |
+          ENTRIES=$(cat /tmp/classify-entries.json)
+          BEHAVIOR_CHANGES=$(cat /tmp/classify-behavior-changes.json)
+          COMPAT_BREAKING=$(cat /tmp/classify-compat-breaking.json)
+          BEHAVIOR_OVERRIDE_LINES=$(cat /tmp/classify-behavior-overrides.txt)
+          BEHAVIOR_DESCRIPTIONS=$(cat /tmp/classify-behavior-descs.txt)
+          CLAUDE_OVERRIDE_LINES=$(cat /tmp/classify-claude-overrides.txt)
+          CLAUDE_DESCRIPTIONS=$(cat /tmp/classify-claude-descs.txt)
+          ROLLUP_TYPE=$(cat /tmp/classify-rollup-type.txt)
+          ROLLUP_BANG=$(cat /tmp/classify-rollup-bang.txt)
+          ENTRY_COUNT=$(cat /tmp/classify-entry-count.txt)
+          BEHAVIOR_COUNT=$(cat /tmp/classify-behavior-count.txt)
 
           # ── Compose final output (behavior changes + Claude entries) ────────
           # Behavior changes (e.g. `feat(authorization)!: change default for
