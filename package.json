@@ -26,7 +26,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@workos/oagen": "^0.22.0"
+    "@workos/oagen": "^0.22.4"
   },
   "scripts": {
     "build:policy": "tsdown",

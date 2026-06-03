@@ -69,6 +69,110 @@ paths:
       summary: Delete an API key
       tags:
         - api_keys
+  /api_keys/{id}/expire:
+    post:
+      description: >-
+        Expire an API key immediately, schedule a future expiration, or clear a
+        scheduled future expiration.
+      operationId: ApiKeysController_expire
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the API key.
+          schema:
+            type: string
+            example: api_key_01EHZNVPK3SFK441A1RGBFSHRT
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpireApiKeyDto'
+            examples:
+              immediateExpiration:
+                summary: Expire immediately
+                value: {}
+              scheduleExpiration:
+                summary: Schedule an expiration
+                value:
+                  expires_at: '2030-01-01T00:00:00.000Z'
+              clearExpiration:
+                summary: Clear a scheduled expiration
+                value:
+                  expires_at: null
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+              example:
+                object: api_key
+                id: api_key_01EHZNVPK3SFK441A1RGBFSHRT
+                owner:
+                  type: organization
+                  id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                name: Production API Key
+                obfuscated_value: sk_...3456
+                last_used_at: null
+                expires_at: '2030-01-01T00:00:00.000Z'
+                permissions:
+                  - posts:read
+                  - posts:write
+                created_at: '2026-01-15T12:00:00.000Z'
+                updated_at: '2026-01-15T12:00:00.000Z'
+          description: OK
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'API Key not found: ''api_key_01EHZNVPK3SFK441A1RGBFSHRT''.'
+                required:
+                  - message
+                x-inline-with-overrides: true
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: api_key_already_expired
+                    const: api_key_already_expired
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: API key is already expired
+                required:
+                  - code
+                  - message
+                x-inline-with-overrides: true
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Expire an API key
+      tags:
+        - api_keys
   /audit_logs/actions:
     get:
       description: Get a list of all Audit Log actions in the current environment.
@@ -1209,7 +1313,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: permission_slug
@@ -1396,7 +1500,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -1520,7 +1624,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -1632,7 +1736,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: resource_id
@@ -3326,7 +3430,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: permission_slug
@@ -3492,7 +3596,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: role_slug
@@ -3586,7 +3690,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -3960,7 +4064,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
@@ -4646,7 +4750,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: permission_slug
@@ -4796,7 +4900,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: role_slug
@@ -5592,7 +5696,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
@@ -6606,7 +6710,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: directory
@@ -6774,7 +6878,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: directory
@@ -6947,7 +7051,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: events
@@ -7833,7 +7937,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: domains
@@ -8718,7 +8822,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -9115,7 +9219,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -11569,7 +11673,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
@@ -12579,7 +12683,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: organization_id
@@ -13450,7 +13554,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -13817,15 +13921,15 @@ paths:
           required: true
           in: query
           description: >-
-            The ID of the session to revoke. This can be extracted from the
-            `sid` claim of the access token.
+            The ID of the session. This can be extracted from the `sid` claim of
+            the access token.
           schema:
             example: session_01H93ZY4F80QPBEZ1R5B2SHQG8
             type: string
         - name: return_to
           required: false
           in: query
-          description: The URL to redirect the user to after session revocation.
+          description: The URL to redirect the user to after logout.
           schema:
             example: https://example.com
             type: string
@@ -13941,7 +14045,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: organization
@@ -14576,6 +14680,12 @@ paths:
                           - 'null'
                         description: The last name of the user.
                         example: Davis
+                      name:
+                        type:
+                          - string
+                          - 'null'
+                        description: The user's full name.
+                        example: Marcelina Davis
                       profile_picture_url:
                         type:
                           - string
@@ -15286,7 +15396,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -15790,7 +15900,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -16619,7 +16729,7 @@ paths:
             Order the results by the creation time. Supported values are `"asc"`
             (ascending), `"desc"` (descending), and `"normal"` (descending with
             reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to descending.
+            `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
       responses:
@@ -17102,6 +17212,10 @@ components:
           type: string
           description: The user's last name.
           example: Davis
+        name:
+          type: string
+          description: The user's full name.
+          example: Marcelina Davis
         metadata:
           type: object
           description: A set of key-value pairs to attach to the user.
@@ -17184,6 +17298,19 @@ components:
           example: sk_example_1234567890abcdef
       required:
         - value
+    ExpireApiKeyDto:
+      type: object
+      properties:
+        expires_at:
+          type:
+            - string
+            - 'null'
+          description: >-
+            When the API key should expire. If omitted or in the past, the key
+            expires immediately. Use null to clear a scheduled future
+            expiration.
+          example: '2030-01-01T00:00:00.000Z'
+          format: date-time
     PaginationOrder:
       type: string
       enum:
@@ -18893,6 +19020,12 @@ components:
                 - 'null'
               description: The last name of the user.
               example: Davis
+            name:
+              type:
+                - string
+                - 'null'
+              description: The user's full name.
+              example: Marcelina Davis
             email_verified:
               type:
                 - boolean
@@ -19015,6 +19148,10 @@ components:
               type: string
               description: The last name of the user.
               example: Davis
+            name:
+              type: string
+              description: The user's full name.
+              example: Marcelina Davis
             email_verified:
               type: boolean
               description: Whether the user's email has been verified.
@@ -19173,10 +19310,6 @@ components:
             The ID of the session to revoke. This can be extracted from the
             `sid` claim of the access token.
           example: session_01H93ZY4F80QPBEZ1R5B2SHQG8
-        return_to:
-          type: string
-          description: The URL to redirect the user to after session revocation.
-          example: https://example.com
       required:
         - session_id
     CreateWebhookEndpointDto:
@@ -19209,6 +19342,7 @@ components:
               - authentication.radar_risk_detected
               - api_key.created
               - api_key.revoked
+              - api_key.updated
               - connection.activated
               - connection.deactivated
               - connection.saml_certificate_renewal_required
@@ -20959,6 +21093,12 @@ components:
             - 'null'
           description: The last name of the user.
           example: Davis
+        name:
+          type:
+            - string
+            - 'null'
+          description: The user's full name.
+          example: Marcelina Davis
         profile_picture_url:
           type:
             - string
@@ -22650,6 +22790,7 @@ components:
                     - name
                     - obfuscated_value
                     - last_used_at
+                    - expires_at
                     - permissions
                     - created_at
                     - updated_at
@@ -22773,9 +22914,150 @@ components:
                     - name
                     - obfuscated_value
                     - last_used_at
+                    - expires_at
                     - permissions
                     - created_at
                     - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: api_key.updated
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the API key object.
+                      const: api_key
+                    id:
+                      type: string
+                      description: Unique identifier of the API key.
+                      example: api_key_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    owner:
+                      oneOf:
+                        - type: object
+                          properties:
+                            type:
+                              type: string
+                              description: The type of the API key owner.
+                              const: organization
+                            id:
+                              type: string
+                              description: The unique identifier of the API key owner.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                          required:
+                            - type
+                            - id
+                        - type: object
+                          properties:
+                            type:
+                              type: string
+                              description: The type of the API key owner.
+                              const: user
+                            id:
+                              type: string
+                              description: >-
+                                The unique identifier of the user who owns the
+                                API key.
+                              example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                            organization_id:
+                              type: string
+                              description: >-
+                                The unique identifier of the organization the
+                                API key belongs to.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                          required:
+                            - type
+                            - id
+                            - organization_id
+                      description: The owner of the API key.
+                    name:
+                      type: string
+                      description: The name of the API key.
+                      example: My API Key
+                    obfuscated_value:
+                      type: string
+                      description: The obfuscated value of the API key.
+                      example: sk_test_...1234
+                    last_used_at:
+                      type:
+                        - string
+                        - 'null'
+                      description: The timestamp when the API key was last used.
+                      example: '2026-01-15T12:00:00.000Z'
+                    expires_at:
+                      type:
+                        - string
+                        - 'null'
+                      format: date-time
+                      description: >-
+                        Timestamp when the API Key expires. Null means the key
+                        does not expire.
+                      example: null
+                    permissions:
+                      type: array
+                      items:
+                        type: string
+                      description: The permissions granted to the API key.
+                      example: *ref_17
+                    created_at:
+                      type: string
+                      description: The timestamp when the API key was created.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the API key was last updated.
+                      example: '2026-01-15T12:00:00.000Z'
+                    previous_attributes:
+                      type: object
+                      properties:
+                        expires_at:
+                          type:
+                            - string
+                            - 'null'
+                          format: date-time
+                          description: >-
+                            The previous timestamp when the API Key expired.
+                            Null means the key did not expire.
+                          example: null
+                      required:
+                        - expires_at
+                      description: Previous API key attributes before the update.
+                  required:
+                    - object
+                    - id
+                    - owner
+                    - name
+                    - obfuscated_value
+                    - last_used_at
+                    - expires_at
+                    - permissions
+                    - created_at
+                    - updated_at
+                    - previous_attributes
                   description: The event payload.
                 created_at:
                   format: date-time
@@ -24909,136 +25191,6 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
-                  const: dsync.deactivated
-                data:
-                  type: object
-                  properties:
-                    object:
-                      type: string
-                      description: Distinguishes the directory object.
-                      const: directory
-                    id:
-                      type: string
-                      description: Unique identifier of the directory.
-                      example: directory_01EHWNCE74X7JSDV0X3SZ3KJNY
-                    organization_id:
-                      type: string
-                      description: The ID of the organization the directory belongs to.
-                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
-                    type:
-                      type: string
-                      enum:
-                        - azure scim v2.0
-                        - bamboohr
-                        - breathe hr
-                        - cezanne hr
-                        - cyberark scim v2.0
-                        - fourth hr
-                        - generic scim v2.0
-                        - gsuite directory
-                        - gusto
-                        - hibob
-                        - jump cloud scim v2.0
-                        - okta scim v2.0
-                        - onelogin scim v2.0
-                        - people hr
-                        - personio
-                        - pingfederate scim v2.0
-                        - rippling scim v2.0
-                        - rippling
-                        - sailpoint scim v2.0
-                        - s3
-                        - sftp
-                        - sftp workday
-                        - workday
-                      description: The type of the directory.
-                      example: okta scim v2.0
-                    state:
-                      type: string
-                      enum:
-                        - active
-                        - validating
-                        - invalid_credentials
-                        - inactive
-                        - deleting
-                      description: The current state of the directory.
-                      example: active
-                    name:
-                      type: string
-                      description: The name of the directory.
-                      example: Acme Directory
-                    created_at:
-                      format: date-time
-                      type: string
-                      description: An ISO 8601 timestamp.
-                      example: '2026-01-15T12:00:00.000Z'
-                    updated_at:
-                      format: date-time
-                      type: string
-                      description: An ISO 8601 timestamp.
-                      example: '2026-01-15T12:00:00.000Z'
-                    external_key:
-                      type: string
-                      description: The external key of the directory.
-                      example: ext_01EHWNCE74X7JSDV0X3SZ3KJNY
-                    domains:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          object:
-                            type: string
-                            description: Distinguishes the organization domain object.
-                            const: organization_domain
-                          id:
-                            type: string
-                            description: Unique identifier of the organization domain.
-                            example: org_domain_01EHWNCE74X7JSDV0X3SZ3KJNY
-                          domain:
-                            type: string
-                            description: The domain value.
-                            example: acme.com
-                        required:
-                          - object
-                          - id
-                          - domain
-                      description: The domains associated with the directory.
-                  required:
-                    - object
-                    - id
-                    - type
-                    - state
-                    - name
-                    - created_at
-                    - updated_at
-                    - external_key
-                    - domains
-                  description: The event payload.
-                created_at:
-                  format: date-time
-                  type: string
-                  description: An ISO 8601 timestamp.
-                  example: '2026-01-15T12:00:00.000Z'
-                context:
-                  $ref: '#/components/schemas/EventContextDto'
-                object:
-                  type: string
-                  description: Distinguishes the Event object.
-                  const: event
-              required:
-                - id
-                - event
-                - data
-                - created_at
-                - object
-            - type: object
-              properties:
-                id:
-                  type: string
-                  description: Unique identifier for the event.
-                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
-                event:
-                  type: string
                   const: dsync.deleted
                 data:
                   type: object
@@ -25260,6 +25412,134 @@ components:
                     - name
                     - created_at
                     - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: dsync.token.created
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the directory token object.
+                      const: directory_token
+                    id:
+                      type: string
+                      description: Unique identifier of the directory token.
+                      example: directory_token_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    directory_id:
+                      type: string
+                      description: The ID of the directory the token authenticates to.
+                      example: directory_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    organization_id:
+                      type: string
+                      description: The ID of the organization the directory belongs to.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    token_suffix:
+                      type: string
+                      description: >-
+                        The trailing characters of the bearer token, for
+                        identification only. The full token value is never
+                        included in events.
+                      example: a1b2
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - directory_id
+                    - token_suffix
+                    - created_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: dsync.token.revoked
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the directory token object.
+                      const: directory_token
+                    id:
+                      type: string
+                      description: Unique identifier of the directory token.
+                      example: directory_token_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    directory_id:
+                      type: string
+                      description: The ID of the directory the token authenticates to.
+                      example: directory_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    organization_id:
+                      type: string
+                      description: The ID of the organization the directory belongs to.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    token_suffix:
+                      type: string
+                      description: >-
+                        The trailing characters of the bearer token, for
+                        identification only. The full token value is never
+                        included in events.
+                      example: a1b2
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - directory_id
+                    - token_suffix
+                    - created_at
                   description: The event payload.
                 created_at:
                   format: date-time
@@ -31001,6 +31281,7 @@ components:
                 - GenericHttps
                 - GoogleCloudStorage
                 - S3
+                - Snowflake
                 - Splunk
               description: The type of the Audit Log Stream destination.
               example: Datadog
@@ -31445,7 +31726,6 @@ components:
           enum:
             - bot_detection
             - brute_force_attack
-            - domain_sign_up_rate_limit
             - impossible_travel
             - repeat_sign_up
             - stale_account
