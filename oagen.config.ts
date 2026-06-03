@@ -8,7 +8,7 @@ import {
   operationHints,
   schemaNameTransform,
   transformSpec,
-} from './src/policy.js';
+} from './src/policy/index.js';
 
 const require = createRequire(import.meta.url);
 const nodeOperationOverrides = require('./operationOverrides.node.json') as Record<

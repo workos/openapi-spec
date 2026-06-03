@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'spec/open-api-spec.yaml'
-      - 'src/policy.ts'
+      - 'src/policy/**'
       - 'operationOverrides.node.json'
       - 'tsdown.config.ts'
   workflow_dispatch:

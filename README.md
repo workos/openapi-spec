@@ -22,7 +22,7 @@ The WorkOS API provides a comprehensive platform for enterprise-ready features i
 
 ## SDK Generation
 
-This repository is the canonical source for SDK generation. The consumer policy — operation hints, mount rules, model placement hints, the NestJS `operationId` transform, the schema-name transform, and the pre-IR spec overlay — lives in [`src/policy.ts`](src/policy.ts) and is published as `@workos/openapi-spec/policy` so downstream consumers (the WorkOS docs build's snippet generators, partner tooling) can apply the exact same naming conventions the SDKs use.
+This repository is the canonical source for SDK generation. The consumer policy lives under [`src/policy/`](src/policy/) — split into focused modules ([`operation-hints.ts`](src/policy/operation-hints.ts), [`mount-rules.ts`](src/policy/mount-rules.ts), [`model-hints.ts`](src/policy/model-hints.ts), [`transforms.ts`](src/policy/transforms.ts) for the NestJS `operationId` transform / schema-name transform / pre-IR spec overlay, and [`types.ts`](src/policy/types.ts) for vendored type definitions). The barrel [`src/policy/index.ts`](src/policy/index.ts) re-exports the whole thing and is published as `@workos/openapi-spec/policy` so downstream consumers (the WorkOS docs build's snippet generators, partner tooling) can apply the exact same naming conventions the SDKs use.
 
 `oagen.config.ts` at the repo root is a thin shim that combines that policy with the `workosEmittersPlugin` bundle from `@workos/oagen-emitters` and feeds the whole thing to `npx oagen generate`.
 
@@ -124,12 +124,12 @@ node scripts/sdk-compat-pr-comment.mjs \
 ### Typical workflow
 
 1. Edit `spec/open-api-spec.yaml`
-2. Update [`src/policy.ts`](src/policy.ts) if the change needs new operation hints, mount rules, model hints, schema renames, or pre-IR transforms (only touch `oagen.config.ts` for changes that affect emitter wiring, e.g. `emitterOptions`)
+2. Update the relevant file under [`src/policy/`](src/policy/) if the change needs new operation hints, mount rules, model hints, schema renames, or pre-IR transforms (only touch `oagen.config.ts` for changes that affect emitter wiring, e.g. `emitterOptions`)
 3. `npm run sdk:resolve` to inspect naming
 4. `npm run sdk:generate -- --lang <lang> --output .oagen/<lang>/sdk` to generate
 5. `npm run sdk:verify -- --lang <lang> --output .oagen/<lang>/sdk` to verify
 
-Changes to `src/policy.ts` (or to `operationOverrides.node.json` or `tsdown.config.ts`) trigger a new release of `@workos/openapi-spec` the same way changes to the spec YAML do — see the publish workflow at `.github/workflows/release.yml`.
+Changes to any file under `src/policy/` (or to `operationOverrides.node.json` or `tsdown.config.ts`) trigger a new release of `@workos/openapi-spec` the same way changes to the spec YAML do — see the publish workflow at `.github/workflows/release.yml`.
 
 ## Grabbing from npm
 
