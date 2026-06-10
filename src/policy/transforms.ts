@@ -94,6 +94,44 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
   delete schemas['UserlandUserOrganizationMembershipBaseWithUser'];
   delete schemas['UserlandUserOrganizationMembershipBaseWithUserList'];
 
+  // -- Pipes: access token `expires_at` is missing `format: date-time` -------
+  // The schema documents an ISO-8601 timestamp (description and example) and
+  // the published Node SDK already exposes the field as `Date | null`.
+  // Without the format hint the Node emitter keeps the baseline `Date` type
+  // on the interface but skips the `new Date(...)` conversion in the
+  // generated serializer, producing invalid TypeScript (TS2322).
+  const tokenResponse = schemas['DataIntegrationAccessTokenResponse'] as
+    | {
+      oneOf?: Array<{
+        properties?: {
+          access_token?: { properties?: { expires_at?: Record<string, unknown> } };
+          error?: { enum?: string[] };
+        };
+      }>;
+    }
+    | undefined;
+  for (const variant of tokenResponse?.oneOf ?? []) {
+    const expiresAt = variant.properties?.access_token?.properties?.expires_at;
+    if (expiresAt && expiresAt.format === undefined) {
+      expiresAt.format = 'date-time';
+    }
+    // The published SDK union is `'not_installed' | 'needs_reauthorization'`.
+    // Keep the enum in that order so the generated const-object interns the
+    // string literal types in the same order TypeScript renders for the
+    // existing hand-written union — otherwise the compat snapshot reports a
+    // (purely cosmetic) union-member reorder as a type change. Wire values
+    // are unchanged; enum order carries no wire semantics.
+    const errorEnum = variant.properties?.error?.enum;
+    if (
+      Array.isArray(errorEnum) &&
+      errorEnum.length === 2 &&
+      errorEnum[0] === 'needs_reauthorization' &&
+      errorEnum[1] === 'not_installed'
+    ) {
+      errorEnum.reverse();
+    }
+  }
+
   // -- Rename: JwtTemplate -> JwtTemplateResponse -----------------------------
   // Upstream renamed the response schema. Existing SDKs already expose the
   // type as `JwtTemplateResponse`/`JWTTemplateResponse`; preserve that name.
