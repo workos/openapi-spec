@@ -26,7 +26,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@workos/oagen": "^0.22.4"
+    "@workos/oagen": "^0.22.5"
   },
   "scripts": {
     "build:policy": "tsdown",
@@ -54,13 +54,13 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.9.1",
-    "@workos/oagen-emitters": "^0.16.0",
+    "@types/node": "^25.9.3",
+    "@workos/oagen-emitters": "^0.17.0",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^4.2.0",
-    "openapi-to-postmanv2": "^6.0.1",
-    "tsdown": "^0.22.1",
+    "openapi-to-postmanv2": "^6.1.0",
+    "tsdown": "^0.22.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
