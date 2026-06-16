@@ -132,6 +132,57 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
     }
   }
 
+  // -- Pipes: token endpoint path param `slug` -> `provider` ------------------
+  // The published Node SDK exposes the token method as
+  // `getAccessToken({ provider, ... })`. Upstream names the path parameter
+  // `slug` (consistent with the newer authorize/connected-account endpoints),
+  // but renaming it for this one endpoint preserves the established `provider`
+  // argument name. The newer endpoints keep the spec's `slug`. The wire path is
+  // unchanged — the placeholder name does not affect the request URL, only the
+  // generated argument/field name.
+  const slugTokenPath = '/data-integrations/{slug}/token';
+  const providerTokenPath = '/data-integrations/{provider}/token';
+  const tokenPathItem = paths[slugTokenPath] as
+    | Record<string, { parameters?: Array<{ name?: string; in?: string }> }>
+    | undefined;
+  if (tokenPathItem && !paths[providerTokenPath]) {
+    for (const [key, member] of Object.entries(tokenPathItem)) {
+      // Path-item-level shared params live under `parameters`; operation-level
+      // params live under each HTTP verb. Handle both.
+      const params = key === 'parameters' ? (member as unknown as Array<{ name?: string; in?: string }>) : member?.parameters;
+      for (const param of params ?? []) {
+        if (param.in === 'path' && param.name === 'slug') {
+          param.name = 'provider';
+        }
+      }
+    }
+    paths[providerTokenPath] = tokenPathItem as unknown as Record<string, unknown>;
+    delete paths[slugTokenPath];
+  }
+
+  // -- Pipes: token request `organization_id` is nullable for compat ---------
+  // The published Node SDK types `getAccessToken`'s `organizationId` as
+  // `string | null`, and the generated method reuses that baseline options
+  // type. Mark the request body field nullable so the generated request type
+  // (and its serializer) accept `string | null` too — otherwise passing the
+  // baseline-typed options into the serializer fails to type-check. `null` is
+  // wire-equivalent to omitting the field.
+  const tokenRequestSchema = (
+    paths[providerTokenPath] as
+      | {
+        post?: {
+          requestBody?: {
+            content?: Record<string, { schema?: { properties?: Record<string, Record<string, unknown>> } }>;
+          };
+        };
+      }
+      | undefined
+  )?.post?.requestBody?.content?.['application/json']?.schema;
+  const orgIdProp = tokenRequestSchema?.properties?.organization_id;
+  if (orgIdProp && orgIdProp.type === 'string') {
+    orgIdProp.type = ['string', 'null'];
+  }
+
   // -- Rename: JwtTemplate -> JwtTemplateResponse -----------------------------
   // Upstream renamed the response schema. Existing SDKs already expose the
   // type as `JwtTemplateResponse`/`JWTTemplateResponse`; preserve that name.

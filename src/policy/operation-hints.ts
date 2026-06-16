@@ -9,6 +9,13 @@ export const operationHints: Record<string, OperationHint> = {
   'POST /radar/lists/{type}/{action}': { name: 'add_list_entry' },
   'DELETE /radar/lists/{type}/{action}': { name: 'remove_list_entry' },
 
+  // -- Pipes / Data Integrations ------------------------------------------------
+  // Token fetch is a POST (the verb heuristic would derive `create…`), but the
+  // published SDK exposes it as `getAccessToken`. Preserve that name.
+  // NB: `transformSpec` renames this endpoint's path param `slug` -> `provider`,
+  // so the key here uses `{provider}` to match the post-transform path.
+  'POST /data-integrations/{provider}/token': { name: 'get_access_token' },
+
   // -- SSO ----------------------------------------------------------------------
   'GET /sso/authorize': {
     name: 'get_authorization_url',
