@@ -40,7 +40,7 @@ const config: OagenConfig = {
       // adopted from the spec automatically so new APIs don't require a
       // service-by-service allowlist.
       adoptMissingServices: true,
-      ownedServices: ['Groups', 'Webhooks', 'Radar', 'Connect', 'Vault', 'Widgets', 'OrganizationDomains', 'Pipes', 'DirectorySync'],
+      ownedServices: ['Groups', 'Webhooks', 'Radar', 'Connect', 'Vault', 'Widgets', 'OrganizationDomains', 'Pipes', 'DirectorySync', 'AuditLogs'],
       // DirectorySync exposes custom-attributes generics the OpenAPI spec
       // cannot express (e.g. `DirectoryUserWithGroups<TCustomAttributes>`).
       // Keep these hand-written declarations authoritative: the emitter skips
