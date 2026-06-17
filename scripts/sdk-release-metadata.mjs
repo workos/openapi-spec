@@ -662,11 +662,62 @@ function factsFromDiff(diffReport, indexes) {
   return facts;
 }
 
+// Pair a removed callable with an added one under the same owner into a
+// rename, so the changelog reads "renamed X to Y" instead of a bare removal
+// plus an unrelated-looking addition. Mirrors pairRemoveAddRows in
+// sdk-compat-pr-comment.mjs: only pair member symbols (owner.member), and only
+// when an owner has exactly one logical removal and one logical addition, to
+// avoid guessing among multiple candidates. Returns a Map of every removed
+// symbol → { from, to } display representatives.
+function renamesFromCompat(compatReport) {
+  // Some SDKs emit a coroutine/async member variant alongside the base method
+  // (e.g. Kotlin's `fooSuspend`). Collapse them to a single logical member so
+  // one rename isn't counted as multiple removals/additions.
+  const VARIANT_SUFFIX = /Suspend$/;
+  const index = (map, symbol) => {
+    const dot = symbol.lastIndexOf('.');
+    if (dot === -1) return;
+    const owner = symbol.slice(0, dot).replace(/_/g, '').toLowerCase();
+    const member = symbol.slice(dot + 1);
+    const base = member.replace(VARIANT_SUFFIX, '').toLowerCase();
+    if (!map.has(owner)) map.set(owner, { bases: new Set(), symbols: [], rep: null });
+    const entry = map.get(owner);
+    entry.bases.add(base);
+    entry.symbols.push(symbol);
+    // Prefer the variant without the suffix as the display representative.
+    if (entry.rep === null || !VARIANT_SUFFIX.test(member)) entry.rep = symbol;
+  };
+
+  const removedByOwner = new Map();
+  const addedByOwner = new Map();
+  for (const change of compatReport?.changes ?? []) {
+    if (change.category === 'symbol_removed') index(removedByOwner, String(change.symbol ?? ''));
+    else if (change.category === 'symbol_added') index(addedByOwner, String(change.symbol ?? ''));
+  }
+
+  const renames = new Map();
+  for (const [owner, removed] of removedByOwner) {
+    const added = addedByOwner.get(owner);
+    if (removed.bases.size !== 1 || added?.bases.size !== 1) continue;
+    for (const symbol of removed.symbols) renames.set(symbol, { from: removed.rep, to: added.rep });
+  }
+  return renames;
+}
+
 function factsFromCompat(compatReport, existingFacts) {
   const facts = [];
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
-  for (const change of compatReport?.changes ?? []) {
-    if (change.severity !== 'breaking') continue;
+  const renames = renamesFromCompat(compatReport);
+
+  // Only one breaking fact survives per scope (the dedup below), so prefer the
+  // sync symbol over its `Async*` mirror when both changed — the sync surface
+  // is the primary public API and reads better in the changelog.
+  const isAsync = (change) => (/^Async(?=[A-Z])/.test(String(change.symbol ?? '')) ? 1 : 0);
+  const breakingChanges = (compatReport?.changes ?? [])
+    .filter((change) => change.severity === 'breaking')
+    .sort((a, b) => isAsync(a) - isAsync(b));
+
+  for (const change of breakingChanges) {
     // Strip the Python async-client prefix (`AsyncPipes` → `Pipes`) so async
     // surface symbols resolve to the same scope as their sync counterparts.
     const root = String(change.symbol ?? '').split('.')[0].replace(/^Async(?=[A-Z])/, '');
@@ -683,14 +734,17 @@ function factsFromCompat(compatReport, existingFacts) {
             ? 'compat_name'
             : 'compat_unresolved';
     if (existingBreakingScopes.has(targetScope)) continue;
+    const renamed = renames.get(String(change.symbol ?? ''));
     addFact(facts, {
       severity: 'breaking',
       scope: targetScope,
       scope_source: source,
       scope_candidates: [targetScope],
-      kind: 'sdk-surface-breaking',
-      symbols: [change.symbol],
-      detail: `SDK surface change: ${change.message ?? change.symbol}.`,
+      kind: renamed ? 'sdk-surface-renamed' : 'sdk-surface-breaking',
+      symbols: renamed ? [renamed.from, renamed.to] : [change.symbol],
+      detail: renamed
+        ? `SDK surface change: \`${renamed.from}\` was renamed to \`${renamed.to}\`.`
+        : `SDK surface change: ${change.message ?? change.symbol}.`,
     });
     existingBreakingScopes.add(targetScope);
   }
