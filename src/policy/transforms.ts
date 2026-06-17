@@ -203,5 +203,35 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
     }
   }
 
+  // -- GroupRoleAssignmentList: collapse inline list_metadata to shared $ref --
+  // Upstream defines `GroupRoleAssignmentList.list_metadata` as an inline
+  // object that is byte-for-byte identical (modulo the `example` strings) to
+  // `AuthorizationPermissionList.list_metadata`. Both resources live in the
+  // `authorization` namespace, so the structural-dedup pass in the python and
+  // dotnet emitters collapses the two anonymous metadata models and emits a
+  // broken cross-reference for the loser:
+  //   - python: group_role_assignment_list_list_metadata.py imports
+  //     `workos.common.models.authorization_permission_list_list_metadata`,
+  //     a module that is never generated (reportMissingImports).
+  //   - dotnet: GroupRoleAssignmentList.cs references the deduped-away type
+  //     `GroupRoleAssignmentListListMetadata` (CS0246).
+  // `GroupRoleAssignmentList` is net-new in this spec, so re-pointing its
+  // metadata at the shared `ListMetadata` component is purely additive (no
+  // compat baseline) and stops a per-list metadata model from being generated
+  // at all — the same shape `ObjectListResponse` already uses. The durable fix
+  // is upstream (the NestJS DTO should reference the shared ListMetadata class)
+  // plus hardening the emitter dedup to emit correct cross-module import paths.
+  if (schemas['ListMetadata']) {
+    const groupRoleList = schemas['GroupRoleAssignmentList'] as
+      | { properties?: { list_metadata?: { $ref?: string; properties?: unknown } } }
+      | undefined;
+    const listMetadata = groupRoleList?.properties?.list_metadata;
+    if (listMetadata && !listMetadata.$ref && listMetadata.properties) {
+      groupRoleList!.properties!.list_metadata = {
+        $ref: '#/components/schemas/ListMetadata',
+      };
+    }
+  }
+
   return spec;
 }

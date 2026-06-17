@@ -4,6 +4,19 @@
  * target unless overridden per-operation in {@link operationHints}.
  */
 export const mountRules: Record<string, string> = {
+  // Client API token -> ClientApi
+  // The `client` tag mounts a `Client` service (accessor `client`, Rust module
+  // `client`, Ruby class `WorkOS::Client`) that collides with each SDK's
+  // built-in client primitive: Rust's `mod client`, Ruby's core
+  // `WorkOS::Client`, and Go's aggregator. The emitters' collision-avoidance
+  // (shared/service-name-collision.ts) only reserves model/enum names, not the
+  // SDK client itself, so generation silently diverges (Go: undefined
+  // `ClientService`; Rust: `client::CreateTokenParams` resolves to the HTTP
+  // client; Ruby: `create_token` arity mismatch). Remounting on `ClientApi`
+  // (accessor `client_api`, "Client API token") sidesteps the collision in
+  // every language. The endpoint is net-new, so there is no compat baseline.
+  Client: 'ClientApi',
+
   // MFA sub-services -> MultiFactorAuth
   MultiFactorAuthChallenges: 'MultiFactorAuth',
 
