@@ -71,6 +71,7 @@ const SERVICE_SCOPE_OVERRIDES = new Map(
     OrganizationsApiKeys: 'api_keys',
     OrganizationsFeatureFlags: 'feature_flags',
     Permissions: 'authorization',
+    PipesProvider: 'pipes',
     UserManagementAuthentication: 'user_management',
     UserManagementCorsOrigins: 'user_management',
     UserManagementDataProviders: 'pipes',
@@ -276,6 +277,7 @@ function publicScopeFromService(serviceName) {
 function scopeFromName(name) {
   if (!name) return 'sdk';
 
+  if (/DataIntegration/.test(name)) return 'pipes';
   if (/WebhookEndpointEvents|Webhook/.test(name)) return 'webhooks';
   if (/^(ApiKey|ExpireApiKey|OrganizationApiKey|UserApiKey)/.test(name)) return 'api_keys';
   if (/^(Dsync|Directory)/.test(name)) return 'directory_sync';
