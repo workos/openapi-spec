@@ -40,7 +40,7 @@ const config: OagenConfig = {
       // adopted from the spec automatically so new APIs don't require a
       // service-by-service allowlist.
       adoptMissingServices: true,
-      ownedServices: ['Groups', 'Webhooks', 'Radar', 'Connect', 'Vault', 'Widgets'],
+      ownedServices: ['Groups', 'Webhooks', 'Radar', 'Connect', 'Vault', 'Widgets', 'OrganizationDomains'],
       regenerateOwnedTests: true,
       operationOverrides: nodeOperationOverrides,
     },
