@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -101,7 +101,9 @@ Inputs:
   --diff-report <file>   JSON output from "oagen diff".
   --old-ir <file>        JSON output from "oagen parse" for the previous spec.
   --new-ir <file>        JSON output from "oagen parse" for the current spec.
-  --compat-report <file> Optional SDK compat report JSON.
+  --compat-report <file> Optional SDK compat report JSON. When omitted and
+                         --sdk-repo is given, one is derived from the checkout
+                         (baseline ref vs current tree) without regenerating.
   --changed-files <file> Optional newline-delimited SDK file list for file attribution.
 
 Commit convenience:
@@ -109,8 +111,11 @@ Commit convenience:
                          against the previous spec-changing commit.
   --openapi-repo <path>  openapi-spec checkout for --spec-commit. Defaults to cwd.
   --spec-path <path>     Spec path in the repo. Defaults to spec/open-api-spec.yaml.
-  --sdk-repo <path>      SDK checkout used only to derive changed files.
+  --sdk-repo <path>      SDK checkout used to derive changed files and, when
+                         --compat-report is omitted, an SDK compat report.
   --sdk-base <rev>       Diff base for --sdk-repo. Defaults to origin/main...HEAD.
+  --lang <language>      SDK language for compat extraction. Inferred from the
+                         --sdk-repo basename (e.g. workos-python → python).
 
 Output:
   --format json          Default. Emits entries consumed by generate-prs.yml.
@@ -242,6 +247,98 @@ function prepareSpecInputs(args) {
   }
 }
 
+function inferLanguage(sdkRepo) {
+  const base =
+    String(sdkRepo)
+      .replace(/[\\/]+$/, '')
+      .split(/[\\/]/)
+      .pop() ?? '';
+  const match = base.match(/^workos-(.+)$/);
+  return match ? match[1] : base;
+}
+
+// Derive an SDK compat report from an existing checkout WITHOUT regenerating
+// the SDK: snapshot the current tree (candidate) and the tree at the base ref
+// (baseline, via a throwaway git worktree), then diff. This lets the changelog
+// surface SDK-surface changes — e.g. a method rename — that the spec diff alone
+// cannot see. Fails open: any problem just means the changelog is built from
+// the spec diff only. Skipped when --compat-report is passed explicitly (so
+// CI, which supplies its own per-language reports, is unaffected).
+function prepareCompatInputs(args) {
+  if (!args['sdk-repo'] || args['compat-report']) return args;
+
+  const sdkRepo = args['sdk-repo'];
+  const lang = args.lang ?? inferLanguage(sdkRepo);
+  const openapiRepo = args['openapi-repo'] ?? process.cwd();
+  const specPath = join(openapiRepo, args['spec-path'] ?? 'spec/open-api-spec.yaml');
+  const rawBase = args['sdk-base'] ?? 'origin/main...HEAD';
+  const leftRef = rawBase.split(/\.\.\.?/)[0] || 'origin/main';
+
+  const tmp = mkdtempSync(join(tmpdir(), 'sdk-release-compat-'));
+  const baselineSrc = join(tmp, 'baseline-src');
+  let worktreeAdded = false;
+  let succeeded = false;
+  try {
+    const baselineCommit = rawBase.includes('...')
+      ? git(sdkRepo, ['merge-base', leftRef, 'HEAD'])
+      : git(sdkRepo, ['rev-parse', leftRef]);
+
+    git(sdkRepo, ['worktree', 'add', '--detach', baselineSrc, baselineCommit]);
+    worktreeAdded = true;
+
+    const baselineOut = join(tmp, 'baseline');
+    const candidateOut = join(tmp, 'candidate');
+    mkdirSync(baselineOut, { recursive: true });
+    mkdirSync(candidateOut, { recursive: true });
+
+    const extract = (sdkPath, output) =>
+      run('npx', ['oagen', 'compat-extract', '--lang', lang, '--sdk-path', sdkPath, '--output', output, '--spec', specPath], {
+        cwd: openapiRepo,
+      });
+    extract(baselineSrc, baselineOut);
+    extract(sdkRepo, candidateOut);
+
+    const reportPath = join(tmp, 'compat-report.json');
+    run(
+      'npx',
+      [
+        'oagen',
+        'compat-diff',
+        '--baseline',
+        join(baselineOut, '.oagen-compat-snapshot.json'),
+        '--candidate',
+        join(candidateOut, '.oagen-compat-snapshot.json'),
+        '--output',
+        reportPath,
+        '--fail-on',
+        'none',
+      ],
+      { cwd: openapiRepo, allowExitCodes: [1] },
+    );
+
+    succeeded = true;
+    return { ...args, 'compat-report': reportPath, _compatTmpdir: tmp };
+  } catch (err) {
+    process.stderr.write(
+      `warning: could not derive SDK compat report (${err.message}); changelog will use the spec diff only\n`,
+    );
+    return args;
+  } finally {
+    if (worktreeAdded) {
+      try {
+        git(sdkRepo, ['worktree', 'remove', '--force', baselineSrc]);
+      } catch {
+        try {
+          git(sdkRepo, ['worktree', 'prune']);
+        } catch {
+          // best-effort cleanup
+        }
+      }
+    }
+    if (!succeeded) rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 function toSnakeCase(value) {
   return String(value)
     .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
@@ -341,12 +438,36 @@ function code(value) {
   return `\`${value}\``;
 }
 
+// Drill through wrappers (list/optional/etc.) to the underlying model or enum
+// name, so a response/request type can be named in the changelog.
+function primaryTypeName(type) {
+  if (!type || typeof type !== 'object') return null;
+  if ((type.kind === 'model' || type.kind === 'enum') && type.name) return type.name;
+  return primaryTypeName(type.inner) ?? primaryTypeName(type.items) ?? null;
+}
+
 function buildIndexes(specs) {
   const modelByName = new Map();
   const enumByName = new Map();
   const enumWireValues = new Map();
   const symbolScopes = new Map();
   const operationByKey = new Map();
+  // Per-side (old vs new) maps of operation → response/request type name, used
+  // to describe *what* changed in a modified operation. specs is [oldIr, newIr].
+  const responseTypeByKey = { old: new Map(), new: new Map() };
+  const requestTypeByKey = { old: new Map(), new: new Map() };
+  specs.forEach((spec, i) => {
+    const slot = i === 0 ? 'old' : 'new';
+    for (const service of spec?.services ?? []) {
+      for (const operation of service.operations ?? []) {
+        const key = `${service.name}.${operation.name}`;
+        const resp = primaryTypeName(operation.response);
+        if (resp) responseTypeByKey[slot].set(key, resp);
+        const req = primaryTypeName(operation.requestBody);
+        if (req) requestTypeByKey[slot].set(key, req);
+      }
+    }
+  });
 
   for (const spec of specs.filter(Boolean)) {
     for (const model of spec.models ?? []) modelByName.set(model.name, model);
@@ -417,7 +538,7 @@ function buildIndexes(specs) {
     }
   }
 
-  return { enumWireValues, symbolScopes, operationByKey };
+  return { enumWireValues, symbolScopes, operationByKey, responseTypeByKey, requestTypeByKey };
 }
 
 function resolveServiceScope(serviceName) {
@@ -639,22 +760,33 @@ function factsFromDiff(diffReport, indexes) {
           detail,
         });
       }
+      const opKey = `${change.serviceName}.${change.operationName}`;
       if (change.responseChanged) {
+        const oldType = indexes.responseTypeByKey?.old.get(opKey);
+        const newType = indexes.responseTypeByKey?.new.get(opKey);
         addFact(facts, {
           severity: change.classification,
           ...scopeFields(scope),
           kind: 'response-changed',
           symbols: [change.serviceName, change.operationName],
-          detail: `Changed response for \`${change.serviceName}.${change.operationName}\`.`,
+          detail:
+            oldType && newType && oldType !== newType
+              ? `Changed response of \`${opKey}\` from \`${oldType}\` to \`${newType}\`.`
+              : `Changed response for \`${opKey}\`.`,
         });
       }
       if (change.requestBodyChanged) {
+        const oldType = indexes.requestTypeByKey?.old.get(opKey);
+        const newType = indexes.requestTypeByKey?.new.get(opKey);
         addFact(facts, {
           severity: change.classification,
           ...scopeFields(scope),
           kind: 'request-body-changed',
           symbols: [change.serviceName, change.operationName],
-          detail: `Changed request body for \`${change.serviceName}.${change.operationName}\`.`,
+          detail:
+            oldType && newType && oldType !== newType
+              ? `Changed request body of \`${opKey}\` from \`${oldType}\` to \`${newType}\`.`
+              : `Changed request body for \`${opKey}\`.`,
         });
       }
     }
@@ -983,6 +1115,7 @@ if (args.help) {
   process.exit(0);
 }
 args = prepareSpecInputs(args);
+args = prepareCompatInputs(args);
 
 try {
   const diffReport = readJson(args['diff-report'], { changes: [], behaviorChanges: [], summary: {} });
@@ -1008,4 +1141,5 @@ try {
   }
 } finally {
   if (args._tmpdir) rmSync(args._tmpdir, { recursive: true, force: true });
+  if (args._compatTmpdir) rmSync(args._compatTmpdir, { recursive: true, force: true });
 }
