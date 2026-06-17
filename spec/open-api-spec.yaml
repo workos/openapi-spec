@@ -1170,6 +1170,430 @@ paths:
       summary: Complete external authentication
       tags:
         - workos-connect
+  /authorization/groups/{group_id}/role_assignments:
+    get:
+      description: >-
+        List all role assignments granted to a group. Each assignment represents
+        a role granted to the group on a resource.
+      operationId: AuthorizationGroupRoleAssignmentsController_list
+      parameters:
+        - name: group_id
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records).
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupRoleAssignmentList'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List role assignments for a group
+      tags:
+        - authorization
+      x-feature-flag: user-groups-role-assignment-enabled
+    post:
+      description: Assign a role to a group on a specific resource.
+      operationId: AuthorizationGroupRoleAssignmentsController_create
+      parameters:
+        - name: group_id
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRoleAssignmentDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupRoleAssignment'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: duplicate_group_role_assignment
+                    const: duplicate_group_role_assignment
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Assign a role to a group
+      tags:
+        - authorization
+      x-feature-flag: user-groups-role-assignment-enabled
+    put:
+      description: >-
+        Replace all role assignments for a group with the provided list.
+        Existing assignments not in the list will be removed.
+      operationId: AuthorizationGroupRoleAssignmentsController_replaceGroupRoleAssignments
+      parameters:
+        - name: group_id
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceGroupRoleAssignmentsDto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupRoleAssignmentList'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Replace all role assignments for a group
+      tags:
+        - authorization
+      x-feature-flag: user-groups-role-assignment-enabled
+    delete:
+      description: >-
+        Remove role assignments from a group that match the provided criteria.
+        Returns 404 when no matching active assignment is found.
+      operationId: AuthorizationGroupRoleAssignmentsController_removeGroupRoleAssignments
+      parameters:
+        - name: group_id
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteGroupRoleAssignmentsByCriteriaDto'
+      responses:
+        '204':
+          description: No Content
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Remove group role assignments by criteria
+      tags:
+        - authorization
+      x-feature-flag: user-groups-role-assignment-enabled
+  /authorization/groups/{group_id}/role_assignments/{role_assignment_id}:
+    get:
+      description: Get a specific role assignment for a group by its ID.
+      operationId: AuthorizationGroupRoleAssignmentsController_get
+      parameters:
+        - name: group_id
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+        - name: role_assignment_id
+          required: true
+          in: path
+          description: The ID of the group role assignment.
+          schema:
+            type: string
+            example: gra_01HXYZ123456789ABCDEFGHIJ
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupRoleAssignment'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get a group role assignment
+      tags:
+        - authorization
+      x-feature-flag: user-groups-role-assignment-enabled
+    delete:
+      description: Remove a specific role assignment from a group by its ID.
+      operationId: AuthorizationGroupRoleAssignmentsController_removeGroupRoleAssignment
+      parameters:
+        - name: group_id
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+        - name: role_assignment_id
+          required: true
+          in: path
+          description: The ID of the group role assignment to remove.
+          schema:
+            type: string
+            example: gra_01HXYZ123456789ABCDEFGHIJ
+      responses:
+        '204':
+          description: No Content
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Remove a group role assignment
+      tags:
+        - authorization
+      x-feature-flag: user-groups-role-assignment-enabled
   /authorization/organization_memberships/{organization_membership_id}/check:
     post:
       description: >-
@@ -4123,6 +4547,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthorizationResourceList'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: missing_organization_id_or_resource_type_slug
+                    const: missing_organization_id_or_resource_type_slug
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -5646,6 +6089,68 @@ paths:
       summary: Add a permission to an environment role
       tags:
         - authorization
+  /client/token:
+    post:
+      description: >-
+        Generate a short-lived, session-bound token for the Client GraphQL API,
+        scoped to an organization and user.
+      operationId: ClientApiTokenController_issueClientApiToken
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientApiTokenDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientApiTokenResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Generate a Client API token
+      tags:
+        - client
   /connect/applications:
     get:
       description: >-
@@ -8610,6 +9115,140 @@ paths:
       summary: Create an API key for an organization
       tags:
         - organizations.api_keys
+  /organizations/{organizationId}/data_integration_configurations:
+    get:
+      description: >-
+        Returns a list of all providers available to the specified organization,
+        along with any configured custom OAuth scopes, enabled state, and
+        organization-managed credentials where applicable.
+      operationId: ProviderController_listForOrganization
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: >-
+            An [Organization](/reference/organization) identifier to list
+            provider configurations for.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+      responses:
+        '200':
+          description: A list of provider configurations for the organization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegrationConfigurationListResponse'
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The organization was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List providers for an organization
+      tags:
+        - pipes.provider
+      x-feature-flag: pipes-org-overrides
+  /organizations/{organizationId}/data_integration_configurations/{slug}:
+    put:
+      description: >-
+        Creates or updates an organization's provider configuration. Use this
+        endpoint to enable or disable a provider, set custom OAuth scopes, or
+        supply organization-managed OAuth credentials.
+      operationId: ProviderController_configure
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: >-
+            An [Organization](/reference/organization) identifier to configure
+            the provider for.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: slug
+          required: true
+          in: path
+          description: >-
+            The slug identifier of the provider to configure (e.g., `github`,
+            `slack`, `notion`).
+          schema:
+            example: github
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigureDataIntegrationBody'
+      responses:
+        '200':
+          description: The provider configuration that was created or updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegrationConfigurationResponse'
+        '400':
+          description: >-
+            The request body is invalid. Possible reasons: the body is empty (at
+            least one of `enabled`, `scopes`, or `client_id` must be provided);
+            `client_id` and `client_secret` are not provided together; or
+            `client_id`/`client_secret` were supplied for a provider that does
+            not support organization-managed credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The organization or provider was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: >-
+            One or more of the supplied `scopes` are not valid for the provider.
+            Only scopes configured on the provider may be used.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Configure a provider for an organization
+      tags:
+        - pipes.provider
+      x-feature-flag: pipes-org-overrides
   /organizations/{organizationId}/feature-flags:
     get:
       description: Get a list of all enabled feature flags for an organization.
@@ -10254,7 +10893,10 @@ paths:
                       example: client_01HXYZ123456789ABCDEFGHIJ
                     client_secret:
                       type: string
-                      description: The client secret of the application.
+                      description: >-
+                        The client secret of the application. May be omitted by
+                        public clients that authenticate through other means,
+                        such as a PKCE `code_verifier`.
                       example: sk_test_....
                     grant_type:
                       type: string
@@ -10287,7 +10929,6 @@ paths:
                       example: Mozilla/5.0
                   required:
                     - client_id
-                    - client_secret
                     - grant_type
                     - code
                 - type: object
@@ -10341,7 +10982,10 @@ paths:
                       example: client_01HXYZ123456789ABCDEFGHIJ
                     client_secret:
                       type: string
-                      description: The client secret of the application.
+                      description: >-
+                        The client secret of the application. May be omitted by
+                        public clients that authenticate through other means,
+                        such as a PKCE `code_verifier`.
                       example: sk_test_....
                     grant_type:
                       type: string
@@ -10368,7 +11012,6 @@ paths:
                       example: Mozilla/5.0
                   required:
                     - client_id
-                    - client_secret
                     - grant_type
                     - refresh_token
                 - type: object
@@ -11699,47 +12342,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - type: object
-                    properties:
-                      object:
-                        type: string
-                        description: Indicates this is a list response.
-                        const: list
-                      list_metadata:
-                        type: object
-                        properties:
-                          before:
-                            type:
-                              - string
-                              - 'null'
-                            description: >-
-                              An object ID that defines your place in the list.
-                              When the ID is not present, you are at the start
-                              of the list.
-                            example: invitation_01HXYZ123456789ABCDEFGHIJ
-                          after:
-                            type:
-                              - string
-                              - 'null'
-                            description: >-
-                              An object ID that defines your place in the list.
-                              When the ID is not present, you are at the end of
-                              the list.
-                            example: invitation_01HXYZ987654321KJIHGFEDCBA
-                        required:
-                          - before
-                          - after
-                        description: >-
-                          Pagination cursors for navigating between pages of
-                          results.
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        description: The list of records for the current page.
-                        items:
-                          $ref: '#/components/schemas/UserlandUserInvite'
+                $ref: '#/components/schemas/UserlandUserInviteList'
         '422':
           description: Unprocessable Entity
           content:
@@ -12726,48 +13329,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - type: object
-                    properties:
-                      object:
-                        type: string
-                        description: Indicates this is a list response.
-                        const: list
-                      list_metadata:
-                        type: object
-                        properties:
-                          before:
-                            type:
-                              - string
-                              - 'null'
-                            description: >-
-                              An object ID that defines your place in the list.
-                              When the ID is not present, you are at the start
-                              of the list.
-                            example: om_01HXYZ123456789ABCDEFGHIJ
-                          after:
-                            type:
-                              - string
-                              - 'null'
-                            description: >-
-                              An object ID that defines your place in the list.
-                              When the ID is not present, you are at the end of
-                              the list.
-                            example: om_01HXYZ987654321KJIHGFEDCBA
-                        required:
-                          - before
-                          - after
-                        description: >-
-                          Pagination cursors for navigating between pages of
-                          results.
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        description: The list of records for the current page.
-                        items:
-                          $ref: >-
-                            #/components/schemas/UserlandUserOrganizationMembership
+                $ref: '#/components/schemas/UserlandUserOrganizationMembershipList'
         '400':
           description: Bad Request
           content:
@@ -13841,7 +14403,7 @@ paths:
         - user-management.users
   /user_management/redirect_uris:
     post:
-      description: Creates a new redirect URI for an environment.
+      description: Creates a new redirect URI for an application.
       operationId: RedirectUrisController_create
       parameters: []
       requestBody:
@@ -15194,7 +15756,7 @@ paths:
   /user_management/users/{id}/email_verification/send:
     post:
       description: >-
-        Sends an email that contains a one-time code used to verify a user’s
+        Sends an email that contains a one-time code used to verify a user's
         email address.
       operationId: UserlandUsersController_sendVerificationEmail[0]
       parameters:
@@ -16136,7 +16698,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
-      summary: List providers
+      summary: List providers for a user
       tags:
         - user-management.data-providers
   /user_management/users/{userlandUserId}/auth_factors:
@@ -17096,6 +17658,8 @@ tags:
     description: Create and query audit log events.
   - name: authorization
     description: Authorization and access control.
+  - name: client
+    description: Client GraphQL API token management.
   - name: connections
     description: Manage SSO connections.
   - name: directories
@@ -17128,6 +17692,8 @@ tags:
     description: Manage permissions.
   - name: pipes
     description: Data integration endpoints.
+  - name: pipes.provider
+    description: Manage organization-scoped provider configurations.
   - name: radar
     description: Radar fraud detection.
   - name: sso
@@ -17777,6 +18343,88 @@ components:
                     required:
                       - resource_id
       x-mutually-exclusive-body-groups: *ref_3
+    CreateGroupRoleAssignmentDto:
+      type: object
+      properties:
+        role_slug:
+          type: string
+          description: The slug of the role to assign to the group.
+          example: admin
+        resource_id:
+          type: string
+          description: >-
+            The ID of the resource. Omit along with the external-id fields to
+            target the organization itself.
+          example: authz_resource_01HXYZ123456789ABCDEFGH
+        resource_external_id:
+          type: string
+          description: The external ID of the resource.
+          example: proj-456
+        resource_type_slug:
+          type: string
+          description: The resource type slug.
+          example: project
+      required:
+        - role_slug
+    ReplaceGroupRoleAssignmentEntryDto:
+      type: object
+      properties:
+        role_slug:
+          type: string
+          description: The slug of the role to assign to the group.
+          example: admin
+        resource_id:
+          type: string
+          description: >-
+            The ID of the resource. Omit along with the external-id fields to
+            target the organization itself.
+          example: authz_resource_01HXYZ123456789ABCDEFGH
+        resource_external_id:
+          type: string
+          description: The external ID of the resource.
+          example: proj-456
+        resource_type_slug:
+          type: string
+          description: The resource type slug.
+          example: project
+      required:
+        - role_slug
+    ReplaceGroupRoleAssignmentsDto:
+      type: object
+      properties:
+        role_assignments:
+          maxItems: 100
+          description: >-
+            The list of role assignments that should exist for the group. All
+            existing assignments will be replaced.
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplaceGroupRoleAssignmentEntryDto'
+      required:
+        - role_assignments
+    DeleteGroupRoleAssignmentsByCriteriaDto:
+      type: object
+      properties:
+        role_slug:
+          type: string
+          description: The slug of the role to remove assignments for.
+          example: admin
+        resource_id:
+          type: string
+          description: >-
+            The ID of the resource. Mutually exclusive with
+            `resource_external_id` and `resource_type_slug`.
+          example: authz_resource_01HXYZ123456789ABCDEFGH
+        resource_external_id:
+          type: string
+          description: The external ID of the resource.
+          example: proj-456
+        resource_type_slug:
+          type: string
+          description: The resource type slug.
+          example: project
+      required:
+        - role_slug
     AssignRoleDto:
       allOf:
         - type: object
@@ -19458,10 +20106,25 @@ components:
               - widgets:api-keys:manage
               - widgets:dsync:manage
               - widgets:audit-log-streaming:manage
+              - widgets:pipes:manage
           example:
             - widgets:users-table:manage
       required:
         - organization_id
+    ClientApiTokenDto:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          description: The ID of the organization to scope the Client API token to.
+          example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        user_id:
+          type: string
+          description: The ID of the user to issue the Client API token for.
+          example: user_01E4ZCR3C56J083X43JQXF3JK5
+      required:
+        - organization_id
+        - user_id
     TokenQueryDto:
       type: object
       properties:
@@ -20890,6 +21553,103 @@ components:
       required:
         - slug
       description: The primary role assigned to the user.
+    GroupRoleAssignment:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the group role assignment object.
+          const: group_role_assignment
+        id:
+          type: string
+          description: Unique identifier of the group role assignment.
+          example: gra_01HXYZ123456789ABCDEFGH
+        group_id:
+          type: string
+          description: The ID of the group the role is assigned to.
+          example: group_01HXYZ123456789ABCDEFGHIJ
+        role:
+          $ref: '#/components/schemas/SlimRole'
+          description: The role included in the assignment.
+        resource:
+          type: object
+          properties:
+            id:
+              type: string
+              description: The unique ID of the Resource.
+              example: authz_resource_01HXYZ123456789ABCDEFGH
+            external_id:
+              type: string
+              description: >-
+                An identifier you provide to reference the resource in your
+                system.
+              example: proj-456
+            resource_type_slug:
+              type: string
+              description: The slug of the resource type this resource belongs to.
+              example: project
+          required:
+            - id
+            - external_id
+            - resource_type_slug
+          description: The resource the role is assigned on.
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - group_id
+        - role
+        - resource
+        - created_at
+        - updated_at
+    GroupRoleAssignmentList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupRoleAssignment'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: gra_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: gra_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     UserRoleAssignment:
       type: object
       properties:
@@ -31320,6 +32080,174 @@ components:
         - organization_id
         - retention_period_in_days
         - state
+    DataIntegrationCredentials:
+      type: object
+      properties:
+        credentials_type:
+          type: string
+          enum:
+            - shared
+            - custom
+            - organization
+          description: >-
+            The credentials type for this integration (e.g., `shared`, `custom`,
+            or `organization`).
+          example: organization
+        has_credentials:
+          type: boolean
+          description: >-
+            Whether the organization has supplied OAuth credentials for this
+            integration.
+          example: true
+        client_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The OAuth client ID supplied by the organization, or `null` when
+            none is configured.
+          example: client_01EHZNVPK3SFK441A1RGBFSHRT
+        client_secret_last_four:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The last four characters of the organization-supplied OAuth client
+            secret, or `null` when none is configured.
+          example: 1a2b
+        redirect_uri:
+          type: string
+          description: >-
+            The redirect URI to register with the provider when configuring the
+            organization-managed OAuth application.
+          example: >-
+            https://api.workos.com/data-integrations/github/dik_01EHZNVPK3SFK441A1RGBFSHRT/callback
+      required:
+        - credentials_type
+        - has_credentials
+        - client_id
+        - client_secret_last_four
+        - redirect_uri
+      description: >-
+        Organization-managed OAuth credential configuration. Present only for
+        integrations whose credentials are supplied by the organization; absent
+        otherwise.
+    DataIntegrationConfigurationResponse:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the data integration configuration object.
+          const: data_integration_configuration
+        id:
+          type: string
+          description: The unique identifier of the data integration.
+          example: data_integration_01EHZNVPK3SFK441A1RGBFSHRT
+        organization_id:
+          type: string
+          description: >-
+            The [Organization](/reference/organization) this configuration
+            applies to.
+          example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        slug:
+          type: string
+          description: >-
+            The slug identifier of the provider (e.g., `github`, `slack`,
+            `notion`).
+          example: github
+        name:
+          type: string
+          description: The display name of the data integration.
+          example: GitHub
+        enabled:
+          type: boolean
+          description: >-
+            Whether the integration is enabled for this organization. Reflects
+            the organization override when one exists, otherwise the provider
+            default.
+          example: true
+        scopes:
+          description: >-
+            The OAuth scopes in effect for this organization. Reflects the
+            organization override when one is set, otherwise the provider
+            scopes, or `null` when none are configured.
+          example:
+            - repo
+            - user:email
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: 'null'
+        created_at:
+          type: string
+          description: The timestamp when the configuration was created.
+          example: '2024-01-15T10:30:00.000Z'
+        updated_at:
+          type: string
+          description: The timestamp when the configuration was last updated.
+          example: '2024-01-15T10:30:00.000Z'
+        credentials:
+          $ref: '#/components/schemas/DataIntegrationCredentials'
+      required:
+        - object
+        - id
+        - organization_id
+        - slug
+        - name
+        - enabled
+        - scopes
+        - created_at
+        - updated_at
+    DataIntegrationConfigurationListResponse:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataIntegrationConfigurationResponse'
+          description: A list of data integration configurations for the organization.
+      required:
+        - object
+        - data
+    ConfigureDataIntegrationBody:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Whether the provider is enabled for the organization.
+          example: true
+        scopes:
+          description: >-
+            The OAuth scopes to request for the organization. Pass `null` to
+            inherit the provider scopes.
+          example:
+            - repo
+            - user:email
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: 'null'
+        client_id:
+          type: string
+          minLength: 1
+          description: >-
+            The OAuth client ID of the organization's own application. Must be
+            provided together with `client_secret`, and only for providers whose
+            credentials are supplied by the organization.
+          example: client_01EHZNVPK3SFK441A1RGBFSHRT
+        client_secret:
+          type: string
+          minLength: 1
+          description: >-
+            The OAuth client secret of the organization's own application. Must
+            be provided together with `client_id`.
+          example: ••••••••
     DataIntegrationAuthorizeUrlResponse:
       type: object
       properties:
@@ -31445,6 +32373,23 @@ components:
           example:
             - repo
             - user:email
+        auth_method:
+          type: string
+          enum:
+            - oauth
+            - api_key
+          description: >-
+            The authentication method used for this connection (`oauth` or
+            `api_key`). Defaults to `oauth` if absent.
+          example: oauth
+        api_key_last_4:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The last four characters of the API key, or `null` for OAuth
+            connections.
+          example: null
         state:
           type: string
           enum:
@@ -31536,6 +32481,19 @@ components:
                     items:
                       type: string
                   - type: 'null'
+              auth_methods:
+                type: array
+                items:
+                  type: string
+                  enum:
+                    - oauth
+                    - api_key
+                description: >-
+                  The authentication methods supported by this provider
+                  (`oauth`, `api_key`, or both). Defaults to `["oauth"]` if
+                  absent.
+                example:
+                  - oauth
               ownership:
                 type: string
                 enum:
@@ -31607,6 +32565,23 @@ components:
                         example:
                           - repo
                           - user:email
+                      auth_method:
+                        type: string
+                        enum:
+                          - oauth
+                          - api_key
+                        description: >-
+                          The authentication method used for this connection
+                          (`oauth` or `api_key`). Defaults to `oauth` if absent.
+                        example: oauth
+                      api_key_last_4:
+                        type:
+                          - string
+                          - 'null'
+                        description: >-
+                          The last four characters of the API key, or `null` for
+                          OAuth connections.
+                        example: null
                       state:
                         type: string
                         enum:
@@ -32012,6 +32987,45 @@ components:
         - updated_at
         - token
         - accept_invitation_url
+    UserlandUserInviteList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserlandUserInvite'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: invitation_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: invitation_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     UserlandUserOrganizationMembership:
       type: object
       properties:
@@ -32090,6 +33104,45 @@ components:
         - updated_at
         - role
         - user
+    UserlandUserOrganizationMembershipList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserlandUserOrganizationMembership'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: om_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: om_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     UserApiKey:
       type: object
       properties:
@@ -32737,6 +33790,15 @@ components:
         token:
           type: string
           description: The widget session token.
+          example: eyJhbGciOiJSUzI1NiIsImtpZCI6InNlc3Npb24...
+      required:
+        - token
+    ClientApiTokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: The Client API token.
           example: eyJhbGciOiJSUzI1NiIsImtpZCI6InNlc3Npb24...
       required:
         - token
