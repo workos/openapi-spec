@@ -277,7 +277,8 @@ function publicScopeFromService(serviceName) {
 function scopeFromName(name) {
   if (!name) return 'sdk';
 
-  if (/DataIntegration/.test(name)) return 'pipes';
+  if (/DataIntegration|Pipe/.test(name)) return 'pipes';
+  if (/SessionAuthenticate/.test(name)) return 'user_management';
   if (/WebhookEndpointEvents|Webhook/.test(name)) return 'webhooks';
   if (/^(ApiKey|ExpireApiKey|OrganizationApiKey|UserApiKey)/.test(name)) return 'api_keys';
   if (/^(Dsync|Directory)/.test(name)) return 'directory_sync';
@@ -666,7 +667,9 @@ function factsFromCompat(compatReport, existingFacts) {
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
   for (const change of compatReport?.changes ?? []) {
     if (change.severity !== 'breaking') continue;
-    const root = String(change.symbol ?? '').split('.')[0];
+    // Strip the Python async-client prefix (`AsyncPipes` → `Pipes`) so async
+    // surface symbols resolve to the same scope as their sync counterparts.
+    const root = String(change.symbol ?? '').split('.')[0].replace(/^Async(?=[A-Z])/, '');
     const serviceScope = resolveServiceScope(root);
     const nameScope = scopeFromName(root);
     const scope = serviceScope.scope !== toSnakeCase(root) ? serviceScope.scope : nameScope;
