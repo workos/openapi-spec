@@ -177,6 +177,76 @@ jobs:
         if: needs.load-matrix.outputs.spec-changed == 'true'
         run: npm ci
 
+      - name: Validate changelog scopes
+        id: scope-check
+        if: needs.load-matrix.outputs.spec-changed == 'true' && github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # Enforce the changelog scope-mapping invariant on the PR instead of
+          # only after merge in generate-prs.yml. Reconstruct the same inputs
+          # (spec diff + old/new IR + compat reports) the post-merge classifier
+          # uses, then run it with --strict-scopes. Records the result as an
+          # output and never hard-fails here, so the PR comment still renders;
+          # "Check result" turns a failure into a red check.
+          if ! git fetch --depth=1 origin "$BASE_SHA" 2>/dev/null; then
+            echo "::warning::could not fetch base $BASE_SHA; skipping changelog scope validation"
+            echo "scopes-valid=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git show "$BASE_SHA:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
+
+          npx oagen diff --old /tmp/previous-open-api-spec.yaml --new spec/open-api-spec.yaml \
+            > /tmp/diff-report.json || DIFF_EXIT=$?
+          # exit 2 means breaking changes were detected — not a failure
+          if [ "${DIFF_EXIT:-0}" -ne 0 ] && [ "${DIFF_EXIT:-0}" -ne 2 ]; then
+            echo "::warning::oagen diff failed (exit ${DIFF_EXIT}); skipping changelog scope validation"
+            echo "scopes-valid=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! jq -e '.summary' /tmp/diff-report.json > /dev/null 2>&1; then
+            echo "::warning::oagen diff produced invalid JSON; skipping changelog scope validation"
+            echo "scopes-valid=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          npx oagen parse --spec /tmp/previous-open-api-spec.yaml > /tmp/previous-ir.json
+          npx oagen parse --spec spec/open-api-spec.yaml > /tmp/current-ir.json
+
+          # Merge every language's breaking compat changes into one report so a
+          # single run scope-checks both spec-level changes and SDK-surface
+          # breaks (e.g. a removed *Params type) — the latter only appear in the
+          # generated SDKs' compat reports, not in the spec diff.
+          jq -s '{changes: (map(.changes // []) | add)}' \
+            sdk-diagnostics/oagen-diagnostics-*/compat-report.json > /tmp/merged-compat.json 2>/dev/null \
+            || echo '{"changes":[]}' > /tmp/merged-compat.json
+
+          out=$(node scripts/sdk-release-metadata.mjs \
+            --diff-report /tmp/diff-report.json \
+            --old-ir /tmp/previous-ir.json \
+            --new-ir /tmp/current-ir.json \
+            --compat-report /tmp/merged-compat.json \
+            --strict-scopes \
+            --output /dev/null 2>&1) && rc=0 || rc=$?
+
+          if [ "$rc" -ne 0 ]; then
+            echo "scopes-valid=false" >> "$GITHUB_OUTPUT"
+            echo "$out"
+            {
+              echo "### ❌ Changelog scope validation failed"
+              echo ""
+              echo "A changelog entry resolved to an unmapped or undocumented scope."
+              echo "Map it in \`scripts/sdk-release-metadata.mjs\` (\`SERVICE_SCOPE_OVERRIDES\` / \`scopeFromName\`) and add \`SCOPE_DOC_URLS\` + \`SCOPE_LABELS\`."
+              echo ""
+              echo '```'
+              echo "$out"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Changelog scope validation failed — see job summary"
+          else
+            echo "scopes-valid=true" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+
       - name: Build code diff report
         if: needs.load-matrix.outputs.spec-changed == 'true'
         id: diff-report
@@ -283,5 +353,10 @@ jobs:
           fi
           if [[ "${{ needs.sdk_build.result }}" != "success" ]]; then
             echo "SDK build failed"
+            exit 1
+          fi
+          if [[ "${{ steps.scope-check.outputs.scopes-valid }}" == "false" ]]; then
+            echo "Changelog scope validation failed — a changelog entry resolved to an unmapped or undocumented scope."
+            echo "See the 'Validate changelog scopes' step and job summary for the offending entries."
             exit 1
           fi
