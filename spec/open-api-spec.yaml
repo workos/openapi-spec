@@ -11710,6 +11710,14 @@ paths:
                                   The email address of the user that must
                                   authenticate via SSO.
                                 example: user@example.com
+                              pending_authentication_token:
+                                type: string
+                                description: >-
+                                  A token that links the subsequent SSO
+                                  authentication back to the pending
+                                  authentication so the authorization session
+                                  can be completed.
+                                example: pat_01FVYZ...
                             required:
                               - connection_ids
                               - email
