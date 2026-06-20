@@ -30,6 +30,7 @@
   },
   "scripts": {
     "build:policy": "tsdown",
+    "test": "node --test scripts/__tests__/*.spec.mjs",
     "generate:postman": "tsx scripts/postman/generate.ts",
     "generate:postman:local": "tsx scripts/postman/generate.ts --local",
     "sdk:resolve": "npx oagen resolve --spec spec/open-api-spec.yaml",

@@ -1,0 +1,138 @@
+name: Record spec changes
+
+# On every spec merge, record which post-mount services changed (and whether any
+# change is breaking) as a per-commit manifest the dashboard bot (Phase 4) reads
+# to compute pending SDK work. All the substance lives in
+# scripts/build-spec-changes.mjs (pure Node, unit-tested); this workflow is a
+# thin wrapper that runs `oagen diff`/`parse` and commits the result.
+#
+# Self-trigger guard: the manifest is committed to the repo-root `.spec-changes/`
+# directory, which is OUTSIDE both this workflow's `spec/**` trigger AND
+# release.yml's `spec/open-api-spec.yaml` + `src/policy/**` triggers. So the
+# manifest commit re-triggers neither workflow. A path-based guard is preferred
+# over `[skip ci]`, which would suppress every workflow indiscriminately.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spec/**'
+
+concurrency:
+  # Serialize so two spec merges in quick succession don't race on the manifest
+  # commit; do not cancel an in-flight run (each merge deserves its manifest).
+  group: spec-changes
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ vars.SDK_BOT_APP_ID }}
+          private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
+          owner: workos
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build policy module
+        # build-spec-changes.mjs imports mountRules from dist/policy.mjs, which
+        # is git-ignored and not produced by `npm ci`.
+        run: npm run build:policy
+
+      - name: Resolve parent spec
+        id: parent
+        run: |
+          set -euo pipefail
+          PARENT="${{ github.event.before }}"
+          if [ -z "$PARENT" ] || [ "$PARENT" = "0000000000000000000000000000000000000000" ]; then
+            PARENT="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$PARENT" ] || ! git cat-file -e "$PARENT:spec/open-api-spec.yaml" 2>/dev/null; then
+            echo "No parent spec to diff against; nothing to record."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git show "$PARENT:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
+          echo "parent=$PARENT" >> "$GITHUB_OUTPUT"
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Diff + parse spec revisions
+        if: steps.parent.outputs.available == 'true'
+        run: |
+          set -uo pipefail
+          # `oagen diff` exit code 2 means breaking changes were detected — that
+          # is a successful diff, not a failure (mirrors generate-prs.yml).
+          REPORT=$(npx oagen diff \
+            --old /tmp/previous-open-api-spec.yaml \
+            --new spec/open-api-spec.yaml) || DIFF_EXIT=$?
+          if [ "${DIFF_EXIT:-0}" -ne 0 ] && [ "${DIFF_EXIT:-0}" -ne 2 ]; then
+            echo "::warning::oagen diff failed (exit code ${DIFF_EXIT})"
+            exit 1
+          fi
+          if ! echo "$REPORT" | jq -e '.summary' > /dev/null 2>&1; then
+            echo "::warning::oagen diff returned invalid JSON"
+            exit 1
+          fi
+          echo "$REPORT" > /tmp/diff-report.json
+
+          # IR for both revisions lets build-spec-changes attribute model/enum
+          # changes to the services that reference them.
+          npx oagen parse --spec /tmp/previous-open-api-spec.yaml > /tmp/previous-ir.json
+          npx oagen parse --spec spec/open-api-spec.yaml > /tmp/current-ir.json
+
+      - name: Build changed-services manifest
+        if: steps.parent.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p .spec-changes
+          node scripts/build-spec-changes.mjs \
+            --report /tmp/diff-report.json \
+            --old-ir /tmp/previous-ir.json \
+            --new-ir /tmp/current-ir.json \
+            --sha "${{ github.sha }}" \
+            --parent-sha "${{ steps.parent.outputs.parent }}" \
+            --output ".spec-changes/${{ github.sha }}.json"
+          echo "Manifest:"
+          jq . ".spec-changes/${{ github.sha }}.json"
+
+      - name: Commit manifest
+        if: steps.parent.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "workos-sdk-automation[bot]"
+          git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
+          git add ".spec-changes/${{ github.sha }}.json"
+          if git diff --cached --quiet; then
+            echo "Manifest unchanged; nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore(spec-changes): record ${{ github.sha }}"
+          # Rebase-and-retry guards against a concurrent merge advancing main
+          # between checkout and push.
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${{ github.ref_name }}"; then
+              exit 0
+            fi
+            echo "push failed (attempt ${attempt}); rebasing onto origin/${{ github.ref_name }}"
+            git pull --rebase origin "${{ github.ref_name }}"
+          done
+          echo "::error::could not push manifest after 3 attempts"
+          exit 1
