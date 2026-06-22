@@ -11,6 +11,11 @@
  *
  * Adding or changing a hint here changes what every consumer sees on the
  * next release of `@workos/openapi-spec`.
+ *
+ * The generated post-mount service roster is published separately as
+ * `@workos/openapi-spec/services` (see tsdown.config.ts) — it is intentionally
+ * NOT re-exported here, because this barrel is loaded by oagen.config.ts during
+ * `generate:services` itself, before the roster file exists.
  */
 export type { OpenApiDocument, OperationHint, SplitHint } from './types.js';
 export { operationHints } from './operation-hints.js';
