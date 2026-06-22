@@ -347,14 +347,14 @@ jobs:
             ROLLUP_BANG="!"
           fi
 
-          # Any SDK-shape break in compat-diff forces the rollup to feat! too.
-          # The deterministic metadata script also emits a breaking entry when
-          # compat-diff is the only source of that break.
-          COMPAT_BREAKING_COUNT=$(echo "$COMPAT_BREAKING" | jq 'length')
-          if [ "${COMPAT_BREAKING_COUNT:-0}" -gt 0 ]; then
-            ROLLUP_TYPE="feat"
-            ROLLUP_BANG="!"
-          fi
+          # NOTE: compat-diff breaks are already accounted for via the
+          # deterministic metadata script (which applies compatChangeIsBreaking
+          # filtering) — its entries drive the rollup at lines 297-306.  We
+          # intentionally do NOT override the rollup from the raw
+          # COMPAT_BREAKING array here, because backend-only compat changes
+          # (field_type_changed, return_type_changed, model-property
+          # symbol_removed on non-service types) are not customer-facing and
+          # should not force a major bump.
 
           # Combine pre-rendered behavior lines with deterministic per-scope
           # entries. Behavior lines come first because they are the most
@@ -385,6 +385,12 @@ jobs:
             BREAKING='${{ steps.diff-report.outputs.breaking }}'
             ADDED='${{ steps.diff-report.outputs.added }}'
             if [ "${BREAKING:-0}" -gt 0 ] 2>/dev/null; then
+              # Reaching this branch means the metadata script classified zero
+              # entries, yet oagen diff still reports breaking changes — i.e. a
+              # diff kind factsFromDiff doesn't recognize. Default to feat!
+              # (over-bump is safer than silently shipping a break as a patch),
+              # but make it loud so the unhandled kind gets investigated.
+              echo "::warning::No classified release entries, but oagen diff reports ${BREAKING} breaking change(s). Defaulting to feat! (major bump) conservatively — this usually means factsFromDiff doesn't recognize a diff kind. Investigate rather than trusting the bump."
               ROLLUP_TYPE="feat"
               ROLLUP_BANG="!"
             elif [ "${ADDED:-0}" -gt 0 ] 2>/dev/null; then
