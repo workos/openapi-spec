@@ -239,6 +239,10 @@ function prepareSpecInputs(args) {
       'diff-report': args['diff-report'] ?? diffPath,
       'old-ir': args['old-ir'] ?? oldIrPath,
       'new-ir': args['new-ir'] ?? newIrPath,
+      // Absolute path to the spec at the requested commit, so a downstream
+      // compat derivation extracts against that historical spec rather than the
+      // current checkout (see prepareCompatInputs).
+      _specPath: newSpecPath,
       _tmpdir: tmp,
     };
   } catch (err) {
@@ -270,7 +274,10 @@ function prepareCompatInputs(args) {
   const sdkRepo = args['sdk-repo'];
   const lang = args.lang ?? inferLanguage(sdkRepo);
   const openapiRepo = args['openapi-repo'] ?? process.cwd();
-  const specPath = join(openapiRepo, args['spec-path'] ?? 'spec/open-api-spec.yaml');
+  // Prefer the spec snapshot pinned by prepareSpecInputs (--spec-commit) so a
+  // historical changelog repair extracts compat against that commit's spec, not
+  // whatever is checked out now. Falls back to the working-tree spec otherwise.
+  const specPath = args._specPath ?? join(openapiRepo, args['spec-path'] ?? 'spec/open-api-spec.yaml');
   const rawBase = args['sdk-base'] ?? 'origin/main...HEAD';
   const leftRef = rawBase.split(/\.\.\.?/)[0] || 'origin/main';
 
@@ -604,6 +611,7 @@ function severityToPrefix(severity) {
 // Cap those kinds: a would-be-breaking severity becomes `fix` (it is neither a
 // feature nor a major bump); additive severities pass through unchanged.
 const BACKEND_ONLY_DIFF_KINDS = new Set([
+  'field-added',
   'field-removed',
   'field-type-changed',
   'field-format-changed',
@@ -971,9 +979,11 @@ function summaryForGroup(group) {
   const commonField = facts.length > 1 && facts.every((fact) => fact.fieldName === facts[0].fieldName) ? facts[0].fieldName : null;
   if (commonField && kinds.size === 1 && kinds.has('field-added')) return `Add ${code(commonField)} to ${label} models`;
   if (commonField && kinds.size === 1 && kinds.has('field-required-changed')) {
-    return facts.every((fact) => fact.madeRequired)
-      ? `Make ${code(commonField)} required in ${label} models`
-      : `Make ${code(commonField)} optional in ${label} models`;
+    // Only collapse to a single required/optional summary when every fact moves
+    // the same way. A mixed group (required in one model, optional in another)
+    // falls through to the generic summary rather than misreporting one direction.
+    if (facts.every((fact) => fact.madeRequired)) return `Make ${code(commonField)} required in ${label} models`;
+    if (facts.every((fact) => !fact.madeRequired)) return `Make ${code(commonField)} optional in ${label} models`;
   }
 
   if (facts.length === 1) {
@@ -1013,9 +1023,10 @@ function descriptionForGroup(group) {
     return `- Added ${code(commonField)} to ${label} models.`;
   }
   if (commonField && kinds.size === 1 && kinds.has('field-required-changed')) {
-    return facts.every((fact) => fact.madeRequired)
-      ? `- Made ${code(commonField)} required in ${label} models.`
-      : `- Made ${code(commonField)} optional in ${label} models.`;
+    // Mixed directions fall through to the per-fact list below; only collapse
+    // to one line when every fact moves the same way.
+    if (facts.every((fact) => fact.madeRequired)) return `- Made ${code(commonField)} required in ${label} models.`;
+    if (facts.every((fact) => !fact.madeRequired)) return `- Made ${code(commonField)} optional in ${label} models.`;
   }
 
   return facts.map((fact) => `- ${fact.detail}`).join('\n');
