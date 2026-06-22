@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate the post-mount service roster for `@workos/openapi-spec/policy`.
+ * Generate the post-mount service roster for `@workos/openapi-spec/services`.
  *
  * `oagen resolve` applies this repo's resolution policy (mountRules, hints) to
  * the spec and emits, per operation, the service it mounts on. The roster is
@@ -8,8 +8,8 @@
  * remounted, otherwise its source `service`) — i.e. exactly the services the
  * generated SDKs expose.
  *
- * Output: src/policy/services.generated.ts (bundled into dist/policy.{mjs,d.mts}
- * by tsdown, so consumers get `import { services } from "@workos/openapi-spec/policy"`).
+ * Output: src/policy/services.generated.ts (bundled into dist/services.{mjs,d.mts}
+ * by tsdown, so consumers get `import { services } from "@workos/openapi-spec/services"`).
  *
  * Re-run via `npm run generate:services`; `build:policy` runs it automatically.
  */
