@@ -385,6 +385,12 @@ jobs:
             BREAKING='${{ steps.diff-report.outputs.breaking }}'
             ADDED='${{ steps.diff-report.outputs.added }}'
             if [ "${BREAKING:-0}" -gt 0 ] 2>/dev/null; then
+              # Reaching this branch means the metadata script classified zero
+              # entries, yet oagen diff still reports breaking changes — i.e. a
+              # diff kind factsFromDiff doesn't recognize. Default to feat!
+              # (over-bump is safer than silently shipping a break as a patch),
+              # but make it loud so the unhandled kind gets investigated.
+              echo "::warning::No classified release entries, but oagen diff reports ${BREAKING} breaking change(s). Defaulting to feat! (major bump) conservatively — this usually means factsFromDiff doesn't recognize a diff kind. Investigate rather than trusting the bump."
               ROLLUP_TYPE="feat"
               ROLLUP_BANG="!"
             elif [ "${ADDED:-0}" -gt 0 ] 2>/dev/null; then
