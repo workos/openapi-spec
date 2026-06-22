@@ -4,6 +4,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  statuses: write
 
 on:
   pull_request:
@@ -344,6 +345,47 @@ jobs:
               "repos/$REPO/issues/$PR_NUMBER/comments" \
               --input /tmp/sdk-compat-comment.json
           fi
+
+      - name: Report SDK compatibility status
+        # Publish a dedicated `sdk-compat` commit status on the PR head so the
+        # SDK automation bot can read a clean breaking/non-breaking signal
+        # (success = no breaking changes; failure = breaking) instead of
+        # scraping the PR comment. The build/test gate (this job's conclusion)
+        # is a separate signal; this status only encodes compatibility.
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          # A PR is breaking if any language's compat report contains a
+          # breaking-severity change. Missing reports (no spec change, or the
+          # build failed before producing them) count as non-breaking here —
+          # a failed build is already caught by the job conclusion below.
+          reports=(sdk-diagnostics/oagen-diagnostics-*/compat-report.json)
+          breaking=0
+          if [ ${#reports[@]} -gt 0 ]; then
+            breaking=$(jq -s '[.[].changes[]? | select(.severity == "breaking")] | length' "${reports[@]}")
+          fi
+
+          if [ "$breaking" -gt 0 ]; then
+            state="failure"
+            description="$breaking breaking SDK change(s) detected"
+          else
+            state="success"
+            description="No breaking SDK changes detected"
+          fi
+          echo "sdk-compat: $state ($description)"
+
+          gh api "repos/$REPO/statuses/$HEAD_SHA" \
+            -f state="$state" \
+            -f context="sdk-compat" \
+            -f description="$description" \
+            -f target_url="https://github.com/$REPO/actions/runs/$RUN_ID"
 
       - name: Check result
         run: |
