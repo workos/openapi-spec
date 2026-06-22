@@ -4,4 +4,7 @@ dist/
 .oagen
 compat-report.md
 
+# Generated at build by `npm run generate:services`; published only in dist/.
+src/policy/services.generated.ts
+
 workos-ir.json
