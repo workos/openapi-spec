@@ -6978,6 +6978,14 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '422':
+          description: >-
+            The matched installation uses a different auth method than this
+            endpoint expects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMethodMismatchError'
       summary: Get an access token for a connected account
       tags:
         - pipes
@@ -32528,6 +32536,25 @@ components:
           required:
             - active
             - error
+    AuthMethodMismatchError:
+      type: object
+      properties:
+        code:
+          type: string
+          description: >-
+            Error code indicating the endpoint does not match the installation
+            auth method.
+          example: auth_method_mismatch
+          const: auth_method_mismatch
+        message:
+          type: string
+          description: A human-readable explanation of the mismatch.
+          example: >-
+            This installation uses oauth authentication. Use the POST
+            /:slug/token endpoint instead.
+      required:
+        - code
+        - message
     ConnectedAccount:
       type: object
       properties:
