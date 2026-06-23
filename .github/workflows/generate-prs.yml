@@ -1,9 +1,7 @@
 name: Generate PRs
 
 on:
-  # NOTE: The push-to-main (paths: spec/**) trigger was REMOVED in Phase 2 of
-  # scoped SDK generation. A spec merge no longer fans out monolithic PRs across
-  # every language; batches are now dispatched (by the dashboard bot, Phase 4)
+  # Batches are dispatched by the SDK bot
   # via workflow_dispatch with an explicit `services` scope and `batch_id`.
   workflow_dispatch:
     inputs:
@@ -522,8 +520,7 @@ jobs:
           # entries (for per-entry commits) and the composed PR body, then
           # delegates. The branch is the deterministic oagen/batch-<batch_id>,
           # force-pushed so a re-dispatch with the same batch_id updates the one
-          # PR instead of opening a second (NFR-2.2). An empty scoped diff exits
-          # cleanly with no PR (FR-2.7).
+          # PR instead of opening a second.
           git config user.name "workos-sdk-automation[bot]"
           git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
 

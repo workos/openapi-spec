@@ -3,7 +3,7 @@
 // build-spec-changes.mjs
 //
 // Transform an `oagen diff` report into a per-commit changed-services manifest
-// that the dashboard bot (Phase 4) reads to compute pending SDK work.
+// that the SDK bot reads to compute pending SDK work.
 //
 //   .spec-changes/<sha>.json
 //   {
@@ -17,7 +17,7 @@
 //   }
 //
 // Service names are POST-MOUNT (PascalCase) so they match exactly what the
-// dashboard offers and what `oagen generate --services <name>` accepts. The
+// SDK bot offers and what `oagen generate --services <name>` accepts. The
 // mapping uses the SAME `mountRules` the generator uses (imported from the
 // built policy bundle), never a re-encoded copy.
 //
@@ -26,42 +26,39 @@
 //     are resolved from the IR (a shared model surfaces every service that
 //     references it, transitively). This needs --old-ir/--new-ir; without them
 //     model/enum changes cannot be attributed and are reported on stderr.
-//
-// Pure Node — no network, no oagen invocation. The workflow runs `oagen diff`
-// and `oagen parse` and feeds this script the resulting JSON.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { pathToFileURL } from "node:url";
 
-const BREAKING = 'breaking';
+const BREAKING = "breaking";
 
 // ── arg parsing ────────────────────────────────────────────────────────────
 function parseArgs(argv) {
   const args = {
-    report: '',
-    oldIr: '',
-    newIr: '',
-    sha: '',
-    parentSha: '',
-    timestamp: '',
-    output: '',
+    report: "",
+    oldIr: "",
+    newIr: "",
+    sha: "",
+    parentSha: "",
+    timestamp: "",
+    output: "",
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--report') args.report = argv[++i] ?? '';
-    else if (arg === '--old-ir') args.oldIr = argv[++i] ?? '';
-    else if (arg === '--new-ir') args.newIr = argv[++i] ?? '';
-    else if (arg === '--sha') args.sha = argv[++i] ?? '';
-    else if (arg === '--parent-sha') args.parentSha = argv[++i] ?? '';
-    else if (arg === '--timestamp') args.timestamp = argv[++i] ?? '';
-    else if (arg === '--output') args.output = argv[++i] ?? '';
+    if (arg === "--report") args.report = argv[++i] ?? "";
+    else if (arg === "--old-ir") args.oldIr = argv[++i] ?? "";
+    else if (arg === "--new-ir") args.newIr = argv[++i] ?? "";
+    else if (arg === "--sha") args.sha = argv[++i] ?? "";
+    else if (arg === "--parent-sha") args.parentSha = argv[++i] ?? "";
+    else if (arg === "--timestamp") args.timestamp = argv[++i] ?? "";
+    else if (arg === "--output") args.output = argv[++i] ?? "";
     else throw new Error(`Unknown option: ${arg}`);
   }
   if (!args.report) {
     throw new Error(
-      'Usage: build-spec-changes.mjs --report <oagen-diff.json> [--old-ir <ir.json>] ' +
-        '[--new-ir <ir.json>] [--sha <sha>] [--parent-sha <sha>] [--timestamp <iso>] [--output <file>]',
+      "Usage: build-spec-changes.mjs --report <oagen-diff.json> [--old-ir <ir.json>] " +
+        "[--new-ir <ir.json>] [--sha <sha>] [--parent-sha <sha>] [--timestamp <iso>] [--output <file>]",
     );
   }
   return args;
@@ -69,7 +66,7 @@ function parseArgs(argv) {
 
 function readJson(path, fallback) {
   if (!path || !existsSync(path)) return fallback;
-  return JSON.parse(readFileSync(path, 'utf8'));
+  return JSON.parse(readFileSync(path, "utf8"));
 }
 
 // ── post-mount mapping ───────────────────────────────────────────────────────
@@ -101,9 +98,9 @@ export function buildSymbolOwners(irs, mountRules) {
   };
 
   const collectTypeRefs = (type, out) => {
-    if (!type || typeof type !== 'object') return;
-    if (type.kind === 'model' && type.name) out.models.add(type.name);
-    if (type.kind === 'enum' && type.name) out.enums.add(type.name);
+    if (!type || typeof type !== "object") return;
+    if (type.kind === "model" && type.name) out.models.add(type.name);
+    if (type.kind === "enum" && type.name) out.enums.add(type.name);
     if (type.inner) collectTypeRefs(type.inner, out);
     if (type.items) collectTypeRefs(type.items, out);
     if (type.values) collectTypeRefs(type.values, out);
@@ -120,7 +117,8 @@ export function buildSymbolOwners(irs, mountRules) {
       const nested = { models: new Set(), enums: new Set() };
       collectTypeRefs(field.type, nested);
       for (const enumName of nested.enums) out.enums.add(enumName);
-      for (const nestedModel of nested.models) collectModelClosure(nestedModel, out, seen);
+      for (const nestedModel of nested.models)
+        collectModelClosure(nestedModel, out, seen);
     }
   };
 
@@ -138,13 +136,16 @@ export function buildSymbolOwners(irs, mountRules) {
         }
         collectTypeRefs(operation.requestBody, direct);
         collectTypeRefs(operation.response, direct);
-        for (const response of operation.successResponses ?? []) collectTypeRefs(response.type, direct);
-        for (const error of operation.errors ?? []) collectTypeRefs(error.type, direct);
+        for (const response of operation.successResponses ?? [])
+          collectTypeRefs(response.type, direct);
+        for (const error of operation.errors ?? [])
+          collectTypeRefs(error.type, direct);
 
         const all = { models: new Set(), enums: new Set(direct.enums) };
-        for (const modelName of direct.models) collectModelClosure(modelName, all);
-        for (const modelName of all.models) add('model', modelName, postMount);
-        for (const enumName of all.enums) add('enum', enumName, postMount);
+        for (const modelName of direct.models)
+          collectModelClosure(modelName, all);
+        for (const modelName of all.models) add("model", modelName, postMount);
+        for (const enumName of all.enums) add("enum", enumName, postMount);
       }
     }
   }
@@ -157,10 +158,11 @@ export function buildSymbolOwners(irs, mountRules) {
 // treat any `*-removed` kind and any breaking sub-change as breaking, so the
 // flag is robust even if the rollup ever regresses.
 export function isBreaking(change) {
-  if (!change || typeof change !== 'object') return false;
+  if (!change || typeof change !== "object") return false;
   if (change.classification === BREAKING) return true;
-  if (typeof change.kind === 'string' && change.kind.endsWith('-removed')) return true;
-  for (const key of ['fieldChanges', 'paramChanges', 'valueChanges']) {
+  if (typeof change.kind === "string" && change.kind.endsWith("-removed"))
+    return true;
+  for (const key of ["fieldChanges", "paramChanges", "valueChanges"]) {
     for (const sub of change[key] ?? []) {
       if (sub?.classification === BREAKING) return true;
     }
@@ -170,26 +172,33 @@ export function isBreaking(change) {
 
 // Post-mount services a single diff change affects.
 export function servicesForChange(change, owners, mountRules) {
-  const kind = typeof change?.kind === 'string' ? change.kind : '';
-  if (kind.startsWith('operation-')) {
+  const kind = typeof change?.kind === "string" ? change.kind : "";
+  if (kind.startsWith("operation-")) {
     const service = toPostMount(change.serviceName, mountRules);
     return service ? [service] : [];
   }
-  if (kind.startsWith('service-')) {
+  if (kind.startsWith("service-")) {
     const service = toPostMount(change.name, mountRules);
     return service ? [service] : [];
   }
-  if (kind.startsWith('model-')) {
+  if (kind.startsWith("model-")) {
     return [...(owners.get(`model:${change.name}`) ?? [])];
   }
-  if (kind.startsWith('enum-')) {
+  if (kind.startsWith("enum-")) {
     return [...(owners.get(`enum:${change.name}`) ?? [])];
   }
   return [];
 }
 
 // ── build the manifest ───────────────────────────────────────────────────────
-export function buildSpecChanges({ report, irs = [], sha = '', parentSha = '', timestamp = '', mountRules = {} }) {
+export function buildSpecChanges({
+  report,
+  irs = [],
+  sha = "",
+  parentSha = "",
+  timestamp = "",
+  mountRules = {},
+}) {
   const owners = buildSymbolOwners(irs, mountRules);
   const byService = new Map(); // postMountService -> hasBreaking
   let unattributedSymbolChanges = 0;
@@ -200,8 +209,11 @@ export function buildSpecChanges({ report, irs = [], sha = '', parentSha = '', t
 
   for (const change of report.changes ?? []) {
     const services = servicesForChange(change, owners, mountRules);
-    const kind = typeof change?.kind === 'string' ? change.kind : '';
-    if (services.length === 0 && (kind.startsWith('model-') || kind.startsWith('enum-'))) {
+    const kind = typeof change?.kind === "string" ? change.kind : "";
+    if (
+      services.length === 0 &&
+      (kind.startsWith("model-") || kind.startsWith("enum-"))
+    ) {
       unattributedSymbolChanges += 1;
     }
     const breaking = isBreaking(change);
@@ -220,18 +232,21 @@ export function buildSpecChanges({ report, irs = [], sha = '', parentSha = '', t
     .map(([service, hasBreaking]) => ({ service, hasBreaking }))
     .sort((a, b) => a.service.localeCompare(b.service));
 
-  return { manifest: { sha, parentSha, timestamp, changedServices }, unattributedSymbolChanges };
+  return {
+    manifest: { sha, parentSha, timestamp, changedServices },
+    unattributedSymbolChanges,
+  };
 }
 
 // ── CLI entrypoint ────────────────────────────────────────────────────────────
 async function loadMountRules() {
   try {
-    const mod = await import(new URL('../dist/policy.mjs', import.meta.url));
+    const mod = await import(new URL("../dist/policy.mjs", import.meta.url));
     return mod.mountRules ?? {};
   } catch (err) {
     throw new Error(
       `Failed to import mountRules from dist/policy.mjs (${err.message}). ` +
-        'Run `npm run build:policy` first — dist/ is git-ignored and is not built by `npm ci`.',
+        "Run `npm run build:policy` first — dist/ is git-ignored and is not built by `npm ci`.",
     );
   }
 }
@@ -239,7 +254,8 @@ async function loadMountRules() {
 async function main() {
   const args = parseArgs(process.argv);
   const report = readJson(args.report, null);
-  if (!report) throw new Error(`Diff report not found or empty: ${args.report}`);
+  if (!report)
+    throw new Error(`Diff report not found or empty: ${args.report}`);
 
   const irs = [readJson(args.oldIr, null), readJson(args.newIr, null)];
   const mountRules = await loadMountRules();
@@ -256,8 +272,8 @@ async function main() {
 
   if (unattributedSymbolChanges > 0) {
     const reason = irs.some(Boolean)
-      ? 'these models/enums are referenced by no operation (orphaned) or absent from the supplied IR'
-      : 'no --old-ir/--new-ir supplied, so model/enum changes cannot be attributed to services';
+      ? "these models/enums are referenced by no operation (orphaned) or absent from the supplied IR"
+      : "no --old-ir/--new-ir supplied, so model/enum changes cannot be attributed to services";
     process.stderr.write(
       `warning: ${unattributedSymbolChanges} model/enum change(s) were not attributed to any service ` +
         `(${reason}).\n`,
@@ -267,7 +283,7 @@ async function main() {
   const json = `${JSON.stringify(manifest, null, 2)}\n`;
   if (args.output) {
     mkdirSync(dirname(args.output), { recursive: true });
-    writeFileSync(args.output, json, 'utf8');
+    writeFileSync(args.output, json, "utf8");
     process.stderr.write(
       `Wrote ${args.output} (${manifest.changedServices.length} changed service(s))\n`,
     );
@@ -276,7 +292,7 @@ async function main() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch((err) => {
     process.stderr.write(`${err.message}\n`);
     process.exit(1);

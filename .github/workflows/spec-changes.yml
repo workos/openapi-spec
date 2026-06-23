@@ -1,9 +1,9 @@
 name: Record spec changes
 
 # On every spec merge, record which post-mount services changed (and whether any
-# change is breaking) as a per-commit manifest the dashboard bot (Phase 4) reads
+# change is breaking) as a per-commit manifest the SDK bot reads
 # to compute pending SDK work. All the substance lives in
-# scripts/build-spec-changes.mjs (pure Node, unit-tested); this workflow is a
+# scripts/build-spec-changes.mjs; this workflow is a
 # thin wrapper that runs `oagen diff`/`parse` and commits the result.
 #
 # Self-trigger guard: the manifest is committed to the repo-root `.spec-changes/`
