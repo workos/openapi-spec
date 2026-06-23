@@ -239,6 +239,10 @@ function prepareSpecInputs(args) {
       'diff-report': args['diff-report'] ?? diffPath,
       'old-ir': args['old-ir'] ?? oldIrPath,
       'new-ir': args['new-ir'] ?? newIrPath,
+      // Absolute path to the spec at the requested commit, so a downstream
+      // compat derivation extracts against that historical spec rather than the
+      // current checkout (see prepareCompatInputs).
+      _specPath: newSpecPath,
       _tmpdir: tmp,
     };
   } catch (err) {
@@ -270,7 +274,10 @@ function prepareCompatInputs(args) {
   const sdkRepo = args['sdk-repo'];
   const lang = args.lang ?? inferLanguage(sdkRepo);
   const openapiRepo = args['openapi-repo'] ?? process.cwd();
-  const specPath = join(openapiRepo, args['spec-path'] ?? 'spec/open-api-spec.yaml');
+  // Prefer the spec snapshot pinned by prepareSpecInputs (--spec-commit) so a
+  // historical changelog repair extracts compat against that commit's spec, not
+  // whatever is checked out now. Falls back to the working-tree spec otherwise.
+  const specPath = args._specPath ?? join(openapiRepo, args['spec-path'] ?? 'spec/open-api-spec.yaml');
   const rawBase = args['sdk-base'] ?? 'origin/main...HEAD';
   const leftRef = rawBase.split(/\.\.\.?/)[0] || 'origin/main';
 
@@ -452,6 +459,7 @@ function buildIndexes(specs) {
   const enumWireValues = new Map();
   const symbolScopes = new Map();
   const operationByKey = new Map();
+  const serviceNames = new Set();
   // Per-side (old vs new) maps of operation → response/request type name, used
   // to describe *what* changed in a modified operation. specs is [oldIr, newIr].
   const responseTypeByKey = { old: new Map(), new: new Map() };
@@ -514,6 +522,7 @@ function buildIndexes(specs) {
   for (const spec of specs.filter(Boolean)) {
     for (const service of spec.services ?? []) {
       const scope = publicScopeFromService(service.name);
+      serviceNames.add(service.name);
       for (const operation of service.operations ?? []) {
         operationByKey.set(`${service.name}.${operation.name}`, operation);
 
@@ -538,7 +547,8 @@ function buildIndexes(specs) {
     }
   }
 
-  return { enumWireValues, symbolScopes, operationByKey, responseTypeByKey, requestTypeByKey };
+  const typeNames = new Set([...modelByName.keys(), ...enumByName.keys()]);
+  return { enumWireValues, symbolScopes, operationByKey, responseTypeByKey, requestTypeByKey, serviceNames, typeNames };
 }
 
 function resolveServiceScope(serviceName) {
@@ -595,6 +605,27 @@ function severityToPrefix(severity) {
   return 'fix';
 }
 
+// Per policy, only a changed call signature or a removed/renamed *type* is
+// breaking. Field-, enum-value-, and response/request-shape changes are backend
+// API changes — never breaking, even when the spec differ classifies them so.
+// Cap those kinds: a would-be-breaking severity becomes `fix` (it is neither a
+// feature nor a major bump); additive severities pass through unchanged.
+const BACKEND_ONLY_DIFF_KINDS = new Set([
+  'field-added',
+  'field-removed',
+  'field-type-changed',
+  'field-format-changed',
+  'field-required-changed',
+  'field-access-changed',
+  'value-removed',
+  'value-modified',
+  'response-changed',
+  'request-body-changed',
+]);
+function capSeverity(kind, severity) {
+  return BACKEND_ONLY_DIFF_KINDS.has(kind) && severity === 'breaking' ? 'fix' : severity;
+}
+
 function addFact(facts, fact) {
   facts.push({
     symbols: [],
@@ -637,17 +668,19 @@ function factsFromDiff(diffReport, indexes) {
     } else if (change.kind === 'model-modified') {
       const scope = resolveSymbolScope('model', change.name, indexes);
       for (const fieldChange of change.fieldChanges ?? []) {
-        const severity = fieldChange.classification;
+        // The spec differ encodes a field's required/optional *direction* in the
+        // classification (made-required reads as breaking). Capture it before the
+        // severity is capped, since the changelog wording depends on it.
+        const madeRequired = fieldChange.classification === 'breaking';
         let detail;
         if (fieldChange.kind === 'field-added') {
           detail = `Added \`${fieldChange.fieldName}\` to \`${change.name}\`.`;
         } else if (fieldChange.kind === 'field-removed') {
           detail = `Removed \`${fieldChange.fieldName}\` from \`${change.name}\`.`;
         } else if (fieldChange.kind === 'field-required-changed') {
-          detail =
-            severity === 'breaking'
-              ? `Made \`${change.name}.${fieldChange.fieldName}\` required.`
-              : `Made \`${change.name}.${fieldChange.fieldName}\` optional.`;
+          detail = madeRequired
+            ? `Made \`${change.name}.${fieldChange.fieldName}\` required.`
+            : `Made \`${change.name}.${fieldChange.fieldName}\` optional.`;
         } else if (fieldChange.kind === 'field-type-changed') {
           detail = `Changed the type of \`${change.name}.${fieldChange.fieldName}\`.`;
         } else if (fieldChange.kind === 'field-format-changed') {
@@ -656,12 +689,13 @@ function factsFromDiff(diffReport, indexes) {
           detail = `Changed access for \`${change.name}.${fieldChange.fieldName}\`.`;
         }
         addFact(facts, {
-          severity,
+          severity: capSeverity(fieldChange.kind, fieldChange.classification),
           ...scopeFields(scope),
           kind: fieldChange.kind,
           symbols: [change.name, fieldChange.fieldName],
           fieldName: fieldChange.fieldName,
           modelName: change.name,
+          ...(fieldChange.kind === 'field-required-changed' ? { madeRequired } : {}),
           detail,
         });
       }
@@ -686,7 +720,6 @@ function factsFromDiff(diffReport, indexes) {
     } else if (change.kind === 'enum-modified') {
       const scope = resolveSymbolScope('enum', change.name, indexes);
       for (const valueChange of change.valueChanges ?? []) {
-        const severity = valueChange.classification;
         let detail;
         if (valueChange.kind === 'value-added') {
           detail = `Added ${enumDisplay(change.name, valueChange.valueName, indexes)} to \`${change.name}\`.`;
@@ -696,7 +729,7 @@ function factsFromDiff(diffReport, indexes) {
           detail = `Changed ${enumDisplay(change.name, valueChange.valueName, indexes)} in \`${change.name}\`.`;
         }
         addFact(facts, {
-          severity,
+          severity: capSeverity(valueChange.kind, valueChange.classification),
           ...scopeFields(scope),
           kind: valueChange.kind,
           symbols: [change.name, valueChange.valueName],
@@ -765,7 +798,7 @@ function factsFromDiff(diffReport, indexes) {
         const oldType = indexes.responseTypeByKey?.old.get(opKey);
         const newType = indexes.responseTypeByKey?.new.get(opKey);
         addFact(facts, {
-          severity: change.classification,
+          severity: capSeverity('response-changed', change.classification),
           ...scopeFields(scope),
           kind: 'response-changed',
           symbols: [change.serviceName, change.operationName],
@@ -779,7 +812,7 @@ function factsFromDiff(diffReport, indexes) {
         const oldType = indexes.requestTypeByKey?.old.get(opKey);
         const newType = indexes.requestTypeByKey?.new.get(opKey);
         addFact(facts, {
-          severity: change.classification,
+          severity: capSeverity('request-body-changed', change.classification),
           ...scopeFields(scope),
           kind: 'request-body-changed',
           symbols: [change.serviceName, change.operationName],
@@ -836,7 +869,37 @@ function renamesFromCompat(compatReport) {
   return renames;
 }
 
-function factsFromCompat(compatReport, existingFacts) {
+// Compat categories the tool may flag breaking that are still backend API
+// changes under our policy: a field's type, an enum member value, a method's
+// return type, or a default moving. Only call-signature and whole-type changes
+// stay breaking.
+const NON_BREAKING_COMPAT_CATEGORIES = new Set([
+  'field_type_changed',
+  'enum_member_value_changed',
+  'return_type_changed',
+  'default_value_changed',
+]);
+
+// Decide whether a breaking-severity compat change is breaking under our policy.
+// `symbol_removed`/`symbol_renamed` carry no kind, so split owner from member and
+// consult the IR: a member of a model/enum is a property (field rename/removal —
+// not breaking); a whole type/service or a service/client member is call surface.
+function compatChangeIsBreaking(change, indexes) {
+  const category = String(change.category ?? '');
+  if (NON_BREAKING_COMPAT_CATEGORIES.has(category)) return false;
+  if (category === 'symbol_removed' || category === 'symbol_renamed') {
+    const symbol = String(change.symbol ?? '');
+    const dot = symbol.lastIndexOf('.');
+    if (dot === -1) return true; // whole type/service removed or renamed
+    const owner = symbol.slice(0, dot).replace(/^Async(?=[A-Z])/, '');
+    if (indexes?.serviceNames?.has(owner) || owner === 'Client') return true;
+    if (indexes?.typeNames?.has(owner)) return false;
+    return true; // unknown owner — preserve breaking rather than drop a real removal
+  }
+  return true;
+}
+
+function factsFromCompat(compatReport, existingFacts, indexes) {
   const facts = [];
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
   const renames = renamesFromCompat(compatReport);
@@ -846,7 +909,7 @@ function factsFromCompat(compatReport, existingFacts) {
   // is the primary public API and reads better in the changelog.
   const isAsync = (change) => (/^Async(?=[A-Z])/.test(String(change.symbol ?? '')) ? 1 : 0);
   const breakingChanges = (compatReport?.changes ?? [])
-    .filter((change) => change.severity === 'breaking')
+    .filter((change) => change.severity === 'breaking' && compatChangeIsBreaking(change, indexes))
     .sort((a, b) => isAsync(a) - isAsync(b));
 
   for (const change of breakingChanges) {
@@ -916,9 +979,11 @@ function summaryForGroup(group) {
   const commonField = facts.length > 1 && facts.every((fact) => fact.fieldName === facts[0].fieldName) ? facts[0].fieldName : null;
   if (commonField && kinds.size === 1 && kinds.has('field-added')) return `Add ${code(commonField)} to ${label} models`;
   if (commonField && kinds.size === 1 && kinds.has('field-required-changed')) {
-    return group.severity === 'breaking'
-      ? `Make ${code(commonField)} required in ${label} models`
-      : `Make ${code(commonField)} optional in ${label} models`;
+    // Only collapse to a single required/optional summary when every fact moves
+    // the same way. A mixed group (required in one model, optional in another)
+    // falls through to the generic summary rather than misreporting one direction.
+    if (facts.every((fact) => fact.madeRequired)) return `Make ${code(commonField)} required in ${label} models`;
+    if (facts.every((fact) => !fact.madeRequired)) return `Make ${code(commonField)} optional in ${label} models`;
   }
 
   if (facts.length === 1) {
@@ -958,9 +1023,10 @@ function descriptionForGroup(group) {
     return `- Added ${code(commonField)} to ${label} models.`;
   }
   if (commonField && kinds.size === 1 && kinds.has('field-required-changed')) {
-    return group.severity === 'breaking'
-      ? `- Made ${code(commonField)} required in ${label} models.`
-      : `- Made ${code(commonField)} optional in ${label} models.`;
+    // Mixed directions fall through to the per-fact list below; only collapse
+    // to one line when every fact moves the same way.
+    if (facts.every((fact) => fact.madeRequired)) return `- Made ${code(commonField)} required in ${label} models.`;
+    if (facts.every((fact) => !fact.madeRequired)) return `- Made ${code(commonField)} optional in ${label} models.`;
   }
 
   return facts.map((fact) => `- ${fact.detail}`).join('\n');
@@ -1126,7 +1192,7 @@ try {
 
   const indexes = buildIndexes([oldIr, newIr]);
   const specFacts = factsFromDiff(diffReport, indexes);
-  const compatFacts = factsFromCompat(compatReport, specFacts);
+  const compatFacts = factsFromCompat(compatReport, specFacts, indexes);
   const entries = entriesFromGroups(groupFacts([...specFacts, ...compatFacts]), changedFiles);
   reportScopeValidation(entries, args);
 

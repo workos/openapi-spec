@@ -1,6 +1,6 @@
 {
   "name": "@workos/openapi-spec",
-  "version": "0.8.0",
+  "version": "0.10.0",
   "type": "module",
   "description": "WorkOS OpenAPI specification, TypeScript types, and SDK resolution policy",
   "license": "MIT",
@@ -22,6 +22,10 @@
       "types": "./dist/policy.d.mts",
       "import": "./dist/policy.mjs"
     },
+    "./services": {
+      "types": "./dist/services.d.mts",
+      "import": "./dist/services.mjs"
+    },
     "./operation-overrides/node": "./dist/operationOverrides.node.json",
     "./package.json": "./package.json"
   },
@@ -29,7 +33,8 @@
     "@workos/oagen": "^0.23.0"
   },
   "scripts": {
-    "build:policy": "tsdown",
+    "generate:services": "node scripts/generate-services.mjs",
+    "build:policy": "npm run generate:services && tsdown",
     "test": "node --test scripts/__tests__/*.spec.mjs",
     "generate:postman": "tsx scripts/postman/generate.ts",
     "generate:postman:local": "tsx scripts/postman/generate.ts --local",
