@@ -7404,6 +7404,24 @@ paths:
           schema:
             example: directory_group_01E64QTDNS0EGJ0FMCVY9BWGZT
             type: string
+        - name: idp_id
+          required: false
+          in: query
+          description: >-
+            Filter Directory Users by the identity provider's unique identifier
+            (`idp_id`). Requires the `directory` parameter to also be provided.
+          schema:
+            example: '2836'
+            type: string
+        - name: email
+          required: false
+          in: query
+          description: >-
+            Filter Directory Users by their primary email address. Requires the
+            `directory` parameter to also be provided.
+          schema:
+            example: jane.doe@example.com
+            type: string
       responses:
         '200':
           description: OK
@@ -11710,6 +11728,14 @@ paths:
                                   The email address of the user that must
                                   authenticate via SSO.
                                 example: user@example.com
+                              pending_authentication_token:
+                                type: string
+                                description: >-
+                                  A token that links the subsequent SSO
+                                  authentication back to the pending
+                                  authentication so the authorization session
+                                  can be completed.
+                                example: pat_01FVYZ...
                             required:
                               - connection_ids
                               - email
@@ -13482,6 +13508,13 @@ paths:
                     description: >-
                       The primary role assigned to the user within the
                       organization.
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SlimRole'
+                    description: >-
+                      The list of roles assigned to the user within the
+                      organization.
                   user:
                     $ref: '#/components/schemas/UserlandUser'
                     description: >-
@@ -13497,6 +13530,7 @@ paths:
                   - created_at
                   - updated_at
                   - role
+                  - roles
                   - user
                 x-inline-with-overrides: true
         '400':
@@ -13897,6 +13931,13 @@ paths:
                     description: >-
                       The primary role assigned to the user within the
                       organization.
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SlimRole'
+                    description: >-
+                      The list of roles assigned to the user within the
+                      organization.
                   user:
                     $ref: '#/components/schemas/UserlandUser'
                     description: >-
@@ -13912,6 +13953,7 @@ paths:
                   - created_at
                   - updated_at
                   - role
+                  - roles
                   - user
                 x-inline-with-overrides: true
         '400':
@@ -20050,6 +20092,7 @@ components:
               - pipes.connected_account.disconnected
               - pipes.connected_account.reauthorization_needed
               - session.created
+              - session.reauthenticated
               - session.revoked
               - waitlist_user.approved
               - waitlist_user.created
@@ -20978,7 +21021,10 @@ components:
             - pending
             - ready
             - error
-          description: 'The state of the export. Possible values: pending, ready, error.'
+            - expired
+          description: >-
+            The state of the export. Possible values: pending, ready, error,
+            expired.
           example: ready
         url:
           type:
@@ -30475,6 +30521,150 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: session.reauthenticated
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the session object.
+                      const: session
+                    id:
+                      type: string
+                      description: The unique ID of the session.
+                      example: session_01H93ZY4F80QPBEZ1R5B2SHQG8
+                    impersonator:
+                      type: object
+                      properties:
+                        email:
+                          type: string
+                          description: >-
+                            The email address of the WorkOS Dashboard user who
+                            is impersonating the user.
+                          example: admin@foocorp.com
+                        reason:
+                          type:
+                            - string
+                            - 'null'
+                          description: >-
+                            The justification the impersonator gave for
+                            impersonating the user.
+                          example: Investigating an issue with the customer's account.
+                      required:
+                        - email
+                        - reason
+                      description: >-
+                        Information about the impersonator if this session was
+                        created via impersonation.
+                    ip_address:
+                      type:
+                        - string
+                        - 'null'
+                      description: The IP address from which the session was created.
+                      example: 198.51.100.42
+                    organization_id:
+                      type: string
+                      description: >-
+                        The ID of the organization this session is associated
+                        with.
+                      example: org_01H945H0YD4F97JN9MATX7BYAG
+                    user_agent:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The user agent string from the device that created the
+                        session.
+                      example: >-
+                        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+                        AppleWebKit/537.36
+                    user_id:
+                      type: string
+                      description: The ID of the user this session belongs to.
+                      example: user_01E4ZCR3C56J083X43JQXF3JK5
+                    auth_method:
+                      type: string
+                      enum:
+                        - cross_app_auth
+                        - external_auth
+                        - impersonation
+                        - magic_code
+                        - migrated_session
+                        - oauth
+                        - passkey
+                        - password
+                        - sso
+                        - unknown
+                      description: The authentication method used to create this session.
+                      example: sso
+                    status:
+                      type: string
+                      enum:
+                        - active
+                        - expired
+                        - revoked
+                      description: The current status of the session.
+                      example: active
+                    expires_at:
+                      format: date-time
+                      type: string
+                      description: The timestamp when the session expires.
+                      example: '2026-01-15T12:00:00.000Z'
+                    ended_at:
+                      format: date-time
+                      type:
+                        - string
+                        - 'null'
+                      description: The timestamp when the session ended.
+                      example: null
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - ip_address
+                    - user_agent
+                    - user_id
+                    - auth_method
+                    - status
+                    - expires_at
+                    - ended_at
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: session.revoked
                 data:
                   type: object
@@ -33090,6 +33280,11 @@ components:
         role:
           $ref: '#/components/schemas/SlimRole'
           description: The primary role assigned to the user within the organization.
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlimRole'
+          description: The list of roles assigned to the user within the organization.
         user:
           $ref: '#/components/schemas/UserlandUser'
           description: The user that belongs to the organization through this membership.
@@ -33103,6 +33298,7 @@ components:
         - created_at
         - updated_at
         - role
+        - roles
         - user
     UserlandUserOrganizationMembershipList:
       type: object
