@@ -5,6 +5,7 @@ SPEC="spec/open-api-spec.yaml"
 LANG=""
 OUTPUT=""
 NAMESPACE=""
+SERVICES=""
 EXTRA_ARGS=()
 TMP_SURFACE=""
 TMP_SDK=""
@@ -14,12 +15,21 @@ while [[ $# -gt 0 ]]; do
     --lang)      LANG="$2";      shift 2 ;;
     --output)    OUTPUT="$2";    shift 2 ;;
     --namespace) NAMESPACE="$2"; shift 2 ;;
+    --services)  SERVICES="$2";  shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
 
+# Scoped generation: forward --services to `oagen generate`. Absent (or empty)
+# means full generation — no flag is appended, preserving the default behaviour
+# every existing caller relies on. An unknown service makes oagen exit non-zero
+# with the valid-name list, which `set -euo pipefail` propagates as a job failure.
+if [[ -n "$SERVICES" ]]; then
+  EXTRA_ARGS+=(--services "$SERVICES")
+fi
+
 if [[ -z "$LANG" ]]; then
-  echo "Usage: sdk-generate.sh --lang <language> --output <path> [--namespace <ns>]" >&2
+  echo "Usage: sdk-generate.sh --lang <language> --output <path> [--namespace <ns>] [--services <list>]" >&2
   exit 1
 fi
 

@@ -30,11 +30,12 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@workos/oagen": "^0.22.6"
+    "@workos/oagen": "^0.23.0"
   },
   "scripts": {
     "generate:services": "node scripts/generate-services.mjs",
     "build:policy": "npm run generate:services && tsdown",
+    "test": "node --test scripts/__tests__/*.spec.mjs",
     "generate:postman": "tsx scripts/postman/generate.ts",
     "generate:postman:local": "tsx scripts/postman/generate.ts --local",
     "sdk:resolve": "npx oagen resolve --spec spec/open-api-spec.yaml",
@@ -54,16 +55,16 @@
     "prepare": "husky"
   },
   "overrides": {
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^5.1.0",
     "lodash": "^4.17.23"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.9.3",
-    "@workos/oagen-emitters": "^0.18.3",
+    "@types/node": "^26.0.0",
+    "@workos/oagen-emitters": "^0.19.0",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^5.1.0",
     "openapi-to-postmanv2": "^6.1.0",
     "tsdown": "^0.22.3",
     "tsx": "^4.22.4",

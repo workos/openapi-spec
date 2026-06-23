@@ -1,0 +1,130 @@
+name: Record spec changes
+
+# On every spec merge, compute which post-mount services changed (and whether
+# any change is breaking) and PUSH the manifest to the SDK automation bot, which
+# stores it in its own D1. Nothing is committed back to this repo — the
+# substance lives in scripts/build-spec-changes.mjs; this workflow runs
+# `oagen diff`/`parse` and POSTs the result (HMAC-signed). The bot owns
+# retention, so no artifact files accumulate here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spec/**'
+
+concurrency:
+  # Serialize so two spec merges in quick succession each get their manifest
+  # pushed; do not cancel an in-flight run (each merge deserves its push).
+  group: spec-changes
+  cancel-in-progress: false
+
+env:
+  SDK_BOT_URL: https://sdk-automation-bot.workos.tools
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build policy module
+        # build-spec-changes.mjs imports mountRules from dist/policy.mjs, which
+        # is git-ignored and not produced by `npm ci`.
+        run: npm run build:policy
+
+      - name: Resolve parent spec
+        id: parent
+        run: |
+          set -euo pipefail
+          PARENT="${{ github.event.before }}"
+          if [ -z "$PARENT" ] || [ "$PARENT" = "0000000000000000000000000000000000000000" ]; then
+            PARENT="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$PARENT" ] || ! git cat-file -e "$PARENT:spec/open-api-spec.yaml" 2>/dev/null; then
+            echo "No parent spec to diff against; nothing to record."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git show "$PARENT:spec/open-api-spec.yaml" > /tmp/previous-open-api-spec.yaml
+          echo "parent=$PARENT" >> "$GITHUB_OUTPUT"
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Diff + parse spec revisions
+        if: steps.parent.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          # `oagen diff` exit code 2 means breaking changes were detected — that
+          # is a successful diff, not a failure (mirrors generate-prs.yml). The
+          # `|| DIFF_EXIT=$?` suffix is errexit-safe (a command on the left of
+          # `||` never trips `-e`), so we keep `-e` on to ensure the `oagen parse`
+          # commands below fail the step instead of silently writing empty IR.
+          REPORT=$(npx oagen diff \
+            --old /tmp/previous-open-api-spec.yaml \
+            --new spec/open-api-spec.yaml) || DIFF_EXIT=$?
+          if [ "${DIFF_EXIT:-0}" -ne 0 ] && [ "${DIFF_EXIT:-0}" -ne 2 ]; then
+            echo "::warning::oagen diff failed (exit code ${DIFF_EXIT})"
+            exit 1
+          fi
+          if ! echo "$REPORT" | jq -e '.summary' > /dev/null 2>&1; then
+            echo "::warning::oagen diff returned invalid JSON"
+            exit 1
+          fi
+          echo "$REPORT" > /tmp/diff-report.json
+
+          # IR for both revisions lets build-spec-changes attribute model/enum
+          # changes to the services that reference them.
+          npx oagen parse --spec /tmp/previous-open-api-spec.yaml > /tmp/previous-ir.json
+          npx oagen parse --spec spec/open-api-spec.yaml > /tmp/current-ir.json
+
+      - name: Push changed-services manifest to the SDK bot
+        if: steps.parent.outputs.available == 'true'
+        env:
+          SPEC_CHANGES_SECRET: ${{ secrets.SPEC_CHANGES_SECRET }}
+        run: |
+          set -euo pipefail
+          # build-spec-changes.mjs writes the manifest to stdout when --output is
+          # omitted. Capture it, then HMAC-sign the exact bytes we POST.
+          MANIFEST=$(node scripts/build-spec-changes.mjs \
+            --report /tmp/diff-report.json \
+            --old-ir /tmp/previous-ir.json \
+            --new-ir /tmp/current-ir.json \
+            --sha "${{ github.sha }}" \
+            --parent-sha "${{ steps.parent.outputs.parent }}")
+          echo "Manifest:"
+          echo "$MANIFEST" | jq .
+
+          if [ "$(echo "$MANIFEST" | jq '.changedServices | length')" -eq 0 ]; then
+            echo "No service changes; nothing to push."
+            exit 0
+          fi
+
+          SIG="sha256=$(printf '%s' "$MANIFEST" | openssl dgst -sha256 -hmac "$SPEC_CHANGES_SECRET" | sed 's/^.*= //')"
+          for attempt in 1 2 3; do
+            if curl -sS -X POST "$SDK_BOT_URL/internal/spec-changes" \
+                 -H "Content-Type: application/json" \
+                 -H "X-Spec-Changes-Signature: $SIG" \
+                 --data-raw "$MANIFEST" \
+                 --fail-with-body; then
+              echo ""
+              echo "Pushed manifest for ${{ github.sha }}."
+              exit 0
+            fi
+            echo "push attempt ${attempt} failed; retrying in 5s..."
+            sleep 5
+          done
+          echo "::error::could not push spec-changes manifest after 3 attempts"
+          exit 1

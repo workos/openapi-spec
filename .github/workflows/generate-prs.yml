@@ -1,10 +1,8 @@
 name: Generate PRs
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'spec/**'
+  # Batches are dispatched by the SDK bot
+  # via workflow_dispatch with an explicit `services` scope and `batch_id`.
   workflow_dispatch:
     inputs:
       languages:
@@ -20,6 +18,14 @@ on:
           - python
           - ruby
           - rust
+      services:
+        description: 'Comma-separated post-mount service names (empty = all)'
+        required: false
+        type: string
+      batch_id:
+        description: 'Caller-supplied batch id (used for branch oagen/batch-<id>)'
+        required: true
+        type: string
       dry_run:
         description: Run generation and classification without creating PRs
         type: boolean
@@ -111,10 +117,17 @@ jobs:
 
       - name: Generate SDK
         working-directory: openapi-spec
+        env:
+          SERVICES_INPUT: ${{ inputs.services }}
         run: |
+          # Strip any spaces from the CSV so "Vault, SSO" threads as a single
+          # quoted --services value instead of word-splitting into a bogus "SSO"
+          # arg. Empty (full generation) → no --services flag is appended.
+          SERVICES="${SERVICES_INPUT// /}"
           npm run sdk:generate -- \
             --lang ${{ matrix.language }} \
-            --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}"
+            --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
+            ${SERVICES:+--services "$SERVICES"}
 
       - name: Extract candidate SDK snapshot
         continue-on-error: true
@@ -497,102 +510,33 @@ jobs:
             echo "ENTRIES_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create PR on live SDK
+      - name: Create batch PR on live SDK
+        id: batch-pr
         if: success() && inputs.dry_run != true
         working-directory: ${{ env.SDK_CHECKOUT_PATH }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          TYPE: ${{ steps.classify.outputs.rollup_type }}
-          BANG: ${{ steps.classify.outputs.rollup_bang }}
-          SUMMARY: ${{ steps.classify.outputs.rollup_summary }}
           DESCRIPTIONS: ${{ steps.classify.outputs.descriptions }}
           OVERRIDE_BLOCK: ${{ steps.classify.outputs.override_block }}
-          CHANGELOG_BULLETS: ${{ steps.classify.outputs.changelog_bullets }}
           ENTRIES_JSON: ${{ steps.classify.outputs.entries_json }}
         run: |
-          BRANCH="oagen/spec-update-${{ github.sha }}"
-
+          # Branch / commit / push / PR logic now lives in
+          # scripts/open-batch-pr.mjs (unit-tested locally). This step only
+          # prepares the bot identity, the .last-synced-sha marker, the classify
+          # entries (for per-entry commits) and the composed PR body, then
+          # delegates. The branch is the deterministic oagen/batch-<batch_id>,
+          # force-pushed so a re-dispatch with the same batch_id updates the one
+          # PR instead of opening a second.
           git config user.name "workos-sdk-automation[bot]"
           git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
 
           cp "$GITHUB_WORKSPACE/openapi-spec/.last-synced-sha" .last-synced-sha
 
-          git checkout -b "$BRANCH"
-          git add -A
+          printf '%s' "${ENTRIES_JSON:-[]}" > /tmp/batch-entries.json
 
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          mapfile -t CHANGED_FILES < <(git diff --cached --name-only)
-          if [ "${#CHANGED_FILES[@]}" -eq 1 ] && [ "${CHANGED_FILES[0]}" = ".oagen-manifest.json" ]; then
-            echo "Only .oagen-manifest.json changed; skipping PR creation"
-            exit 0
-          fi
-
-          # Build per-entry commits using deterministic file_paths attribution so
-          # PR reviewers see small focused diffs in the Commits tab. This is
-          # purely a review-UX improvement: the PR is still squash-merged to
-          # main, so release-please / CHANGELOG plumbing (BEGIN_COMMIT_OVERRIDE,
-          # (#NN) refs, .changelog-pending fragment) is unchanged.
-          # Order: feat! → feat → fix → chore. Any files not attributed to
-          # any entry become a final `chore(generated): shared regenerated files`
-          # commit. Behavior changes (spec-wide default flips) don't have
-          # file_paths in ENTRIES and naturally fall into the catch-all.
-          INITIAL_SET="|$(printf '%s|' "${CHANGED_FILES[@]}")"
-          ORDERED_ENTRIES=$(echo "${ENTRIES_JSON:-[]}" | jq -c '
-            ([.[] | select(.prefix == "feat!")] +
-             [.[] | select(.prefix == "feat")] +
-             [.[] | select(.prefix == "fix")] +
-             [.[] | select(.prefix == "chore")]) | .[]
-          ')
-          if [ -n "$ORDERED_ENTRIES" ]; then
-            while IFS= read -r entry; do
-              prefix=$(echo "$entry" | jq -r '.prefix')
-              scope=$(echo "$entry" | jq -r '.scope')
-              summary=$(echo "$entry" | jq -r '.summary')
-              type_part="${prefix%!}"
-              bang_part=""
-              [[ "$prefix" == *"!" ]] && bang_part="!"
-              headline="${type_part}(${scope})${bang_part}: ${summary}"
-
-              entry_files=()
-              while IFS= read -r path; do
-                [ -z "$path" ] && continue
-                if [[ "$INITIAL_SET" == *"|${path}|"* ]]; then
-                  entry_files+=("$path")
-                fi
-              done < <(echo "$entry" | jq -r '.file_paths[]?')
-
-              if [ ${#entry_files[@]} -eq 0 ]; then
-                echo "Entry '$headline' has no attributed files; deferring to catch-all"
-                continue
-              fi
-
-              git restore --staged .
-              git add -- "${entry_files[@]}"
-
-              if git diff --cached --quiet; then
-                # Listed files were already committed under a prior entry; skip.
-                git add -A
-                continue
-              fi
-
-              git commit -m "$headline"
-              git add -A
-            done <<< "$ORDERED_ENTRIES"
-          fi
-
-          # Catch-all: behavior-change ripple + any unattributed files.
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(generated): shared regenerated files"
-          fi
-
-          git push origin "$BRANCH"
-
-          # The BEGIN_COMMIT_OVERRIDE block tells release-please to treat this
-          # squash-merged PR as multiple conventional commits, one per service.
+          # BEGIN_COMMIT_OVERRIDE tells release-please to treat this
+          # squash-merged PR as one conventional commit per service;
+          # open-batch-pr.mjs appends the (#NN) refs after the PR is created.
           {
             echo "## Summary"
             echo
@@ -605,47 +549,50 @@ jobs:
             fi
           } > /tmp/pr-body.md
 
-          PR_URL=$(gh pr create \
-            --title "${TYPE}(generated)${BANG}: ${SUMMARY}" \
-            --label "autogenerated" \
-            --body-file /tmp/pr-body.md)
-          PR_NUMBER="${PR_URL##*/}"
+          node "$GITHUB_WORKSPACE/openapi-spec/scripts/open-batch-pr.mjs" \
+            --batch-id "${{ inputs.batch_id }}" \
+            --lang "${{ matrix.language }}" \
+            --services "${{ inputs.services }}" \
+            --sdk-dir "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
+            --entries-file /tmp/batch-entries.json \
+            --body-file /tmp/pr-body.md
 
-          # Append (#NN) to each conventional-commit headline inside the
-          # BEGIN_COMMIT_OVERRIDE block so release-please renders a PR link
-          # alongside each entry in CHANGELOG.md and the GitHub Release.
-          # Awk tracks the block so we never touch headline-shaped text that
-          # might appear in generated description prose.
-          awk -v pr="$PR_NUMBER" '
-            /^BEGIN_COMMIT_OVERRIDE$/ { inblock=1; print; next }
-            /^END_COMMIT_OVERRIDE$/   { inblock=0; print; next }
-            inblock && /^(feat|fix|chore)(\([^)]+\))?!?: / {
-              sub(/$/, " (#" pr ")")
-            }
-            { print }
-          ' /tmp/pr-body.md > /tmp/pr-body-with-refs.md
-          mv /tmp/pr-body-with-refs.md /tmp/pr-body.md
-          gh pr edit "$PR_NUMBER" --body-file /tmp/pr-body.md
-
-          # Write a changelog fragment into the SDK repo. The SDK's release
-          # workflow (pilot rollout pending) concatenates all
-          # .changelog-pending/*.md under a new version heading in
-          # CHANGELOG.md and uses the same content as the GitHub Release
-          # body, then deletes the consumed fragments. Until that workflow
-          # lands per-SDK these fragments accumulate harmlessly on main.
-          if [ -n "$CHANGELOG_BULLETS" ]; then
-            FRAGMENT_DIR=".changelog-pending"
-            mkdir -p "$FRAGMENT_DIR"
-            FRAGMENT_PATH="$FRAGMENT_DIR/$(date -u +%Y-%m-%dT%H-%M-%S)-${{ github.sha }}.md"
-            {
-              echo "* [#${PR_NUMBER}](${PR_URL}) ${TYPE}(generated)${BANG}: ${SUMMARY}"
-              echo
-              printf '%s\n' "$CHANGELOG_BULLETS"
-            } > "$FRAGMENT_PATH"
-            git add "$FRAGMENT_PATH"
-            git commit -m "chore(generated): add release notes fragment"
-            git push origin "$BRANCH"
-          fi
+      - name: Add release-notes fragment
+        if: >-
+          success() && inputs.dry_run != true &&
+          steps.batch-pr.outputs.skipped == '' &&
+          steps.classify.outputs.changelog_bullets != ''
+        working-directory: ${{ env.SDK_CHECKOUT_PATH }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TYPE: ${{ steps.classify.outputs.rollup_type }}
+          BANG: ${{ steps.classify.outputs.rollup_bang }}
+          SUMMARY: ${{ steps.classify.outputs.rollup_summary }}
+          CHANGELOG_BULLETS: ${{ steps.classify.outputs.changelog_bullets }}
+          PR_NUMBER: ${{ steps.batch-pr.outputs.pr_number }}
+          PR_URL: ${{ steps.batch-pr.outputs.pr_url }}
+          BRANCH: ${{ steps.batch-pr.outputs.branch }}
+        run: |
+          # Write a changelog fragment into the SDK repo on the batch branch.
+          # The SDK's release workflow (pilot rollout pending) concatenates all
+          # .changelog-pending/*.md under a new version heading in CHANGELOG.md
+          # and the GitHub Release body, then deletes the consumed fragments.
+          # Until that workflow lands per-SDK these fragments accumulate
+          # harmlessly on main.
+          FRAGMENT_DIR=".changelog-pending"
+          mkdir -p "$FRAGMENT_DIR"
+          FRAGMENT_PATH="$FRAGMENT_DIR/$(date -u +%Y-%m-%dT%H-%M-%S)-${{ github.sha }}.md"
+          {
+            echo "* [#${PR_NUMBER}](${PR_URL}) ${TYPE}(generated)${BANG}: ${SUMMARY}"
+            echo
+            printf '%s\n' "$CHANGELOG_BULLETS"
+          } > "$FRAGMENT_PATH"
+          git add "$FRAGMENT_PATH"
+          git commit -m "chore(generated): add release notes fragment"
+          # force-with-lease: this commit sits atop the branch open-batch-pr.mjs
+          # just force-pushed; the lease rejects (rather than clobbers) the push
+          # if a racing same-batch_id re-dispatch moved the remote in between.
+          git push --force-with-lease origin "$BRANCH"
 
       - name: Upload diagnostics
         if: always()

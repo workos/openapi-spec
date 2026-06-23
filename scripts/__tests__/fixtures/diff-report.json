@@ -1,0 +1,286 @@
+{
+  "oldVersion": "1.0",
+  "newVersion": "1.0",
+  "changes": [
+    {
+      "kind": "model-added",
+      "name": "CreateGroupRoleAssignment",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "ReplaceGroupRoleAssignmentEntry",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "ReplaceGroupRoleAssignments",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "DeleteGroupRoleAssignmentsByCriteria",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "ClientApiToken",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "GroupRoleAssignment",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "GroupRoleAssignmentList",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "DataIntegrationCredentials",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "DataIntegrationConfigurationResponse",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "DataIntegrationConfigurationListResponse",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "ConfigureDataIntegrationBody",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "UserInviteList",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "UserOrganizationMembershipList",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "ClientApiTokenResponse",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "UserOrganizationMembershipListListMetadata",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "UserInviteListListMetadata",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-added",
+      "name": "GroupRoleAssignmentResource",
+      "classification": "additive"
+    },
+    {
+      "kind": "model-modified",
+      "name": "ConnectedAccount",
+      "fieldChanges": [
+        {
+          "kind": "field-added",
+          "fieldName": "auth_method",
+          "classification": "additive"
+        },
+        {
+          "kind": "field-added",
+          "fieldName": "api_key_last_4",
+          "classification": "additive"
+        }
+      ],
+      "classification": "additive"
+    },
+    {
+      "kind": "model-modified",
+      "name": "DataIntegrationsListResponseData",
+      "fieldChanges": [
+        {
+          "kind": "field-added",
+          "fieldName": "auth_methods",
+          "classification": "additive"
+        }
+      ],
+      "classification": "additive"
+    },
+    {
+      "kind": "model-modified",
+      "name": "AuthorizationCodeSessionAuthenticateRequest",
+      "fieldChanges": [
+        {
+          "kind": "field-required-changed",
+          "fieldName": "client_secret",
+          "classification": "additive",
+          "details": "required → optional"
+        }
+      ],
+      "classification": "additive"
+    },
+    {
+      "kind": "model-modified",
+      "name": "RefreshTokenSessionAuthenticateRequest",
+      "fieldChanges": [
+        {
+          "kind": "field-required-changed",
+          "fieldName": "client_secret",
+          "classification": "additive",
+          "details": "required → optional"
+        }
+      ],
+      "classification": "additive"
+    },
+    {
+      "kind": "model-modified",
+      "name": "DataIntegrationsListResponseDataConnectedAccount",
+      "fieldChanges": [
+        {
+          "kind": "field-added",
+          "fieldName": "auth_method",
+          "classification": "additive"
+        },
+        {
+          "kind": "field-added",
+          "fieldName": "api_key_last_4",
+          "classification": "additive"
+        }
+      ],
+      "classification": "additive"
+    },
+    {
+      "kind": "enum-added",
+      "name": "DataIntegrationCredentialsCredentialsType",
+      "classification": "additive"
+    },
+    {
+      "kind": "enum-added",
+      "name": "ConnectedAccountAuthMethod",
+      "classification": "additive"
+    },
+    {
+      "kind": "enum-added",
+      "name": "DataIntegrationsListResponseDataAuthMethods",
+      "classification": "additive"
+    },
+    {
+      "kind": "enum-added",
+      "name": "DataIntegrationsListResponseDataConnectedAccountAuthMethod",
+      "classification": "additive"
+    },
+    {
+      "kind": "enum-modified",
+      "name": "WidgetSessionTokenScopes",
+      "valueChanges": [
+        {
+          "kind": "value-added",
+          "valueName": "WIDGETS_PIPES_MANAGE",
+          "classification": "additive"
+        }
+      ],
+      "classification": "additive"
+    },
+    {
+      "kind": "service-added",
+      "name": "Client",
+      "classification": "additive"
+    },
+    {
+      "kind": "service-added",
+      "name": "PipesProvider",
+      "classification": "additive"
+    },
+    {
+      "kind": "operation-added",
+      "serviceName": "Authorization",
+      "operationName": "createRoleAssignments",
+      "classification": "additive"
+    },
+    {
+      "kind": "operation-added",
+      "serviceName": "Authorization",
+      "operationName": "replaceGroupRoleAssignments",
+      "classification": "additive"
+    },
+    {
+      "kind": "operation-added",
+      "serviceName": "Authorization",
+      "operationName": "removeGroupRoleAssignments",
+      "classification": "additive"
+    },
+    {
+      "kind": "operation-added",
+      "serviceName": "Authorization",
+      "operationName": "getRoleAssignments",
+      "classification": "additive"
+    },
+    {
+      "kind": "operation-added",
+      "serviceName": "Authorization",
+      "operationName": "removeGroupRoleAssignment",
+      "classification": "additive"
+    },
+    {
+      "kind": "operation-modified",
+      "serviceName": "Authorization",
+      "operationName": "listResources",
+      "paramChanges": [],
+      "responseChanged": false,
+      "requestBodyChanged": false,
+      "httpMethodChanged": false,
+      "pathChanged": false,
+      "paginatedChanged": false,
+      "injectIdempotencyKeyChanged": false,
+      "errorsChanged": true,
+      "classification": "additive"
+    },
+    {
+      "kind": "operation-modified",
+      "serviceName": "UserManagementInvitations",
+      "operationName": "list",
+      "paramChanges": [],
+      "responseChanged": true,
+      "requestBodyChanged": false,
+      "httpMethodChanged": false,
+      "pathChanged": false,
+      "paginatedChanged": false,
+      "injectIdempotencyKeyChanged": false,
+      "errorsChanged": false,
+      "classification": "breaking"
+    },
+    {
+      "kind": "operation-modified",
+      "serviceName": "UserManagementOrganizationMembership",
+      "operationName": "list",
+      "paramChanges": [],
+      "responseChanged": true,
+      "requestBodyChanged": false,
+      "httpMethodChanged": false,
+      "pathChanged": false,
+      "paginatedChanged": false,
+      "injectIdempotencyKeyChanged": false,
+      "errorsChanged": false,
+      "classification": "breaking"
+    }
+  ],
+  "behaviorChanges": [],
+  "summary": {
+    "added": 28,
+    "removed": 0,
+    "modified": 9,
+    "breaking": 2,
+    "additive": 35,
+    "behaviorChanges": 0
+  }
+}
