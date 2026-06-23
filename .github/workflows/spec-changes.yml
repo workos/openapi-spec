@@ -77,9 +77,12 @@ jobs:
       - name: Diff + parse spec revisions
         if: steps.parent.outputs.available == 'true'
         run: |
-          set -uo pipefail
+          set -euo pipefail
           # `oagen diff` exit code 2 means breaking changes were detected — that
-          # is a successful diff, not a failure (mirrors generate-prs.yml).
+          # is a successful diff, not a failure (mirrors generate-prs.yml). The
+          # `|| DIFF_EXIT=$?` suffix is errexit-safe (a command on the left of
+          # `||` never trips `-e`), so we keep `-e` on to ensure the `oagen parse`
+          # commands below fail the step instead of silently writing empty IR.
           REPORT=$(npx oagen diff \
             --old /tmp/previous-open-api-spec.yaml \
             --new spec/open-api-spec.yaml) || DIFF_EXIT=$?

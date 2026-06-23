@@ -352,7 +352,13 @@ jobs:
         # (success = no breaking changes; failure = breaking) instead of
         # scraping the PR comment. The build/test gate (this job's conclusion)
         # is a separate signal; this status only encodes compatibility.
-        if: github.event_name == 'pull_request'
+        #
+        # Skip on fork PRs: `pull_request` events from forks get a read-only
+        # `github.token` regardless of the `permissions:` block, so the
+        # `statuses` write below would 403 and fail an otherwise-green job.
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
