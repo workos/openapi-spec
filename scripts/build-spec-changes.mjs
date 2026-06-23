@@ -3,9 +3,10 @@
 // build-spec-changes.mjs
 //
 // Transform an `oagen diff` report into a per-commit changed-services manifest
-// that the SDK bot reads to compute pending SDK work.
+// that the SDK bot reads to compute pending SDK work. Emitted to stdout (the
+// spec-changes workflow POSTs it to the bot); --output writes a file instead.
 //
-//   .spec-changes/<sha>.json
+//   manifest:
 //   {
 //     "sha": "abc123",
 //     "parentSha": "def456",
