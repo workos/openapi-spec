@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const SCOPE_LABELS = {
   admin_portal: 'admin portal',
@@ -366,7 +367,7 @@ function sortStable(values) {
   return [...values].sort((a, b) => a.localeCompare(b));
 }
 
-function publicScopeFromService(serviceName) {
+export function publicScopeFromService(serviceName) {
   if (!serviceName) return 'sdk';
   if (SERVICE_SCOPE_OVERRIDES.has(serviceName)) return SERVICE_SCOPE_OVERRIDES.get(serviceName);
   if (serviceName.startsWith('Directory')) return 'directory_sync';
@@ -1145,7 +1146,7 @@ function rollupForEntries(entries) {
   return { type: 'fix', bang: '' };
 }
 
-function renderChangelogMarkdown(entries, args) {
+export function renderChangelogMarkdown(entries, args) {
   const lines = [];
   const rollup = rollupForEntries(entries);
   const count = entries.length;
@@ -1175,37 +1176,42 @@ function renderChangelogMarkdown(entries, args) {
   return `${lines.join('\n')}\n`;
 }
 
-let args = parseArgs(process.argv.slice(2));
-if (args.help) {
-  printHelp();
-  process.exit(0);
-}
-args = prepareSpecInputs(args);
-args = prepareCompatInputs(args);
-
-try {
-  const diffReport = readJson(args['diff-report'], { changes: [], behaviorChanges: [], summary: {} });
-  const oldIr = readJson(args['old-ir'], null);
-  const newIr = readJson(args['new-ir'], null);
-  const compatReport = readJson(args['compat-report'], { changes: [] });
-  const changedFiles = changedFilesFromArgs(args);
-
-  const indexes = buildIndexes([oldIr, newIr]);
-  const specFacts = factsFromDiff(diffReport, indexes);
-  const compatFacts = factsFromCompat(compatReport, specFacts, indexes);
-  const entries = entriesFromGroups(groupFacts([...specFacts, ...compatFacts]), changedFiles);
-  reportScopeValidation(entries, args);
-
-  const output =
-    args.format === 'changelog' || args.format === 'markdown'
-      ? renderChangelogMarkdown(entries, args)
-      : `${JSON.stringify(entries, null, 2)}\n`;
-  if (args.output) {
-    writeFileSync(args.output, output);
-  } else {
-    process.stdout.write(output);
+// Only run the CLI when invoked directly, so the helpers above
+// (publicScopeFromService, renderChangelogMarkdown) can be imported — e.g. by
+// render-changelog-preview.mjs — without executing the CLI.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  let args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    printHelp();
+    process.exit(0);
   }
-} finally {
-  if (args._tmpdir) rmSync(args._tmpdir, { recursive: true, force: true });
-  if (args._compatTmpdir) rmSync(args._compatTmpdir, { recursive: true, force: true });
+  args = prepareSpecInputs(args);
+  args = prepareCompatInputs(args);
+
+  try {
+    const diffReport = readJson(args['diff-report'], { changes: [], behaviorChanges: [], summary: {} });
+    const oldIr = readJson(args['old-ir'], null);
+    const newIr = readJson(args['new-ir'], null);
+    const compatReport = readJson(args['compat-report'], { changes: [] });
+    const changedFiles = changedFilesFromArgs(args);
+
+    const indexes = buildIndexes([oldIr, newIr]);
+    const specFacts = factsFromDiff(diffReport, indexes);
+    const compatFacts = factsFromCompat(compatReport, specFacts, indexes);
+    const entries = entriesFromGroups(groupFacts([...specFacts, ...compatFacts]), changedFiles);
+    reportScopeValidation(entries, args);
+
+    const output =
+      args.format === 'changelog' || args.format === 'markdown'
+        ? renderChangelogMarkdown(entries, args)
+        : `${JSON.stringify(entries, null, 2)}\n`;
+    if (args.output) {
+      writeFileSync(args.output, output);
+    } else {
+      process.stdout.write(output);
+    }
+  } finally {
+    if (args._tmpdir) rmSync(args._tmpdir, { recursive: true, force: true });
+    if (args._compatTmpdir) rmSync(args._compatTmpdir, { recursive: true, force: true });
+  }
 }
