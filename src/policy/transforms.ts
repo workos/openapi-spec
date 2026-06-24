@@ -169,14 +169,14 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
   // wire-equivalent to omitting the field.
   const tokenRequestSchema = (
     paths[providerTokenPath] as
-      | {
-        post?: {
-          requestBody?: {
-            content?: Record<string, { schema?: { properties?: Record<string, Record<string, unknown>> } }>;
-          };
+    | {
+      post?: {
+        requestBody?: {
+          content?: Record<string, { schema?: { properties?: Record<string, Record<string, unknown>> } }>;
         };
-      }
-      | undefined
+      };
+    }
+    | undefined
   )?.post?.requestBody?.content?.['application/json']?.schema;
   const orgIdProp = tokenRequestSchema?.properties?.organization_id;
   if (orgIdProp && orgIdProp.type === 'string') {
@@ -200,6 +200,55 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
           if (schema?.$ref === oldRef) schema.$ref = newRef;
         }
       }
+    }
+  }
+
+  // -- OrganizationDomain: collapse the duplicate StandAlone shape ------------
+  // Upstream models the same organization-domain resource two ways: GET
+  // `/organization_domains/{id}` and POST `…/verify` return the named
+  // `OrganizationDomainStandAlone` component, while POST `/organization_domains`
+  // (create) returns an *inline* object that is byte-for-byte identical to it.
+  // Because one is a `$ref` and the other is inline, oagen emits two parallel
+  // types (`OrganizationDomain` from the inline create response,
+  // `OrganizationDomainStandAlone` from the component) with two parallel —
+  // and TypeScript-incompatible — `state`/`verification_strategy` enum types.
+  // The published SDKs only ever exposed a single `OrganizationDomain`.
+  //
+  // Rename the component to `OrganizationDomain` (the established public name;
+  // there is no bare `OrganizationDomain` component to collide with) and
+  // re-point both the GET/verify `$ref`s and the inline create response at it,
+  // so every method returns one `OrganizationDomain` type. This is additive for
+  // SDKs that have not adopted the resource yet (`OrganizationDomainStandAlone`
+  // is net-new in this spec) and compat-preserving for those that have. The
+  // durable fix is upstream: the create controller should return the typed
+  // entity (a `$ref`) instead of an inline DTO, and the class should be named
+  // `OrganizationDomain`.
+  if (schemas['OrganizationDomainStandAlone'] && !schemas['OrganizationDomain']) {
+    schemas['OrganizationDomain'] = schemas['OrganizationDomainStandAlone'];
+    delete schemas['OrganizationDomainStandAlone'];
+    const oldRef = '#/components/schemas/OrganizationDomainStandAlone';
+    const newRef = '#/components/schemas/OrganizationDomain';
+    for (const pathItem of Object.values(paths)) {
+      for (const op of Object.values(pathItem)) {
+        const responses = (op as { responses?: Record<string, { content?: Record<string, { schema?: { $ref?: string } }> }> })
+          .responses;
+        for (const response of Object.values(responses ?? {})) {
+          const schema = response.content?.['application/json']?.schema;
+          if (schema?.$ref === oldRef) schema.$ref = newRef;
+        }
+      }
+    }
+    // The create response is inline (not a `$ref`), so the loop above misses
+    // it. Replace the inline schema with the shared component reference,
+    // discarding the duplicate inline shape (and its `x-inline-with-overrides`
+    // marker) entirely.
+    const createJson = (
+      paths['/organization_domains'] as
+      | { post?: { responses?: Record<string, { content?: Record<string, { schema?: { $ref?: string } }> }> } }
+      | undefined
+    )?.post?.responses?.['201']?.content?.['application/json'];
+    if (createJson && !createJson.schema?.$ref) {
+      createJson.schema = { $ref: newRef };
     }
   }
 
