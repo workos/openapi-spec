@@ -28,24 +28,52 @@ function parseArgs(argv) {
   return args;
 }
 
-function main() {
+// The changelog scopes for a set of staged POST-mount service names.
+// publicScopeFromService is defined over PRE-mount (IR) names; for post-mount
+// names it coincides for all but the mounted ones — e.g. IR `Client` mounts to
+// `ClientApi`, but its changelog scope is `client`, not `client_api`. So union
+// each post-mount name's own scope with the scopes of every IR name that mounts
+// to it, using the same mountRules the producer/generator use (no drift).
+export function scopesForStaged(staged, mountRules = {}) {
+  const scopes = new Set();
+  for (const s of staged) scopes.add(publicScopeFromService(s));
+  for (const [pre, post] of Object.entries(mountRules)) {
+    if (staged.includes(post)) scopes.add(publicScopeFromService(pre));
+  }
+  return scopes;
+}
+
+async function loadMountRules() {
+  try {
+    const mod = await import(new URL("../dist/policy.mjs", import.meta.url));
+    return mod.mountRules ?? {};
+  } catch {
+    // Fall back to post-mount-name scopes only (the workflow builds dist/policy
+    // first, so this only degrades a local run without `npm run build:policy`).
+    return {};
+  }
+}
+
+async function main() {
   const args = parseArgs(process.argv);
   const entries = existsSync(args.entries) ? JSON.parse(readFileSync(args.entries, "utf8")) : [];
   const staged = String(args.services ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  const scopes = new Set(staged.map((s) => publicScopeFromService(s)));
-  // Scope to the staged services; with none given, render everything.
-  const filtered = staged.length ? entries.filter((e) => scopes.has(e.scope)) : entries;
+  // With no staged set, render everything.
+  if (staged.length === 0) {
+    process.stdout.write(renderChangelogMarkdown(entries, {}));
+    return;
+  }
+  const scopes = scopesForStaged(staged, await loadMountRules());
+  const filtered = entries.filter((e) => scopes.has(e.scope));
   process.stdout.write(renderChangelogMarkdown(filtered, {}));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  try {
-    main();
-  } catch (err) {
+  main().catch((err) => {
     process.stderr.write(`${err.message}\n`);
     process.exit(1);
-  }
+  });
 }

@@ -50,15 +50,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build policy module
+        # render-changelog-preview.mjs reads mountRules from dist/policy.mjs to
+        # resolve staged post-mount service names to changelog scopes (e.g.
+        # ClientApi -> client). dist/ is git-ignored and not produced by npm ci.
+        run: npm run build:policy
+
       - name: Render + push the changelog preview
         env:
           SPEC_CHANGES_SECRET: ${{ secrets.SPEC_CHANGES_SECRET }}
           PREVIEW_ID: ${{ inputs.preview_id }}
           SERVICES: ${{ inputs.services }}
           BASE_REF: ${{ inputs.base_ref }}
-          BASE_SHA: ${{ github.sha }}
         run: |
           set -uo pipefail
+          # Report the SHA of the ref we actually render the changelog for, so the
+          # bot's "spec advanced since preview" check compares like-for-like.
+          BASE_SHA=$(git rev-parse "$BASE_REF")
 
           post() { # $1 = json file
             SIG="sha256=$(openssl dgst -sha256 -hmac "$SPEC_CHANGES_SECRET" "$1" | sed 's/^.*= //')"
