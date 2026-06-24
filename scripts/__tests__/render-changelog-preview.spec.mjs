@@ -37,3 +37,25 @@ test('no mountRules → still resolves the post-mount name to its own scope', ()
   const scopes = scopesForStaged(['Vault'], {});
   assert.ok(scopes.has('vault'));
 });
+
+// Representative slice of the real operation hints: the audit-log-retention ops
+// live under /organizations (changelog scope `organizations`) but mount on
+// AuditLogs via per-operation `mountOn`.
+const OPERATION_HINTS = {
+  'GET /organizations/{id}/audit_logs_retention': { name: 'get_organization_audit_logs_retention', mountOn: 'AuditLogs' },
+  'PUT /organizations/{id}/audit_logs_retention': { mountOn: 'AuditLogs' },
+};
+
+// Regression: staging AuditLogs must include the `organizations` scope of the
+// retention ops mounted onto it via `mountOn` — without the hint-aware union an
+// AuditLogs-only preview would drop those staged entries and render blank.
+test('staged AuditLogs picks up the organizations scope of mountOn-remounted ops', () => {
+  const scopes = scopesForStaged(['AuditLogs'], MOUNT_RULES, OPERATION_HINTS);
+  assert.ok(scopes.has('audit_logs'), 'includes its own scope');
+  assert.ok(scopes.has('organizations'), 'includes the source scope of the remounted ops');
+});
+
+test('mountOn hints for non-staged targets do not leak scopes', () => {
+  const scopes = scopesForStaged(['SSO'], MOUNT_RULES, OPERATION_HINTS);
+  assert.ok(!scopes.has('organizations'), 'AuditLogs not staged → no organizations scope');
+});
