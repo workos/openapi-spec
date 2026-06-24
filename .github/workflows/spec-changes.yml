@@ -12,6 +12,11 @@ on:
     branches: [main]
     paths:
       - 'spec/**'
+  # Manual re-push: re-run the producer for the current spec@main against its
+  # parent (diffs HEAD~1 → HEAD), e.g. to recover a run that failed before
+  # POSTing its manifest. Pushing only this workflow file does not match the
+  # spec/** path filter, so a fix to this job needs a manual run to take effect.
+  workflow_dispatch:
 
 concurrency:
   # Serialize so two spec merges in quick succession each get their manifest
@@ -67,15 +72,18 @@ jobs:
         if: steps.parent.outputs.available == 'true'
         run: |
           set -euo pipefail
-          # `oagen diff` exit code 2 means breaking changes were detected — that
-          # is a successful diff, not a failure (mirrors generate-prs.yml). The
-          # `|| DIFF_EXIT=$?` suffix is errexit-safe (a command on the left of
-          # `||` never trips `-e`), so we keep `-e` on to ensure the `oagen parse`
-          # commands below fail the step instead of silently writing empty IR.
+          # `oagen diff` signals its result through the exit code: 0 = no changes,
+          # 1 = non-breaking changes, 2 = breaking changes — all are SUCCESSFUL
+          # diffs. Only a code outside {0,1,2} is a real failure; a genuine oagen
+          # crash also yields no parseable report, caught by the `.summary` check
+          # below (which is the authoritative validity gate). The `|| DIFF_EXIT=$?`
+          # suffix is errexit-safe (a command on the left of `||` never trips
+          # `-e`), so we keep `-e` on to ensure the `oagen parse` commands below
+          # fail the step instead of silently writing empty IR.
           REPORT=$(npx oagen diff \
             --old /tmp/previous-open-api-spec.yaml \
             --new spec/open-api-spec.yaml) || DIFF_EXIT=$?
-          if [ "${DIFF_EXIT:-0}" -ne 0 ] && [ "${DIFF_EXIT:-0}" -ne 2 ]; then
+          if [ "${DIFF_EXIT:-0}" -gt 2 ]; then
             echo "::warning::oagen diff failed (exit code ${DIFF_EXIT})"
             exit 1
           fi
