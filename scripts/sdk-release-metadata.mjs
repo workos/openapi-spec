@@ -454,7 +454,7 @@ function primaryTypeName(type) {
   return primaryTypeName(type.inner) ?? primaryTypeName(type.items) ?? null;
 }
 
-function buildIndexes(specs) {
+export function buildIndexes(specs) {
   const modelByName = new Map();
   const enumByName = new Map();
   const enumWireValues = new Map();
@@ -645,7 +645,7 @@ function operationDetail(change, indexes, action) {
   return `${action} operation in \`${change.serviceName}\`.`;
 }
 
-function factsFromDiff(diffReport, indexes) {
+export function factsFromDiff(diffReport, indexes) {
   const facts = [];
   for (const change of diffReport.changes ?? []) {
     if (change.kind === 'model-added') {
@@ -947,7 +947,7 @@ function factsFromCompat(compatReport, existingFacts, indexes) {
   return facts;
 }
 
-function groupFacts(facts) {
+export function groupFacts(facts) {
   const groups = new Map();
   for (const fact of facts) {
     const key = `${fact.scope}:${fact.severity}`;
@@ -1058,7 +1058,7 @@ function assignFilePaths(entries, changedFiles) {
   }
 }
 
-function entriesFromGroups(groups, changedFiles) {
+export function entriesFromGroups(groups, changedFiles) {
   const entries = groups.map((group) => ({
     prefix: group.prefix,
     scope: group.scope,

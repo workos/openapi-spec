@@ -31,6 +31,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  buildIndexes,
+  entriesFromGroups,
+  factsFromDiff,
+  groupFacts,
+} from "./sdk-release-metadata.mjs";
+import { scopesForStaged } from "./render-changelog-preview.mjs";
 
 const BREAKING = "breaking";
 
@@ -289,13 +296,13 @@ export function buildSpecChanges({
 }
 
 // ── CLI entrypoint ────────────────────────────────────────────────────────────
-async function loadMountRules() {
+async function loadPolicy() {
   try {
     const mod = await import(new URL("../dist/policy.mjs", import.meta.url));
-    return mod.mountRules ?? {};
+    return { mountRules: mod.mountRules ?? {}, operationHints: mod.operationHints ?? {} };
   } catch (err) {
     throw new Error(
-      `Failed to import mountRules from dist/policy.mjs (${err.message}). ` +
+      `Failed to import policy from dist/policy.mjs (${err.message}). ` +
         "Run `npm run build:policy` first — dist/ is git-ignored and is not built by `npm ci`.",
     );
   }
@@ -308,7 +315,7 @@ async function main() {
     throw new Error(`Diff report not found or empty: ${args.report}`);
 
   const irs = [readJson(args.oldIr, null), readJson(args.newIr, null)];
-  const mountRules = await loadMountRules();
+  const { mountRules, operationHints } = await loadPolicy();
   const timestamp = args.timestamp || new Date().toISOString();
 
   const { manifest, unattributedSymbolChanges } = buildSpecChanges({
@@ -321,13 +328,26 @@ async function main() {
   });
 
   // Enrich the emitted manifest (the bot reads these; the lean buildSpecChanges
-  // rollup above is intentionally left untouched): per-service changed endpoints
-  // and the originating commit/PR.
+  // rollup above is intentionally left untouched): per-service changed endpoints,
+  // per-service changelog entries, and the originating commit/PR.
   const endpointsByService = buildChangedEndpoints({ report, irs, mountRules });
-  manifest.changedServices = manifest.changedServices.map((s) => ({
-    ...s,
-    changedEndpoints: endpointsByService.get(s.service) ?? [],
-  }));
+
+  // This commit's changelog entries, computed from the SAME diff report + IRs
+  // via the exact pipeline the changelog renderer uses (facts -> groups ->
+  // entries) — no extra `oagen` run, no git. Entries are scoped per service the
+  // same way the renderer scopes a staged set (scopesForStaged), so the SDK bot
+  // renders the "Generate staged" preview straight from D1, with no on-demand
+  // changelog-preview workflow dispatch.
+  const indexes = buildIndexes(irs);
+  const allEntries = entriesFromGroups(groupFacts(factsFromDiff(report, indexes)), []);
+  manifest.changedServices = manifest.changedServices.map((s) => {
+    const scopes = scopesForStaged([s.service], mountRules, operationHints);
+    return {
+      ...s,
+      changedEndpoints: endpointsByService.get(s.service) ?? [],
+      entries: allEntries.filter((e) => scopes.has(e.scope)),
+    };
+  });
   if (args.commitMessage) manifest.commitMessage = args.commitMessage;
   if (args.prNumber && /^\d+$/.test(args.prNumber)) manifest.prNumber = Number(args.prNumber);
   if (args.prUrl) manifest.prUrl = args.prUrl;
