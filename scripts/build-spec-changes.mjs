@@ -43,6 +43,9 @@ function parseArgs(argv) {
     sha: "",
     parentSha: "",
     timestamp: "",
+    commitMessage: "",
+    prNumber: "",
+    prUrl: "",
     output: "",
   };
   for (let i = 2; i < argv.length; i += 1) {
@@ -53,6 +56,9 @@ function parseArgs(argv) {
     else if (arg === "--sha") args.sha = argv[++i] ?? "";
     else if (arg === "--parent-sha") args.parentSha = argv[++i] ?? "";
     else if (arg === "--timestamp") args.timestamp = argv[++i] ?? "";
+    else if (arg === "--commit-message") args.commitMessage = argv[++i] ?? "";
+    else if (arg === "--pr-number") args.prNumber = argv[++i] ?? "";
+    else if (arg === "--pr-url") args.prUrl = argv[++i] ?? "";
     else if (arg === "--output") args.output = argv[++i] ?? "";
     else throw new Error(`Unknown option: ${arg}`);
   }
@@ -191,6 +197,49 @@ export function servicesForChange(change, owners, mountRules) {
   return [];
 }
 
+// ── changed endpoints (dashboard drill-in) ────────────────────────────────────
+// The endpoints that changed, grouped by post-mount service, each with the
+// canonical breaking flag. Method/path come from the IR (operations carry
+// httpMethod + path); the diff report only names serviceName.operationName.
+// Kept separate from buildSpecChanges so the lean changedServices rollup the
+// bot's pending logic depends on stays shape-stable; the CLI merges these in.
+export function buildChangedEndpoints({ report, irs = [], mountRules = {} }) {
+  const opByKey = new Map(); // "ServiceName.opName" -> { method, path }
+  for (const ir of irs.filter(Boolean)) {
+    for (const service of ir.services ?? []) {
+      for (const op of service.operations ?? []) {
+        if (op.httpMethod && op.path) {
+          opByKey.set(`${service.name}.${op.name}`, {
+            method: String(op.httpMethod).toUpperCase(),
+            path: op.path,
+          });
+        }
+      }
+    }
+  }
+
+  const byService = new Map(); // postMountService -> Map<"METHOD path", endpoint>
+  for (const change of report.changes ?? []) {
+    const kind = typeof change?.kind === "string" ? change.kind : "";
+    if (!kind.startsWith("operation-")) continue;
+    const ep = opByKey.get(`${change.serviceName}.${change.operationName}`);
+    if (!ep) continue;
+    const service = toPostMount(change.serviceName, mountRules);
+    if (!service) continue;
+    if (!byService.has(service)) byService.set(service, new Map());
+    const endpoints = byService.get(service);
+    const key = `${ep.method} ${ep.path}`;
+    const breaking = isBreaking(change);
+    const existing = endpoints.get(key);
+    if (!existing) endpoints.set(key, { method: ep.method, path: ep.path, breaking, kind });
+    else if (breaking) existing.breaking = true;
+  }
+
+  const out = new Map();
+  for (const [service, endpoints] of byService) out.set(service, [...endpoints.values()]);
+  return out;
+}
+
 // ── build the manifest ───────────────────────────────────────────────────────
 export function buildSpecChanges({
   report,
@@ -270,6 +319,18 @@ async function main() {
     timestamp,
     mountRules,
   });
+
+  // Enrich the emitted manifest (the bot reads these; the lean buildSpecChanges
+  // rollup above is intentionally left untouched): per-service changed endpoints
+  // and the originating commit/PR.
+  const endpointsByService = buildChangedEndpoints({ report, irs, mountRules });
+  manifest.changedServices = manifest.changedServices.map((s) => ({
+    ...s,
+    changedEndpoints: endpointsByService.get(s.service) ?? [],
+  }));
+  if (args.commitMessage) manifest.commitMessage = args.commitMessage;
+  if (args.prNumber && /^\d+$/.test(args.prNumber)) manifest.prNumber = Number(args.prNumber);
+  if (args.prUrl) manifest.prUrl = args.prUrl;
 
   if (unattributedSymbolChanges > 0) {
     const reason = irs.some(Boolean)

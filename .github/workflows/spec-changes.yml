@@ -94,16 +94,31 @@ jobs:
         if: steps.parent.outputs.available == 'true'
         env:
           SPEC_CHANGES_SECRET: ${{ secrets.SPEC_CHANGES_SECRET }}
+          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # Commit subject (first line) + originating PR number, for the
+          # dashboard's "spec commits / PRs" pane. Squash merges put `(#NN)` in
+          # the subject; absent that, prNumber is simply omitted.
+          SUBJECT=$(printf '%s\n' "$HEAD_COMMIT_MSG" | head -1)
+          PR_NUM=$(printf '%s' "$SUBJECT" | grep -oE '#[0-9]+' | head -1 | tr -d '#' || true)
+
+          ARGS=(
+            --report /tmp/diff-report.json
+            --old-ir /tmp/previous-ir.json
+            --new-ir /tmp/current-ir.json
+            --sha "${{ github.sha }}"
+            --parent-sha "${{ steps.parent.outputs.parent }}"
+            --commit-message "$SUBJECT"
+          )
+          if [ -n "$PR_NUM" ]; then
+            ARGS+=(--pr-number "$PR_NUM" --pr-url "https://github.com/$REPO/pull/$PR_NUM")
+          fi
+
           # build-spec-changes.mjs writes the manifest to stdout when --output is
           # omitted. Capture it, then HMAC-sign the exact bytes we POST.
-          MANIFEST=$(node scripts/build-spec-changes.mjs \
-            --report /tmp/diff-report.json \
-            --old-ir /tmp/previous-ir.json \
-            --new-ir /tmp/current-ir.json \
-            --sha "${{ github.sha }}" \
-            --parent-sha "${{ steps.parent.outputs.parent }}")
+          MANIFEST=$(node scripts/build-spec-changes.mjs "${ARGS[@]}")
           echo "Manifest:"
           echo "$MANIFEST" | jq .
 

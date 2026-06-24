@@ -30,6 +30,10 @@ on:
         description: Run generation and classification without creating PRs
         type: boolean
         default: false
+      changelog_override:
+        description: 'Base64 of an operator-edited changelog (from the dashboard preview) to use for the release-note fragment'
+        required: false
+        type: string
 
 concurrency:
   group: sdk-generation
@@ -561,7 +565,7 @@ jobs:
         if: >-
           success() && inputs.dry_run != true &&
           steps.batch-pr.outputs.skipped == '' &&
-          steps.classify.outputs.changelog_bullets != ''
+          (steps.classify.outputs.changelog_bullets != '' || inputs.changelog_override != '')
         working-directory: ${{ env.SDK_CHECKOUT_PATH }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -569,6 +573,7 @@ jobs:
           BANG: ${{ steps.classify.outputs.rollup_bang }}
           SUMMARY: ${{ steps.classify.outputs.rollup_summary }}
           CHANGELOG_BULLETS: ${{ steps.classify.outputs.changelog_bullets }}
+          CHANGELOG_OVERRIDE_B64: ${{ inputs.changelog_override }}
           PR_NUMBER: ${{ steps.batch-pr.outputs.pr_number }}
           PR_URL: ${{ steps.batch-pr.outputs.pr_url }}
           BRANCH: ${{ steps.batch-pr.outputs.branch }}
@@ -579,13 +584,24 @@ jobs:
           # and the GitHub Release body, then deletes the consumed fragments.
           # Until that workflow lands per-SDK these fragments accumulate
           # harmlessly on main.
+          #
+          # An operator-edited changelog (from the dashboard "Generate staged"
+          # preview) takes precedence over the computed bullets.
+          OVERRIDE_MD=""
+          if [ -n "$CHANGELOG_OVERRIDE_B64" ]; then
+            OVERRIDE_MD=$(printf '%s' "$CHANGELOG_OVERRIDE_B64" | base64 -d)
+          fi
           FRAGMENT_DIR=".changelog-pending"
           mkdir -p "$FRAGMENT_DIR"
           FRAGMENT_PATH="$FRAGMENT_DIR/$(date -u +%Y-%m-%dT%H-%M-%S)-${{ github.sha }}.md"
           {
             echo "* [#${PR_NUMBER}](${PR_URL}) ${TYPE}(generated)${BANG}: ${SUMMARY}"
             echo
-            printf '%s\n' "$CHANGELOG_BULLETS"
+            if [ -n "$OVERRIDE_MD" ]; then
+              printf '%s\n' "$OVERRIDE_MD"
+            else
+              printf '%s\n' "$CHANGELOG_BULLETS"
+            fi
           } > "$FRAGMENT_PATH"
           git add "$FRAGMENT_PATH"
           git commit -m "chore(generated): add release notes fragment"

@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   buildSpecChanges,
+  buildChangedEndpoints,
   buildSymbolOwners,
   isBreaking,
   servicesForChange,
@@ -114,6 +115,40 @@ test('behaviorChanges fold into their service as breaking', () => {
   };
   const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
   assert.deepEqual(manifest.changedServices, [{ service: 'UserManagement', hasBreaking: true }]);
+});
+
+// ── buildChangedEndpoints: method/path from IR, post-mount attribution ───────
+test('buildChangedEndpoints resolves method/path and attributes to post-mount service', () => {
+  const ir = {
+    services: [
+      {
+        name: 'UserManagementUsers',
+        operations: [
+          { name: 'createUser', httpMethod: 'post', path: '/user_management/users' },
+          { name: 'deleteUser', httpMethod: 'delete', path: '/user_management/users/{id}' },
+        ],
+      },
+    ],
+  };
+  const report = {
+    changes: [
+      { kind: 'operation-added', serviceName: 'UserManagementUsers', operationName: 'createUser', classification: 'additive' },
+      { kind: 'operation-removed', serviceName: 'UserManagementUsers', operationName: 'deleteUser', classification: 'breaking' },
+    ],
+  };
+  const map = buildChangedEndpoints({ report, irs: [ir, ir], mountRules: MOUNT_RULES });
+  assert.deepEqual(map.get('UserManagement'), [
+    { method: 'POST', path: '/user_management/users', breaking: false, kind: 'operation-added' },
+    { method: 'DELETE', path: '/user_management/users/{id}', breaking: true, kind: 'operation-removed' },
+  ]);
+});
+
+test('buildChangedEndpoints skips changes whose endpoint is absent from the IR', () => {
+  const report = {
+    changes: [{ kind: 'operation-added', serviceName: 'Vault', operationName: 'mystery', classification: 'additive' }],
+  };
+  const map = buildChangedEndpoints({ report, irs: [], mountRules: MOUNT_RULES });
+  assert.equal(map.size, 0);
 });
 
 // ── isBreaking: trust the rollup, but defend against missing classification ──
