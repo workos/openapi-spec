@@ -1,5 +1,10 @@
 name: Generate PRs
 
+# Surface the batch id in the run's display title so the SDK bot dashboard can
+# identify THIS batch's run by name (run.display_title) instead of guessing by
+# timestamp. Falls back to the plain workflow name for non-dispatch runs.
+run-name: ${{ inputs.batch_id && format('Generate PRs (batch {0})', inputs.batch_id) || 'Generate PRs' }}
+
 on:
   # Batches are dispatched by the SDK bot
   # via workflow_dispatch with an explicit `services` scope and `batch_id`.
