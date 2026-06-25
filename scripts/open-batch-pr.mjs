@@ -96,34 +96,30 @@ export function parseServices(csv) {
 }
 
 // Roll the entries' prefixes up into a single conventional type+bang for the PR
-// title, mirroring rollupForEntries in sdk-release-metadata.mjs so the title
-// type matches the changelog override block: any feat! → feat!, else any feat →
-// feat, else fix. Each SDK repo lints the PR title, so the result must keep a
-// valid `<type>(generated)<bang>: ` prefix.
+// title, mirroring rollupForEntries in sdk-release-metadata.mjs EXACTLY (any
+// feat! → feat!, else any feat → feat, else fix) so the title type always
+// matches the changelog override block — including fix-only and chore-only
+// batches, which both roll up to fix. Each SDK repo lints the PR title, so the
+// result keeps a valid `<type>(generated)<bang>: ` prefix.
 function rollupPrefix(entries) {
   if ((entries ?? []).some((e) => e.prefix === 'feat!')) return 'feat(generated)!';
   if ((entries ?? []).some((e) => e.prefix === 'feat')) return 'feat(generated)';
-  if ((entries ?? []).some((e) => e.prefix === 'fix')) return 'fix(generated)';
-  return 'chore(generated)';
+  return 'fix(generated)';
 }
 
-// Build the human-readable part of the title from the classify entries (ordered
-// feat! → feat → fix → chore): the lead entry's summary, plus a `(+N more)`
-// suffix when there are others, so the title describes what actually changed.
-function entriesSummary(entries) {
-  const ordered = orderedEntries(entries);
-  const lead = ordered[0].summary;
-  const more = ordered.length - 1;
-  return more > 0 ? `${lead} (+${more} more)` : lead;
-}
-
-// PR title. When classify entries are present, derive a descriptive,
-// conventional-commit title from them (so every language's PR says what
-// changed, and the title-lint check still passes). With no entries, fall back
-// to the previous services/batch title.
+// PR title. When classify entries with a usable summary are present, derive a
+// descriptive, conventional-commit title from them — the lead entry's summary
+// (entries ordered feat! → feat → fix → chore) plus a `(+N more)` suffix — so
+// every language's PR says what changed and the title-lint check still passes.
+// Otherwise (no entries, or malformed input with no recognized prefix or no
+// summary) fall back to the services/batch title rather than throwing or
+// emitting a literal `undefined`.
 export function prTitle(services, batchId, entries = []) {
-  if ((entries ?? []).length > 0) {
-    return `${rollupPrefix(entries)}: ${entriesSummary(entries)}`;
+  const ordered = orderedEntries(entries ?? []);
+  const lead = ordered[0]?.summary;
+  if (lead) {
+    const more = ordered.length - 1;
+    return `${rollupPrefix(entries)}: ${lead}${more > 0 ? ` (+${more} more)` : ''}`;
   }
   const list = parseServices(services);
   const label = list.length > 0 ? list.join(', ') : 'all services';

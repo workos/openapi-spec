@@ -70,6 +70,26 @@ test('prTitle rolls the type up feat! → feat → fix and orders by it', () => 
   const fixesOnly = [{ prefix: 'fix', scope: 'vault', summary: 'Change vault response' }];
   assert.equal(prTitle('Vault', 'b4', fixesOnly), 'fix(generated): Change vault response');
   assert.match(prTitle('Vault', 'b4', fixesOnly), CONVENTIONAL_TITLE);
+
+  // chore-only rolls up to fix(generated), mirroring rollupForEntries exactly
+  // (which never returns chore) so the title type matches the changelog override.
+  const choreOnly = [{ prefix: 'chore', scope: 'events', summary: 'Regenerate boilerplate' }];
+  assert.equal(prTitle('Events', 'b5', choreOnly), 'fix(generated): Regenerate boilerplate');
+  assert.match(prTitle('Events', 'b5', choreOnly), CONVENTIONAL_TITLE);
+});
+
+test('prTitle falls back gracefully on malformed entries (never throws or emits undefined)', () => {
+  // Entries present but no recognized prefix → fall back to the batch title.
+  const unrecognized = [{ prefix: 'docs', scope: 'readme', summary: 'Tweak docs' }];
+  assert.equal(prTitle('Vault', 'b6', unrecognized), 'feat(generated): Vault (batch b6)');
+  assert.match(prTitle('Vault', 'b6', unrecognized), CONVENTIONAL_TITLE);
+
+  // Recognized prefix but missing summary → fall back rather than emit `undefined`.
+  const noSummary = [{ prefix: 'feat', scope: 'sso' }];
+  const title = prTitle('SSO', 'b7', noSummary);
+  assert.equal(title, 'feat(generated): SSO (batch b7)');
+  assert.doesNotMatch(title, /undefined/);
+  assert.match(title, CONVENTIONAL_TITLE);
 });
 
 test('catchAllMessage names the services and stays a chore(...) prefix', () => {
