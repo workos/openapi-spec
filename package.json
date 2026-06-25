@@ -55,7 +55,7 @@
     "prepare": "husky"
   },
   "overrides": {
-    "js-yaml": "^5.1.0",
+    "js-yaml": "^4.1.1",
     "lodash": "^4.17.23"
   },
   "devDependencies": {
@@ -64,7 +64,7 @@
     "@workos/oagen-emitters": "^0.19.1",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
-    "js-yaml": "^5.1.0",
+    "js-yaml": "^4.1.1",
     "openapi-to-postmanv2": "^6.1.0",
     "tsdown": "^0.22.3",
     "tsx": "^4.22.4",
