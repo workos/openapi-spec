@@ -8,12 +8,18 @@ import { fileURLToPath } from 'node:url';
 
 import {
   batchBranchName,
+  catchAllMessage,
   entryHeadline,
   orderedEntries,
   parseServices,
   prTitle,
   rewriteOverrideRefs,
 } from '../open-batch-pr.mjs';
+
+// A conventional-commit title must start with a valid type, an optional
+// (scope), an optional ! and then ": " — this is what each SDK repo's
+// lint_pr_title / "Validate PR title" check enforces.
+const CONVENTIONAL_TITLE = /^(feat|fix|chore)(\([^)]+\))?!?: \S/;
 
 const SCRIPT = fileURLToPath(new URL('../open-batch-pr.mjs', import.meta.url));
 
@@ -22,9 +28,74 @@ test('batchBranchName is deterministic', () => {
   assert.equal(batchBranchName('abc'), 'oagen/batch-abc');
 });
 
-test('prTitle lists services; empty → all services', () => {
+test('prTitle with no entries falls back to services; empty → all services', () => {
   assert.equal(prTitle('Vault, SSO', 'b1'), 'feat(generated): Vault, SSO (batch b1)');
+  assert.equal(prTitle('Vault, SSO', 'b1', []), 'feat(generated): Vault, SSO (batch b1)');
   assert.equal(prTitle('', 'b1'), 'feat(generated): all services (batch b1)');
+  // Even the fallback titles are valid conventional-commit titles.
+  assert.match(prTitle('Vault, SSO', 'b1'), CONVENTIONAL_TITLE);
+  assert.match(prTitle('', 'b1'), CONVENTIONAL_TITLE);
+});
+
+test('prTitle with a single entry uses that entry summary', () => {
+  const entries = [{ prefix: 'feat', scope: 'organization_membership', summary: 'Add `roles` to organization membership models' }];
+  assert.equal(
+    prTitle('OrganizationMembership', 'e471ddef', entries),
+    'feat(generated): Add `roles` to organization membership models',
+  );
+  assert.match(prTitle('OrganizationMembership', 'e471ddef', entries), CONVENTIONAL_TITLE);
+});
+
+test('prTitle with multiple entries leads with the top entry and counts the rest', () => {
+  const entries = [
+    { prefix: 'feat', scope: 'sso', summary: 'Add SSO API surface' },
+    { prefix: 'fix', scope: 'vault', summary: 'Change vault response' },
+    { prefix: 'chore', scope: 'events', summary: 'Update events' },
+  ];
+  assert.equal(prTitle('SSO,Vault,Events', 'b2', entries), 'feat(generated): Add SSO API surface (+2 more)');
+  assert.match(prTitle('SSO,Vault,Events', 'b2', entries), CONVENTIONAL_TITLE);
+});
+
+test('prTitle rolls the type up feat! → feat → fix and orders by it', () => {
+  // A breaking entry promotes the whole title to feat(generated)! and leads it,
+  // matching how the changelog override block's rollup type is computed.
+  const breaking = [
+    { prefix: 'fix', scope: 'vault', summary: 'Change vault response' },
+    { prefix: 'feat!', scope: 'sso', summary: 'Remove SSO API surface' },
+  ];
+  assert.equal(prTitle('Vault,SSO', 'b3', breaking), 'feat(generated)!: Remove SSO API surface (+1 more)');
+  assert.match(prTitle('Vault,SSO', 'b3', breaking), CONVENTIONAL_TITLE);
+
+  // No feat at all → fix(generated).
+  const fixesOnly = [{ prefix: 'fix', scope: 'vault', summary: 'Change vault response' }];
+  assert.equal(prTitle('Vault', 'b4', fixesOnly), 'fix(generated): Change vault response');
+  assert.match(prTitle('Vault', 'b4', fixesOnly), CONVENTIONAL_TITLE);
+
+  // chore-only rolls up to fix(generated), mirroring rollupForEntries exactly
+  // (which never returns chore) so the title type matches the changelog override.
+  const choreOnly = [{ prefix: 'chore', scope: 'events', summary: 'Regenerate boilerplate' }];
+  assert.equal(prTitle('Events', 'b5', choreOnly), 'fix(generated): Regenerate boilerplate');
+  assert.match(prTitle('Events', 'b5', choreOnly), CONVENTIONAL_TITLE);
+});
+
+test('prTitle falls back gracefully on malformed entries (never throws or emits undefined)', () => {
+  // Entries present but no recognized prefix → fall back to the batch title.
+  const unrecognized = [{ prefix: 'docs', scope: 'readme', summary: 'Tweak docs' }];
+  assert.equal(prTitle('Vault', 'b6', unrecognized), 'feat(generated): Vault (batch b6)');
+  assert.match(prTitle('Vault', 'b6', unrecognized), CONVENTIONAL_TITLE);
+
+  // Recognized prefix but missing summary → fall back rather than emit `undefined`.
+  const noSummary = [{ prefix: 'feat', scope: 'sso' }];
+  const title = prTitle('SSO', 'b7', noSummary);
+  assert.equal(title, 'feat(generated): SSO (batch b7)');
+  assert.doesNotMatch(title, /undefined/);
+  assert.match(title, CONVENTIONAL_TITLE);
+});
+
+test('catchAllMessage names the services and stays a chore(...) prefix', () => {
+  assert.equal(catchAllMessage('Vault, SSO'), 'chore(generated): regenerate shared files for Vault, SSO');
+  assert.equal(catchAllMessage(''), 'chore(generated): regenerate shared files for all services');
+  assert.match(catchAllMessage('Vault'), /^chore(\([^)]+\))?: \S/);
 });
 
 test('parseServices trims and drops empties', () => {
@@ -192,7 +263,7 @@ test('confinement: only the (already scoped) changed paths land on the branch', 
   }
 });
 
-test('--dry-run prints the gh pr create command with the batch title', () => {
+test('--dry-run prints the gh pr create command with the fallback batch title (no entries)', () => {
   const { root, origin } = setupOrigin();
   try {
     const work = freshClone(root, origin, 'work');
@@ -201,6 +272,32 @@ test('--dry-run prints the gh pr create command with the batch title', () => {
     assert.equal(r.code, 0, r.stderr);
     assert.match(r.stdout, /DRY-RUN gh pr create/);
     assert.match(r.stdout, /feat\(generated\): Vault, SSO \(batch t9\)/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('--dry-run derives a descriptive PR title from the classify entries', () => {
+  const { root, origin } = setupOrigin();
+  try {
+    const work = freshClone(root, origin, 'work');
+    writeFileSync(join(work, 'src/workos/vault/client.py'), 'x\n');
+    const entries = [
+      { prefix: 'feat', scope: 'vault', summary: 'Add `roles` to vault models', file_paths: ['src/workos/vault/client.py'] },
+      { prefix: 'fix', scope: 'sso', summary: 'Change SSO response' },
+    ];
+    const entriesFile = join(root, 'title-entries.json'); // OUTSIDE the work tree
+    writeFileSync(entriesFile, JSON.stringify(entries));
+
+    const r = runScript([
+      '--batch-id', 't10', '--lang', 'python', '--services', 'Vault,SSO',
+      '--sdk-dir', work, '--entries-file', entriesFile, '--dry-run',
+    ]);
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stdout, /DRY-RUN gh pr create/);
+    // Title is entry-derived, not the generic services/batch fallback.
+    assert.match(r.stdout, /feat\(generated\): Add `roles` to vault models \(\+1 more\)/);
+    assert.doesNotMatch(r.stdout, /Vault, SSO \(batch t10\)/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -229,7 +326,7 @@ test('per-entry ordered commits + shared catch-all over the scoped diff', () => 
 
     const log = g(origin, 'log', '--format=%s', 'main..oagen/batch-pe1').split('\n').filter(Boolean);
     assert.deepEqual(log, [
-      'chore(generated): shared regenerated files',
+      'chore(generated): regenerate shared files for Vault, SSO',
       'fix(sso): fix conn',
       'feat(vault): add object',
     ]);
