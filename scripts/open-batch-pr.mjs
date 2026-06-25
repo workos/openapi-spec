@@ -29,7 +29,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CATCH_ALL_MESSAGE = 'chore(generated): shared regenerated files';
+// Catch-all commit for the behavior-change ripple + any unattributed files left
+// after the per-entry commits. Names the services (when known) so reviewers can
+// see which regeneration the shared churn belongs to; still a valid `chore(...)`
+// conventional prefix.
+export function catchAllMessage(services) {
+  const list = parseServices(services);
+  const scope = list.length > 0 ? list.join(', ') : 'all services';
+  return `chore(generated): regenerate shared files for ${scope}`;
+}
 // Files that, on their own, do not warrant a PR: the generator manifest and the
 // spec-sync marker the workflow copies in before every run (so it is always
 // staged). A diff containing only these is a no-op batch (FR-2.7).
@@ -87,7 +95,36 @@ export function parseServices(csv) {
     .filter(Boolean);
 }
 
-export function prTitle(services, batchId) {
+// Roll the entries' prefixes up into a single conventional type+bang for the PR
+// title, mirroring rollupForEntries in sdk-release-metadata.mjs so the title
+// type matches the changelog override block: any feat! → feat!, else any feat →
+// feat, else fix. Each SDK repo lints the PR title, so the result must keep a
+// valid `<type>(generated)<bang>: ` prefix.
+function rollupPrefix(entries) {
+  if ((entries ?? []).some((e) => e.prefix === 'feat!')) return 'feat(generated)!';
+  if ((entries ?? []).some((e) => e.prefix === 'feat')) return 'feat(generated)';
+  if ((entries ?? []).some((e) => e.prefix === 'fix')) return 'fix(generated)';
+  return 'chore(generated)';
+}
+
+// Build the human-readable part of the title from the classify entries (ordered
+// feat! → feat → fix → chore): the lead entry's summary, plus a `(+N more)`
+// suffix when there are others, so the title describes what actually changed.
+function entriesSummary(entries) {
+  const ordered = orderedEntries(entries);
+  const lead = ordered[0].summary;
+  const more = ordered.length - 1;
+  return more > 0 ? `${lead} (+${more} more)` : lead;
+}
+
+// PR title. When classify entries are present, derive a descriptive,
+// conventional-commit title from them (so every language's PR says what
+// changed, and the title-lint check still passes). With no entries, fall back
+// to the previous services/batch title.
+export function prTitle(services, batchId, entries = []) {
+  if ((entries ?? []).length > 0) {
+    return `${rollupPrefix(entries)}: ${entriesSummary(entries)}`;
+  }
   const list = parseServices(services);
   const label = list.length > 0 ? list.join(', ') : 'all services';
   return `feat(generated): ${label} (batch ${batchId})`;
@@ -162,7 +199,7 @@ function gh(ghArgs, { dryRun, stub = '' }) {
 }
 
 // ── commit assembly ────────────────────────────────────────────────────────────
-function buildCommits(cwd, entries) {
+function buildCommits(cwd, entries, services) {
   const initialStaged = git(cwd, ['diff', '--cached', '--name-only'])
     .split('\n')
     .map((l) => l.trim())
@@ -186,7 +223,7 @@ function buildCommits(cwd, entries) {
 
   // Catch-all: behavior-change ripple + any unattributed files.
   if (hasStagedChanges(cwd)) {
-    git(cwd, ['commit', '-m', CATCH_ALL_MESSAGE]);
+    git(cwd, ['commit', '-m', catchAllMessage(services)]);
   }
 }
 
@@ -230,13 +267,14 @@ export function run(args) {
   const entries = args.entriesFile && existsSync(args.entriesFile)
     ? JSON.parse(readFileSync(args.entriesFile, 'utf8'))
     : [];
-  buildCommits(sdkDir, entries);
+  buildCommits(sdkDir, entries, services);
 
   // Force-push: same batch_id → same branch, overwritten (idempotent, NFR-2.2).
   git(sdkDir, ['push', '--force', remote, branch]);
 
-  // Create-or-reuse the PR for this branch.
-  const title = prTitle(services, batchId);
+  // Create-or-reuse the PR for this branch. Derive the title from the classify
+  // entries so it describes what changed; fall back to services/batch otherwise.
+  const title = prTitle(services, batchId, entries);
   const bodyText = args.bodyFile && existsSync(args.bodyFile)
     ? readFileSync(args.bodyFile, 'utf8')
     : defaultBody(services, batchId, lang);
