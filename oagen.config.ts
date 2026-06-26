@@ -43,6 +43,13 @@ const config: OagenConfig = {
       ownedServices: ['Groups', 'Webhooks', 'Radar', 'Connect', 'Vault', 'DirectorySync'],
       regenerateOwnedTests: true,
       operationOverrides: nodeOperationOverrides,
+      // The spec reports raw directory states (linked/unlinked/...), but the
+      // Node SDK has always surfaced linked→active / unlinked→inactive. Generate
+      // that translation (domain type + deserializer + tests) instead of
+      // hand-owning it.
+      enumValueRemaps: {
+        DirectoryState: { linked: 'active', unlinked: 'inactive' },
+      },
     },
   },
   transformSpec,
