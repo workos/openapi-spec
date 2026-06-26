@@ -41,7 +41,7 @@ on:
         type: string
 
 concurrency:
-  group: sdk-generation
+  group: sdk-generation-${{ inputs.batch_id }}
   cancel-in-progress: true
 
 jobs:
