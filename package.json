@@ -30,7 +30,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@workos/oagen": "^0.23.0"
+    "@workos/oagen": "^0.24.1"
   },
   "scripts": {
     "generate:services": "node scripts/generate-services.mjs",
@@ -61,7 +61,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.0.1",
-    "@workos/oagen-emitters": "^0.19.2",
+    "@workos/oagen-emitters": "^0.19.3",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.1",
