@@ -623,7 +623,17 @@ const BACKEND_ONLY_DIFF_KINDS = new Set([
   'response-changed',
   'request-body-changed',
 ]);
+// Pure additions can't break a caller and aren't a fix — a new field/value is a
+// feature. Floor these at `additive` (→ feat) regardless of what the differ
+// classified them as: it sometimes flags an added field `breaking` (reads it as
+// a request-shape tightening), which the backend-only cap below would otherwise
+// collapse to `fix`, and a missing/odd classification would fall through to
+// `fix` via severityToPrefix. Either way a new field would land under **Fixes**
+// while the release bumped minor — see model-added/enum-added, hardcoded the
+// same way.
+const ADDITIVE_DIFF_KINDS = new Set(['field-added', 'value-added']);
 function capSeverity(kind, severity) {
+  if (ADDITIVE_DIFF_KINDS.has(kind)) return 'additive';
   return BACKEND_ONLY_DIFF_KINDS.has(kind) && severity === 'breaking' ? 'fix' : severity;
 }
 
