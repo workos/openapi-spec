@@ -1,5 +1,117 @@
 openapi: 3.1.1
 paths:
+  /agents/credentials/validate:
+    post:
+      description: >-
+        Validate an agent credential — an API key or access token — against the
+        environment of the API key used to authenticate the request. This is a
+        read-only check: it never consumes or mutates the credential.
+      operationId: AgentAdminController_validateCredential
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - api_key
+                    - access_token
+                  description: >-
+                    The kind of credential being validated — an agent API key or
+                    an agent access token.
+                  example: access_token
+                credential:
+                  type: string
+                  minLength: 1
+                  description: >-
+                    The credential value to validate: the API key value for
+                    `api_key`, or the access token (JWT) for `access_token`.
+                  example: sk_agent_example_1234567890
+                audience:
+                  type: string
+                  minLength: 1
+                  description: >-
+                    Only applies to `access_token` credentials. When provided,
+                    the access token's `aud` claim is verified against this
+                    value — tokens issued for a different resource are rejected.
+                    Not permitted for `api_key` credentials.
+                  example: https://api.example.com
+              required:
+                - type
+                - credential
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentCredentialValidation'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_request
+                    const: invalid_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Validate an agent credential
+      tags:
+        - agents
+      x-feature-flag: agent-auth-public-api
+  /agents/registrations/{id}:
+    get:
+      description: >-
+        Retrieve the details of an agent registration by ID. The registration is
+        scoped to the environment of the API key used to authenticate the
+        request.
+      operationId: AgentAdminController_getRegistration
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the agent registration.
+          schema:
+            type: string
+            example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRegistration'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get an agent registration
+      tags:
+        - agents
+      x-feature-flag: agent-auth-public-api
   /api_keys/validations:
     post:
       description: Validate an API key value and return the API key object if valid.
@@ -2253,6 +2365,9 @@ paths:
                   id: authz_resource_01HXYZ123456789ABCDEFGH
                   external_id: project-ext-456
                   resource_type_slug: project
+                source:
+                  type: direct
+                  group_role_assignment_id: null
                 created_at: '2026-01-15T12:00:00.000Z'
                 updated_at: '2026-01-15T12:00:00.000Z'
           description: Created
@@ -6204,6 +6319,25 @@ paths:
             `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
+        - name: registration_types
+          required: false
+          in: query
+          description: >-
+            Filter Connect Applications by registration type. Specify multiple
+            as a comma-separated list (e.g.
+            `registration_types=dynamic,authenticated`). Defaults to
+            `authenticated` only when not specified.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - dynamic
+                - authenticated
+            example:
+              - authenticated
         - name: organization_id
           required: false
           in: query
@@ -6816,6 +6950,118 @@ paths:
       summary: Delete a Connection
       tags:
         - connections
+  /data-integrations/{slug}/api-key:
+    put:
+      description: >-
+        Creates or updates an API-key-based installation for the specified
+        integration and user. If an installation already exists, the stored API
+        key is rotated to the new value.
+      operationId: DataIntegrationsController_upsertApiKey
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The identifier of the integration.
+          schema:
+            example: github
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: A [User](/reference/authkit/user) identifier.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An [Organization](/reference/organization) identifier.
+                    Optional parameter to scope the connection to a specific
+                    organization.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                secret:
+                  type: string
+                  minLength: 1
+                  description: The API key secret to store for this integration.
+                  example: sk-1234567890abcdef
+              required:
+                - user_id
+                - secret
+      responses:
+        '200':
+          description: The resulting connected account after the upsert.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+              example:
+                object: connected_account
+                id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                scopes: []
+                auth_method: api_key
+                api_key_last_4: cdef
+                state: connected
+                created_at: '2024-01-16T14:20:00.000Z'
+                updated_at: '2024-01-16T14:20:00.000Z'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Data integration not found for the given provider slug.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: >-
+            The matched installation uses a different auth method than this
+            endpoint expects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMethodMismatchError'
+      summary: Upsert an API key for a connected account
+      tags:
+        - pipes
+      x-feature-flag: pipes-api-keys
   /data-integrations/{slug}/authorize:
     post:
       description: >-
@@ -6908,6 +7154,91 @@ paths:
       summary: Get authorization URL
       tags:
         - pipes
+  /data-integrations/{slug}/credentials:
+    post:
+      description: >-
+        Returns credentials for a user's connected account. Branches on the
+        installation's `auth_method`: OAuth installations return an access token
+        (refreshed if needed); API-key installations return the stored secret.
+      operationId: DataIntegrationsController_vendCredentials
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The identifier of the integration.
+          schema:
+            example: github
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: A [User](/reference/authkit/user) identifier.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An [Organization](/reference/organization) identifier.
+                    Optional parameter to scope the connection to a specific
+                    organization.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+              required:
+                - user_id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegrationCredentialsResponse'
+              example:
+                active: true
+                credential:
+                  object: credential
+                  auth_method: oauth
+                  value: gho_16C7e42F292c6912E7710c838347Ae178B4a
+                  expires_at: '2025-12-31T23:59:59.000Z'
+                  scopes:
+                    - repo
+                    - user:email
+                  missing_scopes: []
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '404':
+          description: Data integration not found for the given provider slug.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Vend credentials for a connected account
+      tags:
+        - pipes
+      x-feature-flag: pipes-api-keys
   /data-integrations/{slug}/token:
     post:
       description: >-
@@ -10102,6 +10433,10 @@ paths:
                   enum:
                     - sign-up
                     - sign-in
+                signals_id:
+                  type: string
+                  description: An optional Radar signals ID for the request.
+                  example: 01JBS0GN92GC2RJQS4X9DBPQ2A
               required:
                 - ip_address
                 - user_agent
@@ -12021,6 +12356,19 @@ paths:
           description: >-
             A token representing a user invitation to redeem during
             authentication.
+        - name: max_age
+          required: false
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            example: 3600
+          description: >-
+            Maximum allowable elapsed time, in seconds, since the user last
+            actively authenticated. If the last authentication is older than
+            this value, the user is prompted to re-authenticate; a value of `0`
+            forces re-authentication. Only supported when the provider is
+            `authkit`.
         - name: screen_hint
           required: false
           in: query
@@ -12263,6 +12611,119 @@ paths:
                         constraints:
                           type: object
       summary: Create a CORS origin
+      tags:
+        - user-management.cors-origins
+    get:
+      description: Lists the CORS origins for the current environment.
+      operationId: CorsOriginsController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records).
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: CORS origins listed successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: cors_origin_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: cors_origin_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/CorsOriginResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List CORS origins
       tags:
         - user-management.cors-origins
   /user_management/email_verification/{id}:
@@ -14522,6 +14983,121 @@ paths:
               example:
                 message: Redirect URI 'https://example.com/callback' already exists.
       summary: Create a redirect URI
+      tags:
+        - user-management.redirect-uris
+    get:
+      description: Lists the redirect URIs for an environment.
+      operationId: RedirectUrisController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records).
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: Redirect URIs listed successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: ruri_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: ruri_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/RedirectUri'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+      summary: List redirect URIs
       tags:
         - user-management.redirect-uris
   /user_management/sessions/logout:
@@ -17698,6 +18274,8 @@ info:
 tags:
   - name: admin-portal
     description: Endpoints for the Admin Portal API.
+  - name: agents
+    description: Manage agents for environments.
   - name: api_keys
     description: Manage API keys for environments.
   - name: application.client-secrets
@@ -19167,37 +19745,6 @@ components:
           pattern: ^[\x00-\x7F]+$
           example: 2fe01467-f7ea-4dd2-8b79-c2b4f56d0191
           description: An external identifier for the Organization.
-    SsoIntentOptions:
-      type: object
-      properties:
-        bookmark_slug:
-          type: string
-          description: The bookmark slug to use for SSO.
-          example: chatgpt
-        provider_type:
-          type: string
-          description: The SSO provider type to configure.
-          example: GoogleSAML
-          const: GoogleSAML
-    DomainVerificationIntentOptions:
-      type: object
-      properties:
-        domain_name:
-          type: string
-          description: >-
-            The domain name to verify. When provided, the domain verification
-            flow will skip the domain entry form and go directly to the
-            verification step.
-          example: example.com
-    IntentOptions:
-      type: object
-      properties:
-        sso:
-          description: SSO-specific options for the Admin Portal.
-          $ref: '#/components/schemas/SsoIntentOptions'
-        domain_verification:
-          description: Domain verification-specific options for the Admin Portal.
-          $ref: '#/components/schemas/DomainVerificationIntentOptions'
     GenerateLinkDto:
       type: object
       properties:
@@ -19242,9 +19789,6 @@ components:
             - domain_verification
             - certificate_renewal
             - bring_your_own_key
-        intent_options:
-          description: Options to configure the Admin Portal based on the intent.
-          $ref: '#/components/schemas/IntentOptions'
         it_contact_emails:
           description: >-
             The email addresses of the IT contacts to grant access to the Admin
@@ -20023,6 +20567,11 @@ components:
           items:
             type: string
             enum: &ref_15
+              - agent.registration.created
+              - agent.registration.claim.attempt.created
+              - agent.registration.claim.completed
+              - agent.registration.credential.issued
+              - agent.registration.organization.switched
               - authentication.email_verification_succeeded
               - authentication.magic_auth_failed
               - authentication.magic_auth_succeeded
@@ -20038,6 +20587,7 @@ components:
               - authentication.sso_succeeded
               - authentication.sso_timed_out
               - authentication.radar_risk_detected
+              - authentication.reauthentication_succeeded
               - api_key.created
               - api_key.revoked
               - api_key.updated
@@ -20101,7 +20651,6 @@ components:
               - pipes.connected_account.disconnected
               - pipes.connected_account.reauthorization_needed
               - session.created
-              - session.reauthenticated
               - session.revoked
               - waitlist_user.approved
               - waitlist_user.created
@@ -20574,6 +21123,185 @@ components:
             https://your-authkit-domain.workos.com/oauth/authorize/complete?state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdGF0ZSI6InJhbmRvbV9zdGF0ZV9zdHJpbmciLCJpYXQiOjE3NDI2MDQ4NTN9.abc123def456ghi789
       required:
         - redirect_uri
+    AgentRegistration:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the agent registration.
+          example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+        agent_identity:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Unique identifier of the agent identity.
+              example: agent_identity_01EHWNCE74X7JSDV0X3SZ3KJNY
+            userland_user_id:
+              type:
+                - string
+                - 'null'
+              description: >-
+                Identifier of the AuthKit user the agent identity is bound to,
+                or `null` when the agent is not associated with a user.
+              example: user_01E4ZCR3C56J083X43JQXF3JK5
+            created_at:
+              type: string
+              format: date-time
+              description: The timestamp when the agent identity was created.
+              example: '2026-01-15T12:00:00.000Z'
+            updated_at:
+              type: string
+              format: date-time
+              description: The timestamp when the agent identity was last updated.
+              example: '2026-01-15T12:00:00.000Z'
+          required:
+            - id
+            - userland_user_id
+            - created_at
+            - updated_at
+          description: The agent identity associated with this registration.
+        organization_id:
+          type: string
+          description: Identifier of the organization the agent is registered to.
+          example: org_01EHQMYV6MBK39QC5PZXHY59C3
+        status:
+          type: string
+          enum:
+            - unverified
+            - verified
+            - expired
+            - revoked
+          description: The current verification status of the registration.
+          example: verified
+        kind:
+          type: string
+          enum:
+            - anonymous
+            - service_auth
+            - identity_assertion
+          description: The kind of agent registration.
+          example: service_auth
+        claim:
+          description: >-
+            The claim associated with this registration, or `null` if the
+            registration has no claim.
+          oneOf:
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier of the claim.
+                  example: agent_reg_claim_01EHWNCE74X7JSDV0X3SZ3KJNY
+                claim_completion:
+                  description: >-
+                    The completion record for the claim, or `null` if the claim
+                    has not been completed.
+                  oneOf:
+                    - type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the claim completion.
+                          example: agent_reg_claim_attempt_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        created_at:
+                          type: string
+                          format: date-time
+                          description: The timestamp when the claim completion was created.
+                          example: '2026-01-15T12:00:00.000Z'
+                        updated_at:
+                          type: string
+                          format: date-time
+                          description: >-
+                            The timestamp when the claim completion was last
+                            updated.
+                          example: '2026-01-15T12:00:00.000Z'
+                        expires_at:
+                          type: string
+                          format: date-time
+                          description: The timestamp when the claim completion expires.
+                          example: '2026-01-15T12:00:00.000Z'
+                        claimed_at:
+                          type: string
+                          format: date-time
+                          description: The timestamp when the claim was completed.
+                          example: '2026-01-15T12:00:00.000Z'
+                      required:
+                        - id
+                        - created_at
+                        - updated_at
+                        - expires_at
+                        - claimed_at
+                    - type: 'null'
+                created_at:
+                  type: string
+                  format: date-time
+                  description: The timestamp when the claim was created.
+                  example: '2026-01-15T12:00:00.000Z'
+                updated_at:
+                  type: string
+                  format: date-time
+                  description: The timestamp when the claim was last updated.
+                  example: '2026-01-15T12:00:00.000Z'
+                expires_at:
+                  type: string
+                  format: date-time
+                  description: The timestamp when the claim expires.
+                  example: '2026-01-15T12:00:00.000Z'
+              required:
+                - id
+                - claim_completion
+                - created_at
+                - updated_at
+                - expires_at
+            - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the registration was created.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: The timestamp when the registration was last updated.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - id
+        - agent_identity
+        - organization_id
+        - status
+        - kind
+        - claim
+        - created_at
+        - updated_at
+    AgentCredentialValidation:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Whether the presented credential is valid.
+          example: true
+        registration_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Identifier of the agent registration the credential belongs to, or
+            `null` when the credential is invalid.
+          example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+        expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            The timestamp when the credential expires, or `null` when the
+            credential is invalid.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - valid
+        - registration_id
+        - expires_at
     ApiKey:
       type: object
       properties:
@@ -20688,6 +21416,12 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ApiKey'
             - type: 'null'
+        agent_registration_id:
+          type: string
+          description: >-
+            The ID of the agent registration this API Key was issued for.
+            Present only when the API Key is assigned to an agent registration.
+          example: agent_reg_01EHZNVPK3SFK441A1RGBFSHRT
       required:
         - api_key
     ConnectApplication:
@@ -21745,6 +22479,27 @@ components:
             - external_id
             - resource_type_slug
           description: The resource the role is assigned on.
+        source:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - direct
+                - group
+              description: Whether the role was assigned directly or derived from a group.
+            group_role_assignment_id:
+              type:
+                - string
+                - 'null'
+              description: >-
+                The ID of the group role assignment the role was derived from,
+                or null if direct.
+              example: null
+          required:
+            - type
+            - group_role_assignment_id
+          description: The origin of the role assignment.
         created_at:
           format: date-time
           type: string
@@ -21761,6 +22516,7 @@ components:
         - organization_membership_id
         - role
         - resource
+        - source
         - created_at
         - updated_at
     UserRoleAssignmentList:
@@ -23509,6 +24265,427 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: agent.registration.claim.attempt.created
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: >-
+                        Distinguishes the agent registration claim attempt
+                        object.
+                      const: agent_registration_claim_attempt
+                    id:
+                      type: string
+                      description: >-
+                        Unique identifier of the agent registration claim
+                        attempt.
+                      example: agent_reg_claim_attempt_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    agent_registration_id:
+                      type: string
+                      description: The ID of the agent registration.
+                      example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    agent_registration_claim_id:
+                      type: string
+                      description: The ID of the agent registration claim.
+                      example: agent_reg_claim_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    login_hint:
+                      type: string
+                      description: The login hint for the claim attempt.
+                      example: jane@example.com
+                    expires_at:
+                      type: string
+                      description: The timestamp when the claim attempt expires.
+                      example: '2024-01-15T10:35:00.000Z'
+                    created_at:
+                      type: string
+                      description: The timestamp when the claim attempt was created.
+                      example: '2024-01-15T10:30:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the claim attempt was last updated.
+                      example: '2024-01-15T10:30:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - agent_registration_id
+                    - agent_registration_claim_id
+                    - login_hint
+                    - expires_at
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.registration.claim.completed
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the agent registration claim object.
+                      const: agent_registration_claim
+                    id:
+                      type: string
+                      description: Unique identifier of the agent registration claim.
+                      example: agent_reg_claim_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    agent_registration_id:
+                      type: string
+                      description: The ID of the agent registration.
+                      example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    completed_by_attempt_id:
+                      type: string
+                      description: The ID of the claim attempt that completed the claim.
+                      example: agent_reg_claim_attempt_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    claimed_by:
+                      type: object
+                      properties:
+                        user_id:
+                          type: string
+                          description: The ID of the user who completed the claim.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        organization_id:
+                          oneOf:
+                            - type: string
+                            - oneOf:
+                                - type: string
+                                  const: 'null'
+                                - type: 'null'
+                          description: >-
+                            The ID of the organization the claiming user belongs
+                            to.
+                          example: null
+                      required:
+                        - user_id
+                        - organization_id
+                      description: The user who completed the claim.
+                    completed_at:
+                      type: string
+                      description: The timestamp when the claim was completed.
+                      example: '2024-01-15T10:32:00.000Z'
+                    created_at:
+                      type: string
+                      description: The timestamp when the claim was created.
+                      example: '2024-01-15T10:30:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the claim was last updated.
+                      example: '2024-01-15T10:32:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - agent_registration_id
+                    - completed_by_attempt_id
+                    - claimed_by
+                    - completed_at
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.registration.created
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the agent registration object.
+                      const: agent_registration
+                    id:
+                      type: string
+                      description: Unique identifier of the agent registration.
+                      example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    agent_identity:
+                      type: object
+                      properties:
+                        object:
+                          type: string
+                          description: Distinguishes the agent identity object.
+                          const: agent_identity
+                        id:
+                          type: string
+                          description: Unique identifier of the agent identity.
+                          example: agent_identity_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        userland_user_id:
+                          oneOf:
+                            - type: string
+                            - oneOf:
+                                - type: string
+                                  const: 'null'
+                                - type: 'null'
+                          description: >-
+                            The ID of the userland user bound to this agent
+                            identity.
+                          example: null
+                      required:
+                        - object
+                        - id
+                        - userland_user_id
+                      description: The agent identity for this registration.
+                    organization_id:
+                      type: string
+                      description: The ID of the organization the registration belongs to.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    status:
+                      type: string
+                      enum:
+                        - unverified
+                        - verified
+                        - expired
+                        - revoked
+                      description: The current status of the registration.
+                      example: unverified
+                    kind:
+                      type: string
+                      enum:
+                        - anonymous
+                        - service_auth
+                        - identity_assertion
+                      description: The kind of the registration.
+                      example: anonymous
+                    method:
+                      type: string
+                      enum:
+                        - anonymous
+                        - service_auth
+                        - id_jag
+                      description: The authentication method of the registration.
+                      example: anonymous
+                    created_at:
+                      type: string
+                      description: The timestamp when the registration was created.
+                      example: '2024-01-15T10:30:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the registration was last updated.
+                      example: '2024-01-15T10:30:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - agent_identity
+                    - organization_id
+                    - status
+                    - kind
+                    - method
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.registration.credential.issued
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the agent registration credential object.
+                      const: agent_registration_credential
+                    id:
+                      type: string
+                      description: Unique identifier of the agent registration credential.
+                      example: agent_reg_credential_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    agent_registration_id:
+                      type: string
+                      description: The ID of the agent registration.
+                      example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    detail:
+                      oneOf:
+                        - type: object
+                          properties:
+                            kind:
+                              type: string
+                              description: The kind of credential issued.
+                              const: api_key
+                            api_key_id:
+                              type: string
+                              description: The ID of the issued API key.
+                              example: api_key_01HWDP91J37GZW2FT9GCEX8YWV
+                          required:
+                            - kind
+                            - api_key_id
+                        - type: object
+                          properties:
+                            kind:
+                              type: string
+                              description: The kind of credential issued.
+                              const: access_token
+                            jti:
+                              type: string
+                              description: The JWT ID of the issued access token.
+                              example: jti_01EHWNCE74X7JSDV0X3SZ3KJNY
+                            expires_at:
+                              oneOf:
+                                - type: string
+                                - oneOf:
+                                    - type: string
+                                      const: 'null'
+                                    - type: 'null'
+                              description: The timestamp when the access token expires.
+                              example: '2024-01-15T11:30:00.000Z'
+                          required:
+                            - kind
+                            - jti
+                            - expires_at
+                      description: Details of the issued credential.
+                    created_at:
+                      type: string
+                      description: The timestamp when the credential was issued.
+                      example: '2024-01-15T10:33:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the credential was last updated.
+                      example: '2024-01-15T10:33:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - agent_registration_id
+                    - detail
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.registration.organization.switched
+                data:
+                  type: object
+                  properties:
+                    agent_registration_id:
+                      type: string
+                      description: The agent registration that was moved.
+                      example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    from_organization_id:
+                      type: string
+                      description: >-
+                        The agent-created organization the registration is
+                        moving off of. Migrate its resources to
+                        `to_organization_id`, then delete it.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    to_organization_id:
+                      type: string
+                      description: The organization the registration now belongs to.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNZ
+                  required:
+                    - agent_registration_id
+                    - from_organization_id
+                    - to_organization_id
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: api_key.created
                 data:
                   type: object
@@ -24827,6 +26004,69 @@ components:
                     - action
                     - control
                     - blocklist_type
+                    - ip_address
+                    - user_agent
+                    - user_id
+                    - email
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: authentication.reauthentication_succeeded
+                data:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      const: reauthentication
+                    status:
+                      type: string
+                      const: succeeded
+                    ip_address:
+                      type:
+                        - string
+                        - 'null'
+                      description: The IP address of the request.
+                      example: 203.0.113.42
+                    user_agent:
+                      type:
+                        - string
+                        - 'null'
+                      description: The user agent of the request.
+                      example: Mozilla/5.0
+                    user_id:
+                      type: string
+                      description: The ID of the user.
+                      example: user_01E4ZCR3C56J083X43JQXF3JK5
+                    email:
+                      type: string
+                      description: The email address of the user.
+                      example: user@example.com
+                  required:
+                    - type
+                    - status
                     - ip_address
                     - user_agent
                     - user_id
@@ -30628,150 +31868,6 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
-                  const: session.reauthenticated
-                data:
-                  type: object
-                  properties:
-                    object:
-                      type: string
-                      description: Distinguishes the session object.
-                      const: session
-                    id:
-                      type: string
-                      description: The unique ID of the session.
-                      example: session_01H93ZY4F80QPBEZ1R5B2SHQG8
-                    impersonator:
-                      type: object
-                      properties:
-                        email:
-                          type: string
-                          description: >-
-                            The email address of the WorkOS Dashboard user who
-                            is impersonating the user.
-                          example: admin@foocorp.com
-                        reason:
-                          type:
-                            - string
-                            - 'null'
-                          description: >-
-                            The justification the impersonator gave for
-                            impersonating the user.
-                          example: Investigating an issue with the customer's account.
-                      required:
-                        - email
-                        - reason
-                      description: >-
-                        Information about the impersonator if this session was
-                        created via impersonation.
-                    ip_address:
-                      type:
-                        - string
-                        - 'null'
-                      description: The IP address from which the session was created.
-                      example: 198.51.100.42
-                    organization_id:
-                      type: string
-                      description: >-
-                        The ID of the organization this session is associated
-                        with.
-                      example: org_01H945H0YD4F97JN9MATX7BYAG
-                    user_agent:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        The user agent string from the device that created the
-                        session.
-                      example: >-
-                        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
-                        AppleWebKit/537.36
-                    user_id:
-                      type: string
-                      description: The ID of the user this session belongs to.
-                      example: user_01E4ZCR3C56J083X43JQXF3JK5
-                    auth_method:
-                      type: string
-                      enum:
-                        - cross_app_auth
-                        - external_auth
-                        - impersonation
-                        - magic_code
-                        - migrated_session
-                        - oauth
-                        - passkey
-                        - password
-                        - sso
-                        - unknown
-                      description: The authentication method used to create this session.
-                      example: sso
-                    status:
-                      type: string
-                      enum:
-                        - active
-                        - expired
-                        - revoked
-                      description: The current status of the session.
-                      example: active
-                    expires_at:
-                      format: date-time
-                      type: string
-                      description: The timestamp when the session expires.
-                      example: '2026-01-15T12:00:00.000Z'
-                    ended_at:
-                      format: date-time
-                      type:
-                        - string
-                        - 'null'
-                      description: The timestamp when the session ended.
-                      example: null
-                    created_at:
-                      format: date-time
-                      type: string
-                      description: An ISO 8601 timestamp.
-                      example: '2026-01-15T12:00:00.000Z'
-                    updated_at:
-                      format: date-time
-                      type: string
-                      description: An ISO 8601 timestamp.
-                      example: '2026-01-15T12:00:00.000Z'
-                  required:
-                    - object
-                    - id
-                    - ip_address
-                    - user_agent
-                    - user_id
-                    - auth_method
-                    - status
-                    - expires_at
-                    - ended_at
-                    - created_at
-                    - updated_at
-                  description: The event payload.
-                created_at:
-                  format: date-time
-                  type: string
-                  description: An ISO 8601 timestamp.
-                  example: '2026-01-15T12:00:00.000Z'
-                context:
-                  $ref: '#/components/schemas/EventContextDto'
-                object:
-                  type: string
-                  description: Distinguishes the Event object.
-                  const: event
-              required:
-                - id
-                - event
-                - data
-                - created_at
-                - object
-            - type: object
-              properties:
-                id:
-                  type: string
-                  description: Unique identifier for the event.
-                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
-                event:
-                  type: string
                   const: session.revoked
                 data:
                   type: object
@@ -32654,6 +33750,132 @@ components:
       required:
         - code
         - message
+    DataIntegrationCredentialsResponse:
+      oneOf:
+        - type: object
+          properties:
+            active:
+              type: boolean
+              description: Indicates credentials are available.
+              const: true
+            credential:
+              type: object
+              properties:
+                object:
+                  type: string
+                  description: Distinguishes the credential object.
+                  const: credential
+                auth_method:
+                  type: string
+                  description: >-
+                    The authentication method for this credential. Additional
+                    values may be added in the future; handle unknown values
+                    gracefully.
+                  x-extensible-enum:
+                    - oauth
+                    - api_key
+                  const: oauth
+                value:
+                  type: string
+                  description: The OAuth access token.
+                  example: gho_16C7e42F292c6912E7710c838347Ae178B4a
+                expires_at:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The ISO-8601 formatted timestamp indicating when the
+                    credential expires.
+                  example: '2025-12-31T23:59:59.000Z'
+                scopes:
+                  type: array
+                  items:
+                    type: string
+                  description: The scopes granted to the access token.
+                  example:
+                    - repo
+                    - user:email
+                missing_scopes:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    If the integration has requested scopes that aren't present
+                    on the access token, they're listed here.
+                  example: []
+              required:
+                - object
+                - auth_method
+                - value
+                - expires_at
+                - scopes
+                - missing_scopes
+              description: The credential object containing the vended secret.
+          required:
+            - active
+            - credential
+        - type: object
+          properties:
+            active:
+              type: boolean
+              description: Indicates credentials are available.
+              const: true
+            credential:
+              type: object
+              properties:
+                object:
+                  type: string
+                  description: Distinguishes the credential object.
+                  const: credential
+                auth_method:
+                  type: string
+                  description: >-
+                    The authentication method for this credential. Additional
+                    values may be added in the future; handle unknown values
+                    gracefully.
+                  x-extensible-enum:
+                    - oauth
+                    - api_key
+                  const: api_key
+                value:
+                  type: string
+                  description: The API key secret.
+                  example: sk-1234567890abcdef
+              required:
+                - object
+                - auth_method
+                - value
+              description: The credential object containing the vended secret.
+          required:
+            - active
+            - credential
+        - type: object
+          properties:
+            active:
+              type: boolean
+              description: Indicates credentials are not available.
+              const: false
+            error:
+              type: string
+              enum:
+                - not_installed
+                - needs_reauthorization
+              description: >-
+                The reason credentials are unavailable. Additional values may be
+                added in the future; handle unknown values gracefully.
+
+                - `"not_installed"`: The user does not have the integration
+                installed.
+
+                - `"needs_reauthorization"`: The user needs to reauthorize the
+                integration.
+              example: not_installed
+              x-extensible-enum:
+                - not_installed
+                - needs_reauthorization
+          required:
+            - active
+            - error
     ConnectedAccount:
       type: object
       properties:
