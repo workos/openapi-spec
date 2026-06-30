@@ -6,9 +6,11 @@ import {
   buildSpecChanges,
   buildChangedEndpoints,
   buildSymbolOwners,
+  enrichChangedServices,
   isBreaking,
   servicesForChange,
 } from '../build-spec-changes.mjs';
+import { scopesForStaged } from '../render-changelog-preview.mjs';
 
 // A representative slice of the real mount-rules, enough to exercise remapping
 // without importing the (git-ignored) built bundle. The real-fixture test below
@@ -214,6 +216,74 @@ test('manifest carries sha/parentSha/timestamp verbatim', () => {
   assert.equal(manifest.sha, 'aaa');
   assert.equal(manifest.parentSha, 'bbb');
   assert.equal(manifest.timestamp, '2026-06-20T00:00:00Z');
+});
+
+// ── enrichChangedServices: reconcile hasBreaking with the enriched evidence ──
+// The single changelog scope a non-mounted post-mount service carries — the
+// same derivation enrichChangedServices uses to filter entries to a service.
+const scopeOf = (service) => [...scopesForStaged([service], MOUNT_RULES)][0];
+
+test('enrich flips hasBreaking when a scoped changelog entry is breaking (orphaned-symbol case)', () => {
+  // Owner-attribution left Vault non-breaking (e.g. a removed webhook-event
+  // payload referenced by no operation), but the changelog scoped a
+  // feat!/breaking entry to it. The emitted flag must agree with the entry.
+  const allEntries = [
+    { scope: scopeOf('Vault'), severity: 'breaking', prefix: 'feat!', summary: 'Remove X', description: '' },
+  ];
+  const [vault] = enrichChangedServices({
+    changedServices: [{ service: 'Vault', hasBreaking: false }],
+    allEntries,
+    mountRules: MOUNT_RULES,
+  });
+  assert.equal(vault.hasBreaking, true);
+  assert.equal(vault.entries.length, 1);
+  assert.deepEqual(vault.changedEndpoints, []);
+});
+
+test('enrich flips hasBreaking when a changed endpoint is breaking', () => {
+  const endpointsByService = new Map([
+    ['Vault', [{ method: 'DELETE', path: '/vault/objects/{id}', breaking: true, kind: 'operation-removed' }]],
+  ]);
+  const [vault] = enrichChangedServices({
+    changedServices: [{ service: 'Vault', hasBreaking: false }],
+    endpointsByService,
+    mountRules: MOUNT_RULES,
+  });
+  assert.equal(vault.hasBreaking, true);
+});
+
+test('enrich preserves an owner-attributed breaking flag with no endpoints/entries (naked-flag superset)', () => {
+  // A shared symbol flagged Authorization breaking via owner-attribution, but no
+  // operation changed and no entry scoped to it. The flag stays true — the bot
+  // renders an explanatory note for this no-detail case.
+  const [auth] = enrichChangedServices({
+    changedServices: [{ service: 'Authorization', hasBreaking: true }],
+    mountRules: MOUNT_RULES,
+  });
+  assert.equal(auth.hasBreaking, true);
+  assert.deepEqual(auth.changedEndpoints, []);
+  assert.deepEqual(auth.entries, []);
+});
+
+test('enrich keeps hasBreaking false with no breaking evidence, and scopes entries to the service', () => {
+  const allEntries = [
+    { scope: scopeOf('Vault'), severity: 'additive', prefix: 'feat', summary: 'Add Y', description: '' },
+    { scope: '__elsewhere__', severity: 'breaking', prefix: 'feat!', summary: 'Other service', description: '' },
+  ];
+  const endpointsByService = new Map([
+    ['Vault', [{ method: 'POST', path: '/vault/objects', breaking: false, kind: 'operation-added' }]],
+  ]);
+  const [vault] = enrichChangedServices({
+    changedServices: [{ service: 'Vault', hasBreaking: false }],
+    endpointsByService,
+    allEntries,
+    mountRules: MOUNT_RULES,
+  });
+  assert.equal(vault.hasBreaking, false);
+  // Only the Vault-scoped entry attaches; a breaking entry from another scope
+  // neither attaches nor flips the flag.
+  assert.equal(vault.entries.length, 1);
+  assert.equal(vault.entries[0].summary, 'Add Y');
 });
 
 // ── real captured oagen-diff report against the REAL mount-rules ─────────────

@@ -295,6 +295,35 @@ export function buildSpecChanges({
   };
 }
 
+// ── enrich + reconcile the emitted manifest ──────────────────────────────────
+// Attach each service's changed endpoints + changelog entries, and reconcile
+// hasBreaking. buildSpecChanges derives hasBreaking purely from IR
+// owner-attribution, which misses symbols referenced by no operation — e.g. a
+// removed webhook-event payload that the changelog pipeline scopes to a service
+// but the owner index leaves orphaned (under-reports breaking), and shared
+// symbols flagged against services that get no endpoint/entry of their own
+// (a breaking pill with nothing behind it). OR the owner flag together with the
+// enriched evidence so the emitted hasBreaking is a true superset of what the
+// dashboard and the shipped changelog actually render as breaking.
+export function enrichChangedServices({
+  changedServices,
+  endpointsByService = new Map(),
+  allEntries = [],
+  mountRules = {},
+  operationHints = {},
+}) {
+  return changedServices.map((s) => {
+    const scopes = scopesForStaged([s.service], mountRules, operationHints);
+    const changedEndpoints = endpointsByService.get(s.service) ?? [];
+    const entries = allEntries.filter((e) => scopes.has(e.scope));
+    const hasBreaking =
+      s.hasBreaking ||
+      changedEndpoints.some((e) => e.breaking) ||
+      entries.some((e) => e.severity === BREAKING);
+    return { ...s, hasBreaking, changedEndpoints, entries };
+  });
+}
+
 // ── CLI entrypoint ────────────────────────────────────────────────────────────
 async function loadPolicy() {
   try {
@@ -327,9 +356,10 @@ async function main() {
     mountRules,
   });
 
-  // Enrich the emitted manifest (the bot reads these; the lean buildSpecChanges
-  // rollup above is intentionally left untouched): per-service changed endpoints,
-  // per-service changelog entries, and the originating commit/PR.
+  // Enrich the emitted manifest the bot reads: per-service changed endpoints,
+  // per-service changelog entries, the originating commit/PR, and a reconciled
+  // hasBreaking (see enrichChangedServices). The exported buildSpecChanges
+  // rollup above stays a pure owner-attribution pass.
   const endpointsByService = buildChangedEndpoints({ report, irs, mountRules });
 
   // This commit's changelog entries, computed from the SAME diff report + IRs
@@ -340,13 +370,12 @@ async function main() {
   // changelog-preview workflow dispatch.
   const indexes = buildIndexes(irs);
   const allEntries = entriesFromGroups(groupFacts(factsFromDiff(report, indexes)), []);
-  manifest.changedServices = manifest.changedServices.map((s) => {
-    const scopes = scopesForStaged([s.service], mountRules, operationHints);
-    return {
-      ...s,
-      changedEndpoints: endpointsByService.get(s.service) ?? [],
-      entries: allEntries.filter((e) => scopes.has(e.scope)),
-    };
+  manifest.changedServices = enrichChangedServices({
+    changedServices: manifest.changedServices,
+    endpointsByService,
+    allEntries,
+    mountRules,
+    operationHints,
   });
   if (args.commitMessage) manifest.commitMessage = args.commitMessage;
   if (args.prNumber && /^\d+$/.test(args.prNumber)) manifest.prNumber = Number(args.prNumber);
