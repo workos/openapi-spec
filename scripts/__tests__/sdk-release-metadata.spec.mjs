@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { factsFromDiff } from '../sdk-release-metadata.mjs';
+import { factsFromDiff, scopesForServices } from '../sdk-release-metadata.mjs';
 
 // factsFromDiff only reaches indexes.symbolScopes (scope resolution) for the
 // kinds under test; an empty index leaves scope unresolved, which is fine — we
@@ -62,4 +62,40 @@ test('field-removed flagged breaking is still capped to fix', () => {
   const fact = factsFromDiff(report, EMPTY_INDEXES).find((f) => f.kind === 'field-removed');
   assert.equal(fact.severity, 'fix');
   assert.equal(fact.prefix, 'fix');
+});
+
+// A scoped batch's changelog must describe only the staged services, even when
+// the spec diff carries an unrelated change that drifted in between staging and
+// generation (the bug that titled a Pipes batch after an authorization change).
+test('scopesForServices maps staged post-mount names to changelog scope keys', () => {
+  assert.deepEqual(scopesForServices('Pipes'), new Set(['pipes']));
+  // PipesProvider folds into the pipes scope via the override table.
+  assert.deepEqual(scopesForServices('Pipes,PipesProvider'), new Set(['pipes']));
+  assert.deepEqual(scopesForServices('UserManagement, SSO'), new Set(['user_management', 'sso']));
+});
+
+test('scopesForServices returns null for an empty/absent selection (full generation keeps every scope)', () => {
+  assert.equal(scopesForServices(undefined), null);
+  assert.equal(scopesForServices(''), null);
+  assert.equal(scopesForServices('true'), null); // parseArgs no-value sentinel
+});
+
+test('scope filter keeps only the staged services facts and drops drifted-in ones', () => {
+  const report = {
+    changes: [
+      { kind: 'model-added', name: 'PipesDataIntegration' },
+      { kind: 'model-added', name: 'Permission' },
+    ],
+  };
+  const facts = factsFromDiff(report, EMPTY_INDEXES);
+  assert.deepEqual(
+    facts.map((f) => f.scope).sort(),
+    ['authorization', 'pipes'],
+  );
+  const allowed = scopesForServices('Pipes');
+  const scoped = facts.filter((fact) => allowed.has(fact.scope));
+  assert.deepEqual(
+    scoped.map((f) => f.scope),
+    ['pipes'],
+  );
 });

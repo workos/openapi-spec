@@ -204,6 +204,7 @@ jobs:
         working-directory: ${{ env.SDK_CHECKOUT_PATH }}
         env:
           SDK_LANGUAGE: ${{ matrix.language }}
+          SERVICES_INPUT: ${{ inputs.services }}
         run: |
           # Stage everything so new (untracked) files appear in the diff
           git add -A
@@ -295,6 +296,10 @@ jobs:
             ')
           fi
 
+          # Strip spaces from the CSV so "Vault, SSO" threads as one --services
+          # value. Empty (full generation) → the flag is omitted and every scope
+          # is kept; non-empty → the changelog is scoped to the staged services.
+          SERVICES="${SERVICES_INPUT// /}"
           node "$GITHUB_WORKSPACE/openapi-spec/scripts/sdk-release-metadata.mjs" \
             --diff-report /tmp/diff-report.json \
             --old-ir /tmp/previous-ir.json \
@@ -302,6 +307,7 @@ jobs:
             --compat-report "$COMPAT_REPORT_PATH" \
             --changed-files /tmp/sdk-changed-files.txt \
             --strict-scopes \
+            ${SERVICES:+--services "$SERVICES"} \
             --output /tmp/classify-entries.json
 
           ENTRIES=$(cat /tmp/classify-entries.json)

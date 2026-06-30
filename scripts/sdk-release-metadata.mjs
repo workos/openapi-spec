@@ -106,6 +106,10 @@ Inputs:
                          --sdk-repo is given, one is derived from the checkout
                          (baseline ref vs current tree) without regenerating.
   --changed-files <file> Optional newline-delimited SDK file list for file attribution.
+  --services <csv>       Optional comma-separated post-mount service names (the
+                         batch's staged scope). Restricts entries to those
+                         services' scopes so the title/notes describe only what
+                         the batch generated. Omit for full generation.
 
 Commit convenience:
   --spec-commit <sha>    Use the spec state at this openapi-spec commit, then diff
@@ -377,6 +381,24 @@ export function publicScopeFromService(serviceName) {
   if (serviceName.startsWith('Organizations')) return 'organizations';
   if (serviceName.startsWith('UserManagement')) return 'user_management';
   return toSnakeCase(serviceName);
+}
+
+// Map a `--services` selection (post-mount service names, comma-separated, as the
+// SDK bot passes them) to the set of changelog SCOPE keys those services own.
+// A scoped batch's release notes and PR title must describe only the staged
+// services — otherwise an unrelated change that happened to land in the spec
+// between staging and generation (a watermark/drift skew) drives the title, e.g.
+// a Pipes-only batch getting titled "Add `resource_type_slug` to authorization
+// models". Returns null when nothing is selected (full generation) so callers
+// keep every scope. `'true'` is the no-value sentinel from parseArgs.
+export function scopesForServices(servicesArg) {
+  if (!servicesArg || servicesArg === 'true') return null;
+  const names = String(servicesArg)
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (names.length === 0) return null;
+  return new Set(names.map((name) => publicScopeFromService(name)));
 }
 
 function scopeFromName(name) {
@@ -1208,7 +1230,13 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     const indexes = buildIndexes([oldIr, newIr]);
     const specFacts = factsFromDiff(diffReport, indexes);
     const compatFacts = factsFromCompat(compatReport, specFacts, indexes);
-    const entries = entriesFromGroups(groupFacts([...specFacts, ...compatFacts]), changedFiles);
+    // Scope the changelog to the batch's staged services (when given), so the
+    // title/notes never describe an out-of-scope change that drifted into the
+    // spec diff between staging and generation.
+    const allowedScopes = scopesForServices(args.services);
+    const allFacts = [...specFacts, ...compatFacts];
+    const scopedFacts = allowedScopes ? allFacts.filter((fact) => allowedScopes.has(fact.scope)) : allFacts;
+    const entries = entriesFromGroups(groupFacts(scopedFacts), changedFiles);
     reportScopeValidation(entries, args);
 
     const output =
