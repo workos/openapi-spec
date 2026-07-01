@@ -6950,6 +6950,284 @@ paths:
       summary: Delete a Connection
       tags:
         - connections
+  /data-integrations:
+    post:
+      description: >-
+        Creates a data integration for a provider. Set `credentials.type` to
+        `custom` to use your own OAuth app credentials, or `organization` to
+        have each organization supply its own. For a built-in provider, pass its
+        slug as `provider`. For a custom provider, pass a new slug plus a
+        `custom_provider` definition.
+      operationId: DataIntegrationsManagementController_createDataIntegration
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDataIntegrationDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Create a data integration
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
+    get:
+      description: >-
+        Lists the environment's data integrations configured with `custom` or
+        `organization` credentials, including custom providers.
+      operationId: DataIntegrationsManagementController_listDataIntegrations
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records).
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegrationList'
+        '401':
+          description: Unauthorized
+      summary: List data integrations
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
+  /data-integrations/{slug}:
+    get:
+      description: Retrieves a data integration by its slug.
+      operationId: DataIntegrationsManagementController_getDataIntegration
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The slug identifier of the data integration.
+          schema:
+            example: github
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegration'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get a data integration
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
+    put:
+      description: >-
+        Updates the description, enabled state, or custom credentials of a data
+        integration. For custom providers, `custom_provider` updates the OAuth
+        definition.
+      operationId: DataIntegrationsManagementController_updateDataIntegration
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The slug identifier of the data integration.
+          schema:
+            example: github
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDataIntegrationDto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Update a data integration
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
+    delete:
+      description: >-
+        Deletes a data integration and all of its connected installations. For a
+        custom provider, also deletes the custom provider definition.
+      operationId: DataIntegrationsManagementController_deleteDataIntegration
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The slug identifier of the data integration.
+          schema:
+            example: github
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Delete a data integration
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
   /data-integrations/{slug}/api-key:
     put:
       description: >-
@@ -14108,7 +14386,7 @@ paths:
       summary: Create an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_9
+      x-mutually-exclusive-body-groups: &ref_10
         role:
           optional: true
           variants:
@@ -14292,7 +14570,7 @@ paths:
       summary: Update an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_10
+      x-mutually-exclusive-body-groups: &ref_11
         role:
           optional: true
           variants:
@@ -15465,7 +15743,7 @@ paths:
       summary: Create a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_11
+      x-mutually-exclusive-body-groups: &ref_12
         password:
           optional: true
           variants:
@@ -15740,7 +16018,7 @@ paths:
       summary: Update a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_14
+      x-mutually-exclusive-body-groups: &ref_15
         password:
           optional: true
           variants:
@@ -17275,6 +17553,161 @@ paths:
       summary: Delete a connected account
       tags:
         - user-management.data-providers
+    post:
+      description: >-
+        Imports a [connected account](/reference/pipes/connected-account) for a
+        user by providing OAuth tokens directly. Use this to migrate existing
+        connections or set up connections without going through the OAuth flow.
+      operationId: DataIntegrationsUserManagementController_createUserDataInstallation
+      parameters:
+        - name: user_id
+          required: true
+          in: path
+          description: A [User](/reference/authkit/user) identifier.
+          schema:
+            example: user_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: slug
+          required: true
+          in: path
+          description: >-
+            The slug identifier of the provider (e.g., `github`, `slack`,
+            `notion`).
+          schema:
+            example: github
+            type: string
+        - name: organization_id
+          required: false
+          in: query
+          description: >-
+            An [Organization](/reference/organization) identifier. Optional
+            parameter if the connection is scoped to an organization.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectedAccountDto'
+      responses:
+        '201':
+          description: The connected account was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The user, organization, or data integration was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            A connected account already exists for this user, integration, and
+            organization.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: >-
+            The data integration is not in a valid state or the token
+            combination is invalid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Import a connected account
+      tags:
+        - user-management.data-providers
+      x-feature-flag: pipes-management-api
+    put:
+      description: >-
+        Updates a user's [connected account](/reference/pipes/connected-account)
+        tokens, scopes, or state for a specific provider.
+      operationId: DataIntegrationsUserManagementController_updateUserDataInstallation
+      parameters:
+        - name: user_id
+          required: true
+          in: path
+          description: A [User](/reference/authkit/user) identifier.
+          schema:
+            example: user_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: slug
+          required: true
+          in: path
+          description: >-
+            The slug identifier of the provider (e.g., `github`, `slack`,
+            `notion`).
+          schema:
+            example: github
+            type: string
+        - name: organization_id
+          required: false
+          in: query
+          description: >-
+            An [Organization](/reference/organization) identifier. Optional
+            parameter if the connection is scoped to an organization.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectedAccountDto'
+      responses:
+        '200':
+          description: The connected account was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The user, organization, or connected account was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Update a connected account
+      tags:
+        - user-management.data-providers
+      x-feature-flag: pipes-management-api
   /user_management/users/{user_id}/data_providers:
     get:
       description: >-
@@ -19747,6 +20180,288 @@ components:
           pattern: ^[\x00-\x7F]+$
           example: 2fe01467-f7ea-4dd2-8b79-c2b4f56d0191
           description: An external identifier for the Organization.
+    DataIntegrationCredentialsDto:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - custom
+            - organization
+          example: custom
+          description: >-
+            The credentials type. `custom` uses your own OAuth app credentials;
+            `organization` has each organization supply its own credentials
+            (configured per-organization).
+        client_id:
+          type: string
+          description: >-
+            OAuth client ID for the provider app. Required when `type` is
+            `custom`; omit for `organization`.
+          example: Iv1.abc123
+        client_secret:
+          type: string
+          description: >-
+            OAuth client secret for the provider app. Required when `type` is
+            `custom`; omit for `organization`.
+          example: secret_…
+      required:
+        - type
+    CustomProviderDefinitionDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: A descriptive name for the custom provider.
+          example: My OAuth App
+        authorization_url:
+          type: string
+          format: uri
+          description: The provider's OAuth authorization endpoint.
+          example: https://provider.example.com/oauth/authorize
+        token_url:
+          type: string
+          format: uri
+          description: The provider's OAuth token endpoint.
+          example: https://provider.example.com/oauth/token
+        refresh_token_url:
+          type:
+            - string
+            - 'null'
+          format: uri
+          description: >-
+            The endpoint used to refresh tokens, if different from the token
+            endpoint.
+          example: https://provider.example.com/oauth/token
+        pkce_enabled:
+          type: boolean
+          description: >-
+            Whether PKCE is used during the authorization code flow. Defaults to
+            `true`.
+          example: true
+        request_scope_separator:
+          type: string
+          description: The separator used to join requested scopes. Defaults to a space.
+          example: ' '
+        scopes_required:
+          type: boolean
+          description: >-
+            Whether at least one scope must be selected when connecting an
+            account. Defaults to `false`.
+          example: false
+        client_secret_required:
+          type: boolean
+          description: >-
+            Whether a client secret is required for this provider. Defaults to
+            `true`.
+          example: true
+        additional_authorization_parameters:
+          type: object
+          description: >-
+            Additional static query parameters appended to the authorization
+            request.
+          additionalProperties:
+            type: string
+          example:
+            prompt: consent
+        token_body_content_type:
+          type: string
+          description: The Content-Type used when exchanging the token request.
+          example: application/x-www-form-urlencoded
+        authenticate_via:
+          type: string
+          enum: &ref_9
+            - request_body
+            - basic_auth_header
+          description: >-
+            How client credentials are sent when exchanging authorization codes
+            and refreshing tokens.
+          example: request_body
+      required:
+        - name
+        - authorization_url
+        - token_url
+    CreateDataIntegrationDto:
+      type: object
+      properties:
+        provider:
+          type: string
+          description: >-
+            The provider to create a Data Integration for. For a built-in
+            provider use its slug (e.g. `github`, `slack`). For a custom
+            provider, this is the new provider slug and `custom_provider` must
+            be supplied. A custom provider slug cannot shadow an existing global
+            provider slug.
+          example: github
+        description:
+          type:
+            - string
+            - 'null'
+          description: An optional description of the Data Integration.
+          example: Production GitHub app
+        enabled:
+          type: boolean
+          description: Whether the Data Integration is enabled. Defaults to `false`.
+          example: true
+        scopes:
+          description: >-
+            The OAuth scopes to request for the Data Integration. Defaults to
+            the provider's configured scopes when omitted.
+          example:
+            - repo
+            - read:org
+          type:
+            - array
+            - 'null'
+          items:
+            type: string
+        credentials:
+          description: >-
+            The credentials to configure for the Data Integration. Required for
+            both built-in and custom providers.
+          $ref: '#/components/schemas/DataIntegrationCredentialsDto'
+        custom_provider:
+          description: >-
+            The OAuth definition for a custom provider. Supply this to define a
+            custom provider; omit it to create an integration for a built-in
+            provider.
+          $ref: '#/components/schemas/CustomProviderDefinitionDto'
+      required:
+        - provider
+    UpdateCustomProviderDefinitionDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: A descriptive name for the custom provider.
+          example: My OAuth App
+        authorization_url:
+          type: string
+          format: uri
+          description: The provider's OAuth authorization endpoint.
+          example: https://provider.example.com/oauth/authorize
+        token_url:
+          type: string
+          format: uri
+          description: The provider's OAuth token endpoint.
+          example: https://provider.example.com/oauth/token
+        refresh_token_url:
+          type:
+            - string
+            - 'null'
+          format: uri
+          description: >-
+            The endpoint used to refresh tokens, if different from the token
+            endpoint.
+          example: https://provider.example.com/oauth/token
+        pkce_enabled:
+          type: boolean
+          description: Whether PKCE is used during the authorization code flow.
+          example: true
+        request_scope_separator:
+          type: string
+          description: The separator used to join requested scopes.
+          example: ' '
+        scopes_required:
+          type: boolean
+          description: >-
+            Whether at least one scope must be selected when connecting an
+            account.
+          example: false
+        client_secret_required:
+          type: boolean
+          description: Whether a client secret is required for this provider.
+          example: true
+        additional_authorization_parameters:
+          type: object
+          description: >-
+            Additional static query parameters appended to the authorization
+            request.
+          additionalProperties:
+            type: string
+          example:
+            prompt: consent
+        token_body_content_type:
+          type: string
+          description: The Content-Type used when exchanging the token request.
+          example: application/x-www-form-urlencoded
+        authenticate_via:
+          type: string
+          enum: *ref_9
+          description: >-
+            How client credentials are sent when exchanging authorization codes
+            and refreshing tokens.
+          example: request_body
+    UpdateDataIntegrationDto:
+      type: object
+      properties:
+        description:
+          type:
+            - string
+            - 'null'
+          description: An optional description of the Data Integration.
+          example: Production GitHub app
+        enabled:
+          type: boolean
+          description: Whether the Data Integration is enabled.
+          example: true
+        scopes:
+          description: >-
+            The OAuth scopes to request for the Data Integration. Pass `null` to
+            reset to the provider's configured scopes.
+          example:
+            - repo
+            - read:org
+          type:
+            - array
+            - 'null'
+          items:
+            type: string
+        credentials:
+          description: >-
+            New credentials for the Data Integration. When provided, rotates the
+            stored client secret.
+          $ref: '#/components/schemas/DataIntegrationCredentialsDto'
+        custom_provider:
+          description: >-
+            Updates to a custom provider's OAuth definition. Only valid for
+            custom-provider integrations.
+          $ref: '#/components/schemas/UpdateCustomProviderDefinitionDto'
+    ConnectedAccountDto:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: The OAuth access token for the connected account.
+          example: gho_16C7e42F292c6912E7710c838347Ae178B4a
+        refresh_token:
+          type: string
+          description: The OAuth refresh token for the connected account.
+          example: ghr_xxxxxxxxxxxxxxxxxxxx
+        expires_at:
+          type: string
+          description: >-
+            The ISO-8601 timestamp when the access token expires. Required when
+            `access_token` is provided for tokens that expire.
+          example: '2025-12-31T23:59:59.000Z'
+          format: date-time
+        scopes:
+          description: The OAuth scopes granted for this connection.
+          example:
+            - repo
+            - user:email
+          type: array
+          items:
+            type: string
+        state:
+          type: string
+          enum:
+            - connected
+            - needs_reauthorization
+          description: >-
+            Explicitly set the state of the connected account. When omitted, the
+            state is derived from the token combination provided.
+          example: connected
     GenerateLinkDto:
       type: object
       properties:
@@ -20156,9 +20871,9 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - role_slug
-      x-mutually-exclusive-body-groups: *ref_9
-    UpdateUserlandUserOrganizationMembershipDto:
       x-mutually-exclusive-body-groups: *ref_10
+    UpdateUserlandUserOrganizationMembershipDto:
+      x-mutually-exclusive-body-groups: *ref_11
       oneOf:
         - type: object
           not:
@@ -20282,7 +20997,7 @@ components:
                 - 'null'
               additionalProperties: *ref_7
               maxProperties: 50
-              example: &ref_12
+              example: &ref_13
                 timezone: America/New_York
               description: >-
                 Object containing metadata key/value pairs associated with the
@@ -20352,7 +21067,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: &ref_13
+                  enum: &ref_14
                     - bcrypt
                     - firebase-scrypt
                     - ssha
@@ -20374,7 +21089,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_11
+      x-mutually-exclusive-body-groups: *ref_12
     UpdateUserlandUserDto:
       allOf:
         - type: object
@@ -20406,7 +21121,7 @@ components:
                 - 'null'
               additionalProperties: *ref_7
               maxProperties: 50
-              example: *ref_12
+              example: *ref_13
               description: >-
                 Object containing metadata key/value pairs associated with the
                 user.
@@ -20477,7 +21192,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: *ref_13
+                  enum: *ref_14
                   description: >-
                     The algorithm originally used to hash the password, used
                     when providing a `password_hash`. Required with
@@ -20493,7 +21208,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_14
+      x-mutually-exclusive-body-groups: *ref_15
     VerifyEmailAddressDto:
       type: object
       properties:
@@ -20568,7 +21283,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: &ref_15
+            enum: &ref_16
               - agent.registration.created
               - agent.registration.claim.attempt.created
               - agent.registration.claim.completed
@@ -20682,7 +21397,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: *ref_15
+            enum: *ref_16
           example:
             - user.created
             - dsync.user.created
@@ -23879,7 +24594,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_18
+          example: &ref_19
             department: Engineering
             job_title: Software Engineer
         role:
@@ -24057,7 +24772,7 @@ components:
               type: object
               additionalProperties: {}
               description: The event payload.
-              example: &ref_16
+              example: &ref_17
                 id: directory_user_01E1JG7J09H96KYP8HM9B0G5SJ
                 directory_id: directory_01ECAZ4NV9QMV47GW873HDCX74
                 organization_id: org_01EZTR6WYX1A0DSE2CYMGXQ24Y
@@ -24092,11 +24807,11 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_23
+          example: &ref_24
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
-            data: *ref_16
+            data: *ref_17
             created_at: '2021-06-25T19:07:33.155Z'
             context: {}
         - oneOf:
@@ -24766,7 +25481,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_17
+                      example: &ref_18
                         - users:read
                         - users:write
                     created_at:
@@ -24892,7 +25607,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_17
+                      example: *ref_18
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -25016,7 +25731,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_17
+                      example: *ref_18
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -27878,7 +28593,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_18
+                      example: *ref_19
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -28068,7 +28783,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_19
+                      example: &ref_20
                         - reports
                     enabled:
                       type: boolean
@@ -28229,7 +28944,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_19
+                      example: *ref_20
                     enabled:
                       type: boolean
                       description: >-
@@ -28389,7 +29104,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_19
+                      example: *ref_20
                     enabled:
                       type: boolean
                       description: >-
@@ -28669,7 +29384,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_19
+                      example: *ref_20
                     enabled:
                       type: boolean
                       description: >-
@@ -29657,7 +30372,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_20
+                      example: &ref_21
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -29807,7 +30522,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_20
+                      example: *ref_21
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -30634,7 +31349,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_21
+                      example: &ref_22
                         - users:read
                         - users:write
                     created_at:
@@ -30718,7 +31433,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_21
+                      example: *ref_22
                     created_at:
                       format: date-time
                       type: string
@@ -30800,7 +31515,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_21
+                      example: *ref_22
                     created_at:
                       format: date-time
                       type: string
@@ -30937,7 +31652,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_20
+                      example: *ref_21
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -31568,7 +32283,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_22
+                      example: &ref_23
                         - users:read
                         - users:write
                     created_at:
@@ -31634,7 +32349,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_22
+                      example: *ref_23
                     created_at:
                       format: date-time
                       type: string
@@ -31698,7 +32413,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_22
+                      example: *ref_23
                     created_at:
                       format: date-time
                       type: string
@@ -32781,7 +33496,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_23
+      example: *ref_24
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -32816,7 +33531,7 @@ components:
       example:
         object: list
         data:
-          - *ref_23
+          - *ref_24
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -33658,6 +34373,245 @@ components:
             The OAuth client secret of the organization's own application. Must
             be provided together with `client_id`.
           example: ••••••••
+    DataIntegration:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Data Integration object.
+          example: data_integration
+          const: data_integration
+        id:
+          type: string
+          description: Unique identifier of the Data Integration.
+          example: data_integration_01EHZNVPK3SFK441A1RGBFSHRT
+        slug:
+          type: string
+          description: The provider slug for this Data Integration.
+          example: github
+        integration_type:
+          type: string
+          description: The integration type derived from the provider.
+          example: github
+        description:
+          type:
+            - string
+            - 'null'
+          description: An optional description of the Data Integration.
+          example: Production GitHub app
+        enabled:
+          type: boolean
+          description: Whether the Data Integration is enabled.
+          example: true
+        state:
+          type: string
+          enum:
+            - valid
+            - invalid
+            - requested
+          description: The state of the Data Integration.
+          example: valid
+        scopes:
+          description: >-
+            The OAuth scopes configured for the Data Integration. `null` when
+            the provider's configured scopes are used.
+          example:
+            - repo
+            - read:org
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: 'null'
+        redirect_uri:
+          type: string
+          description: >-
+            The OAuth redirect URI to register with the provider when
+            configuring the custom application.
+          example: >-
+            https://api.workos.com/data-integrations/github/dik_01EHZNVPK3SFK441A1RGBFSHRT/callback
+        credentials:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - custom
+                - organization
+              description: >-
+                The credentials type. `custom` uses your own OAuth app
+                credentials; `organization` has each organization supply its own
+                credentials (so `client_id`/`redacted_client_secret` are null on
+                the integration itself).
+              example: custom
+            client_id:
+              type:
+                - string
+                - 'null'
+              description: >-
+                The OAuth client ID configured for the provider app. Null for
+                `organization` credentials.
+              example: Iv1.abc123
+            redacted_client_secret:
+              type:
+                - string
+                - 'null'
+              description: >-
+                The last four characters of the OAuth client secret. The full
+                secret is never returned. Null for `organization` credentials.
+              example: '6789'
+          required:
+            - type
+            - client_id
+            - redacted_client_secret
+          description: The credentials configured for the Data Integration.
+        custom_provider:
+          description: >-
+            The OAuth definition when this is a custom provider; `null` for
+            built-in providers.
+          oneOf:
+            - type: object
+              properties:
+                name:
+                  type: string
+                  description: A descriptive name for the custom provider.
+                  example: My OAuth App
+                authorization_url:
+                  type:
+                    - string
+                    - 'null'
+                  description: The provider's OAuth authorization endpoint.
+                  example: https://provider.example.com/oauth/authorize
+                token_url:
+                  type:
+                    - string
+                    - 'null'
+                  description: The provider's OAuth token endpoint.
+                  example: https://provider.example.com/oauth/token
+                refresh_token_url:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The endpoint used to refresh tokens, if different from the
+                    token endpoint.
+                  example: https://provider.example.com/oauth/token
+                pkce_enabled:
+                  type: boolean
+                  description: Whether PKCE is used during the authorization code flow.
+                  example: true
+                request_scope_separator:
+                  type: string
+                  description: The separator used to join requested scopes.
+                  example: ' '
+                scopes_required:
+                  type: boolean
+                  description: >-
+                    Whether at least one scope must be selected when connecting
+                    an account.
+                  example: false
+                client_secret_required:
+                  type: boolean
+                  description: Whether a client secret is required for this provider.
+                  example: true
+                additional_authorization_parameters:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Additional static query parameters appended to the
+                    authorization request.
+                  example:
+                    prompt: consent
+                token_body_content_type:
+                  type: string
+                  description: The Content-Type used when exchanging the token request.
+                  example: application/x-www-form-urlencoded
+                authenticate_via:
+                  type: string
+                  enum:
+                    - request_body
+                    - basic_auth_header
+                  description: >-
+                    How client credentials are sent when exchanging
+                    authorization codes and refreshing tokens.
+                  example: request_body
+              required:
+                - name
+                - authorization_url
+                - token_url
+                - refresh_token_url
+                - pkce_enabled
+                - request_scope_separator
+                - scopes_required
+                - client_secret_required
+                - additional_authorization_parameters
+                - token_body_content_type
+                - authenticate_via
+            - type: 'null'
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - slug
+        - integration_type
+        - description
+        - enabled
+        - state
+        - scopes
+        - redirect_uri
+        - credentials
+        - custom_provider
+        - created_at
+        - updated_at
+    DataIntegrationList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataIntegration'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: data_integration_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: data_integration_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     DataIntegrationAuthorizeUrlResponse:
       type: object
       properties:
