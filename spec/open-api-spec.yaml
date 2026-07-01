@@ -18796,10 +18796,12 @@ components:
           type: string
           description: ISO-8601 value for start of the export range.
           example: '2022-07-02T18:09:06.996Z'
+          format: date-time
         range_end:
           type: string
           description: ISO-8601 value for end of the export range.
           example: '2022-09-02T18:09:06.996Z'
+          format: date-time
         actions:
           description: List of actions to filter against.
           example:
