@@ -429,6 +429,11 @@ function scopeFromName(name) {
   if (/^(Role|Permission)/.test(name)) return 'authorization';
   if (/^Widget/.test(name)) return 'widgets';
   if (/^Event/.test(name)) return 'events';
+  // Admin Portal generate-link intent options (`GenerateLinkDto`). The SSO and
+  // domain-verification variants resolve to their own scopes via the rules
+  // above; this catches the bare `IntentOptions` aggregate and any other
+  // intent-options type not otherwise classified.
+  if (/IntentOptions$/.test(name)) return 'admin_portal';
 
   return 'sdk';
 }
