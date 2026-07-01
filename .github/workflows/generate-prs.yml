@@ -647,6 +647,25 @@ jobs:
             /tmp/diff-report.json
           retention-days: 14
 
+      # Preview only: run the SDK's own CI (build + tests) on the freshly
+      # generated code, so the dashboard's per-language "green" means "generates
+      # AND builds/tests pass" rather than just "generation didn't error" (the
+      # same script/ci validate-sdks.yml runs on real PRs). Runs LAST so the diff
+      # + diagnostics are already captured/uploaded above regardless of the CI
+      # result — a CI failure reds this language's job (→ ❌ in the preview) but
+      # never blocks the diff report (preview_diff_report is always()).
+      - name: Run SDK CI (preview)
+        if: success() && inputs.dry_run == true
+        working-directory: ${{ env.SDK_CHECKOUT_PATH }}
+        run: |
+          if [ -x script/ci ]; then
+            script/ci
+          elif [ -x scripts/ci ]; then
+            scripts/ci
+          else
+            echo "No script/ci or scripts/ci found, skipping"
+          fi
+
   # Preview only (dry_run). Aggregate every language's captured sdk-code.diff into
   # one rendered HTML report (same builder validate-sdks.yml uses) and publish it
   # to GitHub Pages under preview-<batch_id>/, so the SDK bot dashboard can link
