@@ -416,6 +416,7 @@ function scopeFromName(name) {
   if (/^(Group|CreateGroup|UpdateGroup)/.test(name)) return 'groups';
   if (/OrganizationMembership/.test(name)) return 'organization_membership';
   if (/^OrganizationDomain/.test(name)) return 'organization_domains';
+  if (/^DomainVerification/.test(name)) return 'organization_domains';
   if (/^Organization/.test(name)) return 'organizations';
   if (/^(Connection|SSO|Sso)/.test(name)) return 'sso';
   if (/^(AuthenticationFactor|AuthenticationChallenge|ChallengeAuthenticationFactor|MultiFactor|Mfa)/.test(name)) {
@@ -443,7 +444,7 @@ function scopeFromFile(path) {
   if (/connect|applicationcredential|externalauth|userobject/.test(normalized)) return 'connect';
   if (/featureflag|featureflags|feature_flags/.test(normalized)) return 'feature_flags';
   if (/multifactorauth|multi_factor_auth|mfa/.test(normalized)) return 'multi_factor_auth';
-  if (/organizationdomain|organizationdomains|organization_domains/.test(normalized)) return 'organization_domains';
+  if (/organizationdomain|organizationdomains|organization_domains|domainverification|domain_verification/.test(normalized)) return 'organization_domains';
   if (/organizationmembership|organizationmemberships/.test(normalized)) return 'organization_membership';
   if (/organization|organizations/.test(normalized)) return 'organizations';
   if (/user_management|usermanagement|revoke_session|revokesession|createuser|updateuser/.test(normalized)) {
