@@ -683,6 +683,20 @@ jobs:
         id: diff-report
         run: |
           languages="$(jq -r 'map(.language) | join(",")' .github/sdk-matrix.json)"
+          # generate_pr uploads the diagnostics artifact with a mixed path set
+          # (.oagen/<lang>/ + /tmp/diff-report.json), so upload-artifact roots it
+          # at "/" and sdk-code.diff lands under a deep home/runner/... prefix
+          # instead of at the artifact root build-sdk-diff-report expects. Hoist
+          # each language's sdk-code.diff back to oagen-diagnostics-<lang>/ so the
+          # builder (written for validate-sdks' single-path layout) finds it.
+          for lang in $(jq -r '.[].language' .github/sdk-matrix.json); do
+            dir="sdk-diagnostics/oagen-diagnostics-$lang"
+            [ -d "$dir" ] || continue
+            found="$(find "$dir" -name sdk-code.diff -print -quit 2>/dev/null || true)"
+            if [ -n "$found" ] && [ "$found" != "$dir/sdk-code.diff" ]; then
+              cp "$found" "$dir/sdk-code.diff"
+            fi
+          done
           node scripts/build-sdk-diff-report.mjs \
             --artifacts-root sdk-diagnostics \
             --languages "$languages" \
