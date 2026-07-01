@@ -716,9 +716,14 @@ jobs:
               cp "$found" "$dir/sdk-code.diff"
             fi
           done
+          # --staged groups each language's files into "your staged service(s)"
+          # vs "other" (shared types/fixtures + already-on-disk services re-synced
+          # to the current spec), so the report separates what you staged from the
+          # rest. Empty (full preview) → no grouping.
           node scripts/build-sdk-diff-report.mjs \
             --artifacts-root sdk-diagnostics \
             --languages "$languages" \
+            --staged "${{ inputs.services }}" \
             --output /tmp/sdk-diff-report.html
 
       - name: Upload code diff report

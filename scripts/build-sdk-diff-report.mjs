@@ -17,16 +17,21 @@ const TEST_PATTERNS = {
 };
 
 function parseArgs(argv) {
-  const args = { artifactsRoot: '', output: '', languages: [] };
+  const args = { artifactsRoot: '', output: '', languages: [], staged: [] };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--artifacts-root') args.artifactsRoot = argv[++i] ?? '';
     else if (arg === '--output') args.output = argv[++i] ?? '';
     else if (arg === '--languages') args.languages = (argv[++i] ?? '').split(',').filter(Boolean);
+    // Optional: the services the caller staged (a scoped preview). When present,
+    // each language's files are split into "your staged service(s)" vs "other"
+    // (shared types/fixtures + already-on-disk services this run re-synced).
+    // Absent (e.g. validate-sdks) → no grouping, output byte-identical to before.
+    else if (arg === '--staged') args.staged = (argv[++i] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
     else throw new Error(`Unknown option: ${arg}`);
   }
   if (!args.artifactsRoot || !args.output || args.languages.length === 0) {
-    throw new Error('Usage: build-sdk-diff-report.mjs --artifacts-root <dir> --output <file> --languages <csv>');
+    throw new Error('Usage: build-sdk-diff-report.mjs --artifacts-root <dir> --output <file> --languages <csv> [--staged <csv>]');
   }
   return args;
 }
@@ -49,7 +54,28 @@ function effectiveName(file) {
   return file.oldName ?? '';
 }
 
-function renderLanguageBody(language, diffText) {
+// A changed file belongs to the "staged" group when its (lang-stripped) path
+// mentions one of the staged service names — the per-service resource/test files
+// (Services/Pipes/…, PipesServiceTest, …). Everything else ("other") is shared
+// types/fixtures the staged services reference, or already-on-disk services this
+// run re-synced. Returns null when nothing was staged (grouping disabled).
+function fileGroup(stagedServices, language, filePath) {
+  if (!stagedServices || stagedServices.length === 0) return null;
+  const p = stripLangPrefix(language, filePath).toLowerCase();
+  return stagedServices.some((svc) => svc && p.includes(svc.toLowerCase())) ? 'staged' : 'other';
+}
+
+function groupSection(title, note, blocks) {
+  const n = blocks.length;
+  const inner = n ? blocks.join('\n') : '<p class="empty">None — see below.</p>';
+  return (
+    `<section class="diff-group"><h3 class="group-head">${title} ` +
+    `<span class="group-count">${n} file${n === 1 ? '' : 's'}</span></h3>` +
+    `<p class="group-note">${note}</p>${inner}</section>`
+  );
+}
+
+function renderLanguageBody(language, diffText, stagedServices) {
   const trimmed = diffText.trim();
   if (!trimmed) {
     return { fileCount: 0, counts: { code: 0, test: 0, manifest: 0 }, body: '<p class="empty">No changes for this language.</p>' };
@@ -61,7 +87,9 @@ function renderLanguageBody(language, diffText) {
   }
 
   const counts = { code: 0, test: 0, manifest: 0 };
-  const blocks = [];
+  const grouping = stagedServices && stagedServices.length > 0;
+  const flat = [];
+  const grouped = { staged: [], other: [] };
 
   for (const file of files) {
     const filePath = effectiveName(file);
@@ -76,12 +104,31 @@ function renderLanguageBody(language, diffText) {
 
     const anchorId = filePath;
     const header = `<div class="diff-file-header"><a class="permalink" href="#${escapeHtml(encodeURI(anchorId))}" title="Copy link to this file">🔗</a> <code class="permalink-path">${escapeHtml(filePath)}</code></div>`;
-    blocks.push(
-      `<div class="diff-file" id="${escapeHtml(anchorId)}" data-category="${category}">${header}${fileHtml}</div>`,
-    );
+    const block = `<div class="diff-file" id="${escapeHtml(anchorId)}" data-category="${category}">${header}${fileHtml}</div>`;
+    flat.push(block);
+    if (grouping) grouped[fileGroup(stagedServices, language, filePath)].push(block);
   }
 
-  return { fileCount: files.length, counts, body: blocks.join('\n') };
+  let body;
+  if (grouping) {
+    const label = escapeHtml(stagedServices.join(', '));
+    body = [
+      groupSection(
+        `Your staged service${stagedServices.length === 1 ? '' : 's'}: ${label}`,
+        'Files under the service(s) you staged.',
+        grouped.staged,
+      ),
+      groupSection(
+        'Other changes',
+        'Shared types &amp; fixtures your staged services reference, plus services already on disk that this run re-synced to the current spec.',
+        grouped.other,
+      ),
+    ].join('\n');
+  } else {
+    body = flat.join('\n');
+  }
+
+  return { fileCount: files.length, counts, body };
 }
 
 function escapeHtml(value) {
@@ -151,6 +198,11 @@ function buildHtml(languageReports) {
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
   .lang-summary { font-size: 13px; color: #57606a; margin: 0 0 12px; }
+  .diff-group { margin: 0 0 28px; }
+  .group-head { font-size: 14px; margin: 0 0 4px; padding-bottom: 6px; border-bottom: 2px solid #d0d7de; }
+  .group-count { color: #8c959f; font-weight: 400; font-size: 12px; }
+  .group-note { font-size: 12px; color: #57606a; margin: 0 0 12px; }
+  .diff-group.all-hidden { display: none; }
   .diff-file { margin-bottom: 16px; }
   body.hide-test .diff-file[data-category="test"] { display: none; }
   body.hide-manifest .diff-file[data-category="manifest"] { display: none; }
@@ -218,6 +270,14 @@ ${panels}
   function updateEmptyState() {
     panels.forEach((panel) => {
       if (!panel.classList.contains('active')) { panel.classList.remove('all-hidden'); return; }
+      // Collapse a group (staged / other) once the active filters hide all of its
+      // files, so an empty "Your staged services" heading doesn't dangle.
+      panel.querySelectorAll('.diff-group').forEach((group) => {
+        const gf = group.querySelectorAll('.diff-file');
+        if (gf.length === 0) { group.classList.remove('all-hidden'); return; }
+        const vis = Array.from(gf).some((f) => getComputedStyle(f).display !== 'none');
+        group.classList.toggle('all-hidden', !vis);
+      });
       const files = panel.querySelectorAll('.diff-file');
       if (files.length === 0) { panel.classList.remove('all-hidden'); return; }
       const visible = Array.from(files).some((f) => getComputedStyle(f).display !== 'none');
@@ -249,7 +309,7 @@ function main() {
 
   for (const language of args.languages) {
     const diff = readDiff(args.artifactsRoot, language);
-    const rendered = renderLanguageBody(language, diff);
+    const rendered = renderLanguageBody(language, diff, args.staged);
     reports.push({ language, ...rendered });
   }
 
