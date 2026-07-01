@@ -138,6 +138,22 @@ jobs:
             --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
             ${SERVICES:+--services "$SERVICES"}
 
+      # Preview only: capture the generated changes as a unified diff so
+      # preview_diff_report can render them (mirrors validate-sdks.yml's capture).
+      # Gated to dry_run so the real-PR path is untouched — this also never stages
+      # content that could disturb open-batch-pr.mjs's own commit.
+      - name: Capture SDK code diff (preview)
+        if: success() && inputs.dry_run == true
+        working-directory: ${{ env.SDK_CHECKOUT_PATH }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}"
+          # intent-to-add so untracked generated files appear in the diff
+          git add -AN
+          git -c core.quotepath=false diff HEAD \
+              --src-prefix="a/${{ matrix.language }}/" \
+              --dst-prefix="b/${{ matrix.language }}/" \
+              > "$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-code.diff" || true
+
       - name: Extract candidate SDK snapshot
         continue-on-error: true
         working-directory: openapi-spec
@@ -630,3 +646,108 @@ jobs:
             openapi-spec/.oagen/${{ matrix.language }}/
             /tmp/diff-report.json
           retention-days: 14
+
+  # Preview only (dry_run). Aggregate every language's captured sdk-code.diff into
+  # one rendered HTML report (same builder validate-sdks.yml uses) and publish it
+  # to GitHub Pages under preview-<batch_id>/, so the SDK bot dashboard can link
+  # the actual file-level changes for a staged subset without opening any PR.
+  # always() so a partial-failure run still publishes the languages that worked.
+  preview_diff_report:
+    name: preview_diff_report
+    needs: [load-matrix, generate_pr]
+    if: ${{ always() && inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout openapi-spec
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download diagnostics
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: oagen-diagnostics-*
+          path: sdk-diagnostics
+
+      - name: Build code diff report
+        id: diff-report
+        run: |
+          languages="$(jq -r 'map(.language) | join(",")' .github/sdk-matrix.json)"
+          node scripts/build-sdk-diff-report.mjs \
+            --artifacts-root sdk-diagnostics \
+            --languages "$languages" \
+            --output /tmp/sdk-diff-report.html
+
+      - name: Upload code diff report
+        if: steps.diff-report.outputs.report-exists == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sdk-code-diff-report
+          path: /tmp/sdk-diff-report.html
+          retention-days: 14
+
+      - name: Publish preview to GitHub Pages
+        if: steps.diff-report.outputs.report-exists == 'true'
+        env:
+          PREVIEW_ID: ${{ inputs.batch_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          worktree=$(mktemp -d)
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch --depth=1 origin gh-pages
+            git worktree add "$worktree" origin/gh-pages
+            (cd "$worktree" && git checkout -B gh-pages)
+          else
+            git worktree add --orphan -b gh-pages "$worktree"
+            : > "$worktree/.nojekyll"
+          fi
+
+          # batch_id already carries the "preview-" prefix, so the dir is
+          # preview-<uuid>/ (never collides with validate-sdks' pr-<N>/ dirs).
+          target_dir="$worktree/${PREVIEW_ID}"
+          mkdir -p "$target_dir"
+          cp /tmp/sdk-diff-report.html "$target_dir/sdk-diff-report.html"
+          # A creation marker survives the shallow gh-pages checkout (git history
+          # is depth-1, so per-dir commit dates are unusable) — prune reads it.
+          date +%s > "$target_dir/.created"
+
+          (
+            cd "$worktree"
+            # Prune preview-*/ dirs older than 14 days so on-demand previews don't
+            # accumulate unbounded (unlike pr-<N>/, they have no PR-close cleanup).
+            now=$(date +%s)
+            for marker in preview-*/.created; do
+              [ -f "$marker" ] || continue
+              d="$(dirname "$marker")"
+              ts="$(cat "$marker" 2>/dev/null || echo "$now")"
+              case "$ts" in ''|*[!0-9]*) ts="$now" ;; esac
+              if [ "$(( (now - ts) / 86400 ))" -gt 14 ]; then
+                git rm -r --quiet "$d" || true
+              fi
+            done
+            git add -A
+            if git diff --cached --quiet; then
+              echo "No changes to publish"
+            else
+              git commit -m "SDK diff preview ${PREVIEW_ID}"
+              git push origin gh-pages
+            fi
+          )
+
+          owner="${REPO%%/*}"
+          name="${REPO#*/}"
+          echo "Preview: https://${owner}.github.io/${name}/${PREVIEW_ID}/sdk-diff-report.html"
