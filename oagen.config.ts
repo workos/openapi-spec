@@ -58,6 +58,14 @@ const config: OagenConfig = {
       ],
       regenerateOwnedTests: true,
       operationOverrides: nodeOperationOverrides,
+      // The spec reports raw directory states (linked/unlinked/...), but the
+      // Node SDK has always surfaced linked→active / unlinked→inactive. Generate
+      // that translation: the emitter emits the domain type (DirectoryState),
+      // the raw-wire companion (DirectoryStateResponse), the wire→domain
+      // deserializer, and tests — instead of hand-owning it.
+      enumValueRemaps: {
+        DirectoryState: { linked: 'active', unlinked: 'inactive' },
+      },
     },
   },
   transformSpec,
