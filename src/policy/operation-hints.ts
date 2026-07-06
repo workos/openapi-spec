@@ -189,7 +189,7 @@ export const operationHints: Record<string, OperationHint> = {
   },
   'PUT /organizations/{id}/audit_logs_retention': { mountOn: 'AuditLogs' },
 
-  // -- Union split: POST /user_management/authenticate (8 variants) -------------
+  // -- Union split: POST /user_management/authenticate (10 variants) ------------
   'POST /user_management/authenticate': {
     split: [
       {
@@ -197,16 +197,32 @@ export const operationHints: Record<string, OperationHint> = {
         targetVariant: 'PasswordSessionAuthenticateRequest',
         defaults: { grant_type: 'password' },
         inferFromClient: ['client_id', 'client_secret'],
-        exposedParams: ['email', 'password', 'invitation_token', 'ip_address', 'device_id', 'user_agent'],
-        optionalParams: ['invitation_token', 'ip_address', 'device_id', 'user_agent'],
+        exposedParams: [
+          'email',
+          'password',
+          'invitation_token',
+          'ip_address',
+          'device_id',
+          'user_agent',
+          'signals_id',
+          'radar_auth_attempt_id',
+        ],
+        optionalParams: [
+          'invitation_token',
+          'ip_address',
+          'device_id',
+          'user_agent',
+          'signals_id',
+          'radar_auth_attempt_id',
+        ],
       },
       {
         name: 'authenticate_with_code',
         targetVariant: 'AuthorizationCodeSessionAuthenticateRequest',
         defaults: { grant_type: 'authorization_code' },
         inferFromClient: ['client_id', 'client_secret'],
-        exposedParams: ['code', 'code_verifier', 'invitation_token', 'ip_address', 'device_id', 'user_agent'],
-        optionalParams: ['code_verifier', 'invitation_token', 'ip_address', 'device_id', 'user_agent'],
+        exposedParams: ['code', 'code_verifier', 'invitation_token', 'ip_address', 'device_id', 'user_agent', 'signals_id'],
+        optionalParams: ['code_verifier', 'invitation_token', 'ip_address', 'device_id', 'user_agent', 'signals_id'],
       },
       {
         name: 'authenticate_with_refresh_token',
@@ -221,8 +237,8 @@ export const operationHints: Record<string, OperationHint> = {
         targetVariant: 'MagicAuthCodeSessionAuthenticateRequest',
         defaults: { grant_type: 'urn:workos:oauth:grant-type:magic-auth:code' },
         inferFromClient: ['client_id', 'client_secret'],
-        exposedParams: ['code', 'email', 'invitation_token', 'ip_address', 'device_id', 'user_agent'],
-        optionalParams: ['invitation_token', 'ip_address', 'device_id', 'user_agent'],
+        exposedParams: ['code', 'email', 'invitation_token', 'ip_address', 'device_id', 'user_agent', 'radar_auth_attempt_id'],
+        optionalParams: ['invitation_token', 'ip_address', 'device_id', 'user_agent', 'radar_auth_attempt_id'],
       },
       {
         name: 'authenticate_with_email_verification',
@@ -261,6 +277,43 @@ export const operationHints: Record<string, OperationHint> = {
         defaults: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code' },
         inferFromClient: ['client_id'],
         exposedParams: ['device_code', 'ip_address', 'device_id', 'user_agent'],
+        optionalParams: ['ip_address', 'device_id', 'user_agent'],
+      },
+      // NB: the two Radar challenge variants below are brand-new inline oneOf
+      // branches. Their targetVariant names are the synthesized IR model names
+      // (grant_type const → PascalCase, then the `Urn…OAuthGrantType` prefix
+      // strip in transforms.ts); confirmed against a fresh regen. If the model
+      // name ever drifts the wrapper silently marks every param required, so
+      // re-verify these two names after any authenticate-schema change.
+      {
+        name: 'authenticate_with_radar_email_challenge',
+        targetVariant: 'RadarEmailChallengeCodeSessionAuthenticateRequest',
+        defaults: { grant_type: 'urn:workos:oauth:grant-type:radar-email-challenge:code' },
+        inferFromClient: ['client_id', 'client_secret'],
+        exposedParams: [
+          'code',
+          'radar_challenge_id',
+          'pending_authentication_token',
+          'ip_address',
+          'device_id',
+          'user_agent',
+        ],
+        optionalParams: ['ip_address', 'device_id', 'user_agent'],
+      },
+      {
+        name: 'authenticate_with_radar_sms_challenge',
+        targetVariant: 'RadarSmsChallengeCodeSessionAuthenticateRequest',
+        defaults: { grant_type: 'urn:workos:oauth:grant-type:radar-sms-challenge:code' },
+        inferFromClient: ['client_id', 'client_secret'],
+        exposedParams: [
+          'code',
+          'verification_id',
+          'phone_number',
+          'pending_authentication_token',
+          'ip_address',
+          'device_id',
+          'user_agent',
+        ],
         optionalParams: ['ip_address', 'device_id', 'user_agent'],
       },
     ],
