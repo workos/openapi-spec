@@ -13,36 +13,56 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                type:
-                  type: string
-                  enum:
-                    - api_key
-                    - access_token
-                  description: >-
-                    The kind of credential being validated — an agent API key or
-                    an agent access token.
-                  example: access_token
-                credential:
-                  type: string
-                  minLength: 1
-                  description: >-
-                    The credential value to validate: the API key value for
-                    `api_key`, or the access token (JWT) for `access_token`.
-                  example: sk_agent_example_1234567890
-                audience:
-                  type: string
-                  minLength: 1
-                  description: >-
-                    Only applies to `access_token` credentials. When provided,
-                    the access token's `aud` claim is verified against this
-                    value — tokens issued for a different resource are rejected.
-                    Not permitted for `api_key` credentials.
-                  example: https://api.example.com
-              required:
-                - type
-                - credential
+              discriminator:
+                propertyName: type
+              oneOf:
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      description: >-
+                        The kind of credential being validated — an agent API
+                        key or an agent access token.
+                      const: api_key
+                    credential:
+                      type: string
+                      minLength: 1
+                      description: >-
+                        The credential value to validate: the API key value for
+                        `api_key`, or the access token (JWT) for `access_token`.
+                      example: sk_agent_example_1234567890
+                  required:
+                    - type
+                    - credential
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      description: >-
+                        The kind of credential being validated — an agent API
+                        key or an agent access token.
+                      const: access_token
+                    credential:
+                      type: string
+                      minLength: 1
+                      description: >-
+                        The credential value to validate: the API key value for
+                        `api_key`, or the access token (JWT) for `access_token`.
+                      example: eyJhbGciOiJSUzI1NiIsImtpZCI6...
+                    audience:
+                      type: string
+                      minLength: 1
+                      description: >-
+                        When provided, the access token's `aud` claim is
+                        verified against this value. Tokens issued for a
+                        different resource are rejected.
+                      example: https://api.example.com
+                  required:
+                    - type
+                    - credential
+              description: >-
+                The agent credential to validate. Either an `api_key` or an
+                `access_token`, discriminated by `type`.
       responses:
         '200':
           description: OK
