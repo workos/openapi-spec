@@ -15378,6 +15378,41 @@ paths:
       summary: Send a Radar SMS challenge
       tags:
         - user-management.authentication
+  /user_management/radar_challenges/{id}:
+    get:
+      description: Get the details of an existing Radar Challenge, including the OTP code.
+      operationId: PublicRadarChallengesController_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the Radar Challenge.
+          schema:
+            example: radar_challenge_01HWZBQZY2M3AMQW166Q22K88F
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadarChallenge'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get Radar Challenge details
+      tags:
+        - user-management.authentication
   /user_management/redirect_uris:
     post:
       description: Creates a new redirect URI for an application.
@@ -35551,6 +35586,59 @@ components:
             https://setup.workos.com?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
       required:
         - link
+    RadarChallenge:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Radar Challenge object.
+          const: radar_challenge
+        id:
+          type: string
+          description: The unique ID of the Radar Challenge.
+          example: radar_challenge_01HWZBQZY2M3AMQW166Q22K88F
+        type:
+          type: string
+          description: The type of the Radar challenge.
+          example: email
+          const: email
+        user_id:
+          type: string
+          description: The unique ID of the user.
+          example: user_01E4ZCR3C56J083X43JQXF3JK5
+        email:
+          type: string
+          description: The email address of the user.
+          example: marcelina.davis@example.com
+        expires_at:
+          format: date-time
+          type: string
+          description: The timestamp when the Radar Challenge code expires.
+          example: '2026-01-15T12:00:00.000Z'
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        code:
+          type: string
+          description: The code used to verify the Radar Challenge.
+          example: '123456'
+      required:
+        - object
+        - id
+        - type
+        - user_id
+        - email
+        - expires_at
+        - created_at
+        - updated_at
+        - code
     SendRadarSmsChallengeResponse:
       type: object
       properties:
