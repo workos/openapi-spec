@@ -21572,6 +21572,7 @@ components:
               - authentication.sso_started
               - authentication.sso_succeeded
               - authentication.sso_timed_out
+              - radar.challenge_created
               - authentication.radar_risk_detected
               - authentication.reauthentication_succeeded
               - api_key.created
@@ -32548,6 +32549,58 @@ components:
                   const: pipes.connected_account.reauthorization_needed
                 data:
                   $ref: '#/components/schemas/PipesConnectedAccount'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: radar.challenge_created
+                data:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      description: The type of the Radar challenge.
+                      example: email
+                      const: email
+                    radar_challenge_id:
+                      type: string
+                      description: The ID of the Radar challenge.
+                      example: radar_challenge_01HWZBQZY2M3AMQW166Q22K88F
+                    user_id:
+                      type: string
+                      description: The ID of the user.
+                      example: user_01E4ZCR3C56J083X43JQXF3JK5
+                    email:
+                      type: string
+                      description: The email address of the user.
+                      example: user@example.com
+                  required:
+                    - type
+                    - radar_challenge_id
+                    - user_id
+                    - email
                   description: The event payload.
                 created_at:
                   format: date-time
