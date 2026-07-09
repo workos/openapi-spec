@@ -24011,20 +24011,6 @@ components:
             connections this is the ACS URL; for OIDC connections this is the
             redirect URI.
           example: https://auth.workos.com/sso/saml/acs/conn_externalkey
-        options:
-          type: object
-          properties:
-            signing_cert:
-              type:
-                - string
-                - 'null'
-              description: The signing certificate of the SAML connection.
-              example: null
-          required:
-            - signing_cert
-          description: >-
-            Configuration options for SAML connections. Only present for SAML
-            connection types.
         created_at:
           format: date-time
           type: string
