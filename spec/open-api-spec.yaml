@@ -21378,6 +21378,7 @@ components:
                     - bcrypt
                     - firebase-scrypt
                     - ssha
+                    - ssha256
                     - scrypt
                     - pbkdf2
                     - argon2
