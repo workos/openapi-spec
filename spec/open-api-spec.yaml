@@ -19659,10 +19659,12 @@ components:
           type: string
           description: The external ID of the resource.
           example: proj-456
+          x-feature-flag: user-groups-role-assignment-enabled
         resource_type_slug:
           type: string
           description: The resource type slug.
           example: project
+          x-feature-flag: user-groups-role-assignment-enabled
       required:
         - role_slug
     ReplaceGroupRoleAssignmentEntryDto:
