@@ -21599,6 +21599,7 @@ components:
               - agent.registration.deleted
               - agent.registration.expired
               - agent.registration.organization.switched
+              - agent.registration.revoked
               - authentication.email_verification_succeeded
               - authentication.magic_auth_failed
               - authentication.magic_auth_succeeded
@@ -25755,6 +25756,42 @@ components:
                     - agent_registration_id
                     - from_organization_id
                     - to_organization_id
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.registration.revoked
+                data:
+                  type: object
+                  properties:
+                    agent_registration_id:
+                      type: string
+                      description: The agent registration that was revoked.
+                      example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                  required:
+                    - agent_registration_id
                   description: The event payload.
                 created_at:
                   format: date-time
