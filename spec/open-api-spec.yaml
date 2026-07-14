@@ -33785,6 +33785,63 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: vault.kek.deleted
+                data:
+                  type: object
+                  properties:
+                    actor_id:
+                      type: string
+                      description: The unique identifier of the actor.
+                      example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor_source:
+                      type: string
+                      enum:
+                        - api
+                        - dashboard
+                    actor_name:
+                      type: string
+                      description: The name of the actor.
+                      example: Jane Doe
+                    key_name:
+                      type: string
+                      description: The name of the key encryption key.
+                      example: production-kek
+                    key_id:
+                      type: string
+                      description: The unique identifier of the key encryption key.
+                      example: key_01EHWNCE74X7JSDV0X3SZ3KJNY
+                  required:
+                    - actor_id
+                    - actor_source
+                    - actor_name
+                    - key_name
+                    - key_id
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: vault.metadata.read
                 data:
                   type: object
