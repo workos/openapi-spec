@@ -76,7 +76,10 @@ jobs:
 
     steps:
       - name: Resolve SDK checkout path
-        run: echo "SDK_CHECKOUT_PATH=backend/$(basename ${{ matrix.sdk_repo }})" >> "$GITHUB_ENV"
+        run: |
+          SDK_REPO_NAME="$(basename "${{ matrix.sdk_repo }}")"
+          echo "SDK_REPO_NAME=$SDK_REPO_NAME" >> "$GITHUB_ENV"
+          echo "SDK_CHECKOUT_PATH=backend/$SDK_REPO_NAME" >> "$GITHUB_ENV"
 
       - name: Generate GitHub App token
         id: app-token
@@ -85,7 +88,7 @@ jobs:
           client-id: ${{ vars.SDK_BOT_APP_ID }}
           private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
           owner: workos
-          repositories: ${{ matrix.sdk_repo }}
+          repositories: ${{ env.SDK_REPO_NAME }}
           permission-contents: write
           permission-pull-requests: write
 
