@@ -38,9 +38,10 @@ if [[ -z "$OUTPUT" ]]; then
   exit 1
 fi
 
-# Default namespace: WorkOS for php, workos for everything else
+# Default namespace: WorkOS for languages whose namespace is a cased type/module
+# name (php namespace, Swift module), workos for everything else
 if [[ -z "$NAMESPACE" ]]; then
-  if [[ "$LANG" == "php" ]]; then
+  if [[ "$LANG" == "php" || "$LANG" == "ios" ]]; then
     NAMESPACE="WorkOS"
   else
     NAMESPACE="workos"
