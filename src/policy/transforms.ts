@@ -24,6 +24,11 @@ const COLLISION_RENAMES: Record<string, string> = {
   AuditLogSchemaDto: 'AuditLogSchemaInput',
   AuditLogSchemaActorDto: 'AuditLogSchemaActorInput',
   AuditLogSchemaTargetDto: 'AuditLogSchemaTargetInput',
+  // Request-body shapes whose bare names collide with the matching response
+  // schemas (`DataIntegrationCredentials`, `ConnectedAccount`), so the generic
+  // `Dto` suffix strip skips them — rename explicitly instead.
+  DataIntegrationCredentialsDto: 'DataIntegrationCredentialsInput',
+  ConnectedAccountDto: 'ConnectedAccountInput',
   // Generic list-derived names that need domain-specific identifiers
   ListData: 'Role',
   ListModel: 'RoleList',
