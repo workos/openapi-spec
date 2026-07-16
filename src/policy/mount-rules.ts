@@ -51,6 +51,9 @@ export const mountRules: Record<string, string> = {
   // Org API keys -> ApiKeys
   OrganizationsApiKeys: 'ApiKeys',
 
+  // Org-scoped authorized applications -> Organizations
+  OrganizationsAuthorizedApplications: 'Organizations',
+
   // User Management sub-services -> UserManagement, except the
   // OrganizationMembership family (longer wildcard prefix wins) and the three
   // exact entries below/above (exact always beats a wildcard):

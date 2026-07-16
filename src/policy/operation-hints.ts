@@ -50,6 +50,13 @@ export const operationHints: Record<string, OperationHint> = {
   'GET /organizations/{organizationId}/feature-flags': { name: 'list_organization_feature_flags' },
   'GET /user_management/users/{userId}/feature-flags': { name: 'list_user_feature_flags' },
 
+  // -- Organizations -- authorized applications (mounted on Organizations) ------
+  // Everything in the Organizations namespace is org-scoped, so drop the
+  // redundant `organization` noun (matching `get_audit_log_configuration`).
+  'GET /organizations/{organization_id}/authorized_applications': {
+    name: 'list_authorized_applications',
+  },
+
   // -- External ID lookups (not derivable from path) ----------------------------
   'GET /organizations/external_id/{external_id}': { name: 'get_organization_by_external_id' },
   'GET /user_management/users/external_id/{external_id}': { name: 'get_user_by_external_id' },
