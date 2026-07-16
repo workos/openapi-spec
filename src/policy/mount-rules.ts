@@ -2,6 +2,14 @@
  * Service-level remounting. Maps IR service name → target service/namespace
  * (PascalCase). All operations in the source service are mounted on the
  * target unless overridden per-operation in {@link operationHints}.
+ *
+ * Keys may be exact service names or trailing-`*` prefix patterns
+ * (requires @workos/oagen >= 0.25.0). Precedence: an exact key always wins;
+ * among wildcards the longest prefix wins. Matching is plain `startsWith` —
+ * no regex. Note that a wildcard also absorbs future spec tags under its
+ * prefix, so review `oagen diff` output when tags are added: a new tag that
+ * does not belong to its prefix family (cf. UserManagementDataProviders →
+ * Pipes) needs its own exact entry here.
  */
 export const mountRules: Record<string, string> = {
   // Client API token -> ClientApi
@@ -32,9 +40,8 @@ export const mountRules: Record<string, string> = {
   Connections: 'SSO',
 
   // Directory Sync sub-services -> DirectorySync
-  Directories: 'DirectorySync',
-  DirectoryGroups: 'DirectorySync',
-  DirectoryUsers: 'DirectorySync',
+  // ("Director*", not "Directory*": the prefix must also cover "Directories")
+  'Director*': 'DirectorySync',
 
   // Feature flag sub-services -> FeatureFlags
   FeatureFlagsTargets: 'FeatureFlags',
@@ -44,18 +51,13 @@ export const mountRules: Record<string, string> = {
   // Org API keys -> ApiKeys
   OrganizationsApiKeys: 'ApiKeys',
 
-  // User Management sub-services -> UserManagement
-  UserManagementSessionTokens: 'UserManagement',
-  UserManagementAuthentication: 'UserManagement',
-  UserManagementCorsOrigins: 'UserManagement',
-  UserManagementUsers: 'UserManagement',
-  UserManagementInvitations: 'UserManagement',
-  UserManagementJWTTemplate: 'UserManagement',
-  UserManagementMagicAuth: 'UserManagement',
-  UserManagementOrganizationMembership: 'OrganizationMembership',
-  UserManagementOrganizationMembershipGroups: 'OrganizationMembership',
-  UserManagementRedirectUris: 'UserManagement',
-  UserManagementUsersAuthorizedApplications: 'UserManagement',
+  // User Management sub-services -> UserManagement, except the
+  // OrganizationMembership family (longer wildcard prefix wins) and the three
+  // exact entries below/above (exact always beats a wildcard):
+  // UserManagementUsersFeatureFlags, UserManagementDataProviders,
+  // UserManagementMultiFactorAuthentication.
+  'UserManagement*': 'UserManagement',
+  'UserManagementOrganizationMembership*': 'OrganizationMembership',
 
   // Pipes / Data Providers -> Pipes
   UserManagementDataProviders: 'Pipes',
