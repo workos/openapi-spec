@@ -51,8 +51,6 @@ export const operationHints: Record<string, OperationHint> = {
   'GET /user_management/users/{userId}/feature-flags': { name: 'list_user_feature_flags' },
 
   // -- Organizations -- authorized applications (mounted on Organizations) ------
-  // Everything in the Organizations namespace is org-scoped, so drop the
-  // redundant `organization` noun (matching `get_audit_log_configuration`).
   'GET /organizations/{organization_id}/authorized_applications': {
     name: 'list_authorized_applications',
   },
