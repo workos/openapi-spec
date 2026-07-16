@@ -15433,7 +15433,7 @@ paths:
                 $ref: '#/components/schemas/RedirectUri'
               example:
                 object: redirect_uri
-                id: ruri_01EHZNVPK3SFK441A1RGBFSHRT
+                id: redir_01EHZNVPK3SFK441A1RGBFSHRT
                 uri: https://example.com/callback
                 default: true
                 created_at: '2026-01-15T12:00:00.000Z'
@@ -15560,7 +15560,7 @@ paths:
                               An object ID that defines your place in the list.
                               When the ID is not present, you are at the start
                               of the list.
-                            example: ruri_01HXYZ123456789ABCDEFGHIJ
+                            example: redir_01HXYZ123456789ABCDEFGHIJ
                           after:
                             type:
                               - string
@@ -15569,7 +15569,7 @@ paths:
                               An object ID that defines your place in the list.
                               When the ID is not present, you are at the end of
                               the list.
-                            example: ruri_01HXYZ987654321KJIHGFEDCBA
+                            example: redir_01HXYZ987654321KJIHGFEDCBA
                         required:
                           - before
                           - after
@@ -15599,6 +15599,69 @@ paths:
               example:
                 message: Unauthorized
       summary: List redirect URIs
+      tags:
+        - user-management.redirect-uris
+  /user_management/redirect_uris/{id}:
+    delete:
+      description: Deletes a redirect URI from an application.
+      operationId: RedirectUrisController_delete
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The ID of the redirect URI to delete.
+          schema:
+            type: string
+            example: redir_01EHZNVPK3SFK441A1RGBFSHRT
+      responses:
+        '204':
+          description: Redirect URI deleted successfully.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+        '404':
+          description: Redirect URI not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: 'Redirect URI not found: ''redir_01EHZNVPK3SFK441A1RGBFSHRT''.'
+        '409':
+          description: The redirect URI is the default and cannot be deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Cannot delete the default redirect URI.
+      summary: Delete a redirect URI
       tags:
         - user-management.redirect-uris
   /user_management/sessions/logout:
@@ -35849,7 +35912,7 @@ components:
         id:
           type: string
           description: The ID of the redirect URI.
-          example: ruri_01EHZNVPK3SFK441A1RGBFSHRT
+          example: redir_01EHZNVPK3SFK441A1RGBFSHRT
         uri:
           type: string
           description: The redirect URI.
