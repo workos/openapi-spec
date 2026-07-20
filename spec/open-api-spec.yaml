@@ -1223,6 +1223,20 @@ paths:
                       code:
                         type: string
                         description: The error code identifying the type of error.
+                        example: user_consent_options_not_supported
+                        const: user_consent_options_not_supported
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
                         example: email_change_not_allowed
                         const: email_change_not_allowed
                       message:
