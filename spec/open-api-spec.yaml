@@ -1412,7 +1412,6 @@ paths:
       summary: List role assignments for a group
       tags:
         - authorization
-      x-feature-flag: user-groups-role-assignment-enabled
     post:
       description: Assign a role to a group on a specific resource.
       operationId: AuthorizationGroupRoleAssignmentsController_create
@@ -1498,7 +1497,6 @@ paths:
       summary: Assign a role to a group
       tags:
         - authorization
-      x-feature-flag: user-groups-role-assignment-enabled
     put:
       description: >-
         Replace all role assignments for a group with the provided list.
@@ -1567,7 +1565,6 @@ paths:
       summary: Replace all role assignments for a group
       tags:
         - authorization
-      x-feature-flag: user-groups-role-assignment-enabled
     delete:
       description: >-
         Remove role assignments from a group that match the provided criteria.
@@ -1632,7 +1629,6 @@ paths:
       summary: Remove group role assignments by criteria
       tags:
         - authorization
-      x-feature-flag: user-groups-role-assignment-enabled
   /authorization/groups/{group_id}/role_assignments/{role_assignment_id}:
     get:
       description: Get a specific role assignment for a group by its ID.
@@ -1688,7 +1684,6 @@ paths:
       summary: Get a group role assignment
       tags:
         - authorization
-      x-feature-flag: user-groups-role-assignment-enabled
     delete:
       description: Remove a specific role assignment from a group by its ID.
       operationId: AuthorizationGroupRoleAssignmentsController_removeGroupRoleAssignment
@@ -1739,7 +1734,6 @@ paths:
       summary: Remove a group role assignment
       tags:
         - authorization
-      x-feature-flag: user-groups-role-assignment-enabled
   /authorization/organization_memberships/{organization_membership_id}/check:
     post:
       description: >-
@@ -19780,12 +19774,10 @@ components:
           type: string
           description: The external ID of the resource.
           example: proj-456
-          x-feature-flag: user-groups-role-assignment-enabled
         resource_type_slug:
           type: string
           description: The resource type slug.
           example: project
-          x-feature-flag: user-groups-role-assignment-enabled
       required:
         - role_slug
     ReplaceGroupRoleAssignmentEntryDto:
