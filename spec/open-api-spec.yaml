@@ -10111,7 +10111,6 @@ paths:
       summary: Create a group
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
     get:
       description: Get a paginated list of groups within an organization.
       operationId: GroupsController_list
@@ -10205,7 +10204,6 @@ paths:
       summary: List groups
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
   /organizations/{organizationId}/groups/{groupId}:
     get:
       description: Retrieve a group by its ID within an organization.
@@ -10261,7 +10259,6 @@ paths:
       summary: Get a group
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
     patch:
       description: >-
         Update an existing group. Only the fields provided in the request body
@@ -10356,7 +10353,6 @@ paths:
       summary: Update a group
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
     delete:
       description: Delete a group from an organization.
       operationId: GroupsController_delete
@@ -10407,7 +10403,6 @@ paths:
       summary: Delete a group
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
   /organizations/{organizationId}/groups/{groupId}/organization-memberships:
     post:
       description: Add an organization membership to a group.
@@ -10501,7 +10496,6 @@ paths:
       summary: Add a member to a Group
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
     get:
       description: Get a list of organization memberships in a group.
       operationId: GroupMembershipsController_listMembers
@@ -10603,7 +10597,6 @@ paths:
       summary: List Group members
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
   /organizations/{organizationId}/groups/{groupId}/organization-memberships/{omId}:
     delete:
       description: Remove an organization membership from a group.
@@ -10662,7 +10655,6 @@ paths:
       summary: Remove a member from a Group
       tags:
         - groups
-      x-feature-flag: user-groups-enabled
   /portal/generate_link:
     post:
       description: Generate a Portal Link scoped to an Organization.
@@ -15144,7 +15136,6 @@ paths:
       summary: List groups
       tags:
         - user-management.organization-membership.groups
-      x-feature-flag: user-groups-enabled
   /user_management/password_reset:
     post:
       description: Creates a one-time token that can be used to reset a user's password.
