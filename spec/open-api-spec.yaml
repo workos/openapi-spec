@@ -1223,6 +1223,20 @@ paths:
                       code:
                         type: string
                         description: The error code identifying the type of error.
+                        example: user_consent_options_not_supported
+                        const: user_consent_options_not_supported
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
                         example: email_change_not_allowed
                         const: email_change_not_allowed
                       message:
@@ -6974,10 +6988,12 @@ paths:
     post:
       description: >-
         Creates a data integration for a provider. Set `credentials.type` to
-        `custom` to use your own OAuth app credentials, or `organization` to
-        have each organization supply its own. For a built-in provider, pass its
-        slug as `provider`. For a custom provider, pass a new slug plus a
-        `custom_provider` definition.
+        `custom` to use your own OAuth app credentials or `organization` to have
+        each organization supply its own. Set `auth_methods` to `["api_key"]` to
+        create an API key integration; you may optionally supply an `api_key`
+        block to install a first tenant in the same call. For a built-in
+        provider, pass its slug as `provider`. For a custom provider, pass a new
+        slug plus a `custom_provider` definition.
       operationId: DataIntegrationsManagementController_createDataIntegration
       parameters: []
       requestBody:
@@ -7008,8 +7024,34 @@ paths:
                   - message
         '401':
           description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '404':
           description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: A data integration with this slug already exists in the environment.
           content:
             application/json:
               schema:
@@ -7041,7 +7083,8 @@ paths:
     get:
       description: >-
         Lists the environment's data integrations configured with `custom` or
-        `organization` credentials, including custom providers.
+        `organization` credentials, including custom providers and API key
+        integrations.
       operationId: DataIntegrationsManagementController_listDataIntegrations
       parameters:
         - name: before
@@ -7183,6 +7226,19 @@ paths:
                   - message
         '401':
           description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '404':
           description: Not Found
           content:
@@ -20510,6 +20566,27 @@ components:
           example: secret_…
       required:
         - type
+    ApiKeyInstallationDto:
+      type: object
+      properties:
+        secret:
+          type: string
+          minLength: 5
+          description: The API key secret to store for the tenant.
+          example: sk-1234567890abcdef
+        user_id:
+          type: string
+          description: The User identifier the API key is installed for.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        organization_id:
+          type: string
+          description: >-
+            An Organization identifier to scope the installation to a specific
+            organization.
+          example: org_01EHZNVPK3SFK441A1RGBFSHRT
+      required:
+        - secret
+        - user_id
     CustomProviderDefinitionDto:
       type: object
       properties:
@@ -20618,11 +20695,32 @@ components:
             - 'null'
           items:
             type: string
+        auth_methods:
+          type: array
+          description: >-
+            How accounts authenticate with the provider. Defaults to
+            `["oauth"]`. Use `["api_key"]` to declare an API key integration;
+            `credentials` is then not required and keys are supplied per-tenant
+            (optionally via `api_key` on this request).
+          items:
+            type: string
+            enum:
+              - oauth
+              - api_key
+          example:
+            - oauth
         credentials:
           description: >-
-            The credentials to configure for the Data Integration. Required for
-            both built-in and custom providers.
+            The OAuth credentials to configure for the Data Integration.
+            Required for OAuth integrations; omit when `auth_methods` is
+            `["api_key"]`.
           $ref: '#/components/schemas/DataIntegrationCredentialsDto'
+        api_key:
+          description: >-
+            An optional API key to install for the first tenant on an `api_key`
+            integration. Omit to declare a keyless integration; tenants can be
+            added later via the per-installation API key path.
+          $ref: '#/components/schemas/ApiKeyInstallationDto'
         custom_provider:
           description: >-
             The OAuth definition for a custom provider. Supply this to define a
@@ -20722,9 +20820,15 @@ components:
             type: string
         credentials:
           description: >-
-            New credentials for the Data Integration. When provided, rotates the
-            stored client secret.
+            New OAuth credentials for the Data Integration. When provided,
+            rotates the stored client secret. Mutually exclusive with `api_key`.
           $ref: '#/components/schemas/DataIntegrationCredentialsDto'
+        api_key:
+          description: >-
+            An API key to install or rotate for a tenant on an `api_key`
+            integration. Upserts the tenant installation identified by `user_id`
+            (and optional `organization_id`).
+          $ref: '#/components/schemas/ApiKeyInstallationDto'
         custom_provider:
           description: >-
             Updates to a custom provider's OAuth definition. Only valid for
@@ -35017,6 +35121,18 @@ components:
             configuring the custom application.
           example: >-
             https://api.workos.com/data-integrations/github/dik_01EHZNVPK3SFK441A1RGBFSHRT/callback
+        auth_methods:
+          type: array
+          items:
+            type: string
+            enum:
+              - oauth
+              - api_key
+          description: >-
+            How accounts authenticate with the provider for this Data
+            Integration.
+          example:
+            - oauth
         credentials:
           type: object
           properties:
@@ -35052,6 +35168,45 @@ components:
             - client_id
             - redacted_client_secret
           description: The credentials configured for the Data Integration.
+        installation:
+          description: >-
+            The tenant installation created when an API key was supplied at
+            creation time; `null` otherwise. Not populated on list/get
+            responses.
+          example: null
+          oneOf:
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier of the installation.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                user_id:
+                  type: string
+                  description: The User the API key was installed for.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The Organization the installation is scoped to, or null when
+                    unscoped.
+                  example: null
+                api_key_last_4:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The last four characters of the stored API key. The full key
+                    is never returned.
+                  example: cdef
+              required:
+                - id
+                - user_id
+                - organization_id
+                - api_key_last_4
+            - type: 'null'
         custom_provider:
           description: >-
             The OAuth definition when this is a custom provider; `null` for
@@ -35156,7 +35311,9 @@ components:
         - state
         - scopes
         - redirect_uri
+        - auth_methods
         - credentials
+        - installation
         - custom_provider
         - created_at
         - updated_at
