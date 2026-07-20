@@ -13035,7 +13035,7 @@ paths:
   /user_management/cors_origins:
     post:
       description: >-
-        Creates a new CORS origin for the current environment. CORS origins
+        Creates a new CORS origin for the API key's application. CORS origins
         allow browser-based applications to make requests to the WorkOS API.
       operationId: CorsOriginsController_createCorsOrigin
       parameters: []
