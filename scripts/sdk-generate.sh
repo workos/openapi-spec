@@ -24,7 +24,15 @@ done
 # means full generation — no flag is appended, preserving the default behaviour
 # every existing caller relies on. An unknown service makes oagen exit non-zero
 # with the valid-name list, which `set -euo pipefail` propagates as a job failure.
+#
+# First canonicalize the list to post-mount names: callers (the dashboard,
+# manual dispatches) sometimes pass a raw pre-mount spec tag like
+# `UserManagementRedirectUris` (mounts onto `UserManagement`), which oagen
+# rejects outright. canonicalize-services folds those onto their post-mount
+# target using the same resolution oagen generate applies; genuine typos still
+# pass through and fail loudly. Its own failures degrade to the raw list.
 if [[ -n "$SERVICES" ]]; then
+  SERVICES="$(node "$(dirname "$0")/canonicalize-services.mjs" --spec "$SPEC" --services "$SERVICES")"
   EXTRA_ARGS+=(--services "$SERVICES")
 fi
 
