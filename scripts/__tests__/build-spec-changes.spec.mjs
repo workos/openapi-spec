@@ -48,6 +48,22 @@ test('removed operation in a mounted sub-service → post-mount parent flagged b
   assert.deepEqual(manifest.changedServices, [{ service: 'UserManagement', hasBreaking: true }]);
 });
 
+// ── Regression: wildcard mount rule folds a sub-service with no exact entry ───
+// A pre-mount service that matches only a trailing-`*` pattern (not an exact
+// key) must still remap to its parent. A prior exact-only lookup leaked the raw
+// pre-mount name (e.g. UserManagementRedirectUris), which `oagen generate
+// --services` then rejected — breaking every generate-prs matrix job.
+test('wildcard-only sub-service (no exact key) folds to its post-mount parent', () => {
+  const WILDCARD_RULES = { 'UserManagement*': 'UserManagement' };
+  const report = {
+    changes: [
+      { kind: 'operation-added', serviceName: 'UserManagementRedirectUris', operationName: 'createRedirectUri', classification: 'additive' },
+    ],
+  };
+  const { manifest } = buildSpecChanges({ report, mountRules: WILDCARD_RULES });
+  assert.deepEqual(manifest.changedServices, [{ service: 'UserManagement', hasBreaking: false }]);
+});
+
 // ── Key scenario 3: shared-schema-only change → every referencing service ────
 test('shared-model change surfaces every service that references it (incl. transitively)', () => {
   const ir = {

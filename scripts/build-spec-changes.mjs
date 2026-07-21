@@ -31,6 +31,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
+import { resolveMountTarget } from "@workos/oagen";
 import {
   buildIndexes,
   entriesFromGroups,
@@ -86,9 +87,13 @@ function readJson(path, fallback) {
 // ── post-mount mapping ───────────────────────────────────────────────────────
 // A source IR service name maps to its post-mount target via mountRules; a
 // service that is not remounted keeps its own (already post-mount) name.
+// Delegates to oagen's resolveMountTarget so the exact-key-then-longest-
+// wildcard-prefix precedence matches the generator exactly — a local
+// exact-only lookup silently drops wildcard rules (e.g. `UserManagement*`),
+// leaking pre-mount names that `oagen generate --services` then rejects.
 function toPostMount(serviceName, mountRules) {
   if (!serviceName) return null;
-  return mountRules[serviceName] ?? serviceName;
+  return resolveMountTarget(serviceName, mountRules);
 }
 
 // ── model/enum → owning-services index ───────────────────────────────────────
