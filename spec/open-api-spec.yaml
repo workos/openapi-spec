@@ -10655,6 +10655,103 @@ paths:
       summary: Remove a member from a Group
       tags:
         - groups
+  /organizations/{organization_id}/authorized_applications:
+    get:
+      description: >-
+        Get a list of all Connect applications that users in the organization
+        have authorized.
+      operationId: OrganizationAuthorizedApplicationsController_list
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records).
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  #/components/schemas/OrganizationAuthorizedConnectApplicationList
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List authorized applications
+      tags:
+        - organizations.authorized-applications
   /portal/generate_link:
     post:
       description: Generate a Portal Link scoped to an Organization.
@@ -19089,6 +19186,8 @@ tags:
     description: Manage organizations.
   - name: organizations.api_keys
     description: Manage organization-scoped API keys.
+  - name: organizations.authorized-applications
+    description: Manage authorized applications for organizations.
   - name: organizations.feature-flags
     description: Manage organization-scoped feature flags.
   - name: permissions
@@ -22842,6 +22941,81 @@ components:
               - id
               - granted_scopes
               - application
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: authorized_connect_app_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: authorized_connect_app_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
+    OrganizationAuthorizedConnectApplicationList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              object:
+                type: string
+                description: Distinguishes the authorized connect application object.
+                const: authorized_connect_application
+              id:
+                type: string
+                description: The unique ID of the authorized connect application.
+                example: authorized_connect_app_01HXYZ123456789ABCDEFGHIJ
+              granted_scopes:
+                type: array
+                items:
+                  type: string
+                description: The scopes granted by the user to the application.
+                example:
+                  - openid
+                  - profile
+                  - email
+              oauth_resource:
+                type: string
+                description: >-
+                  The OAuth resource associated with the authorized connect
+                  application, if one was requested.
+                example: https://api.example.com/resource
+              application:
+                $ref: '#/components/schemas/ConnectApplication'
+              user_id:
+                type: string
+                description: The ID of the user who authorized the application.
+                example: user_01E4ZCR3C56J083X43JQXF3JK5
+            required:
+              - object
+              - id
+              - granted_scopes
+              - application
+              - user_id
           description: The list of records for the current page.
         list_metadata:
           type: object
