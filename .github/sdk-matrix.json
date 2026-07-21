@@ -8,6 +8,10 @@
     "sdk_repo": "workos/workos-go"
   },
   {
+    "language": "ios",
+    "sdk_repo": "workos/workos-ios"
+  },
+  {
     "language": "kotlin",
     "sdk_repo": "workos/workos-kotlin"
   },
