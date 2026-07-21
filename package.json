@@ -30,7 +30,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@workos/oagen": "^0.25.1"
+    "@workos/oagen": "^0.26.0"
   },
   "scripts": {
     "generate:services": "node scripts/generate-services.mjs",
