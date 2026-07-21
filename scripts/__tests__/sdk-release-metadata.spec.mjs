@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { factsFromDiff, scopesForServices } from '../sdk-release-metadata.mjs';
+import { factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
 
 // factsFromDiff only reaches indexes.symbolScopes (scope resolution) for the
 // kinds under test; an empty index leaves scope unresolved, which is fine — we
@@ -98,4 +98,66 @@ test('scope filter keeps only the staged services facts and drops drifted-in one
     scoped.map((f) => f.scope),
     ['pipes'],
   );
+});
+
+// Regression: when several entries share a scope (e.g. multiple spec commits
+// each touching Pipes or Webhooks), the changelog must collapse them under a
+// single `* **[scope]**:` heading rather than repeating the heading per entry.
+test('renderChangelogMarkdown merges same-scope entries under one heading', () => {
+  const entries = [
+    {
+      prefix: 'feat',
+      scope: 'webhooks',
+      docs_url: 'https://workos.com/docs/reference/webhooks',
+      summary: 'Add webhook API surface',
+      description: '- Added `agent.registration.revoked` to `CreateWebhookEndpointEvents`.',
+    },
+    {
+      prefix: 'feat',
+      scope: 'webhooks',
+      docs_url: 'https://workos.com/docs/reference/webhooks',
+      summary: 'Add webhook API surface',
+      description: '- Added `agent.registration.deleted` to `CreateWebhookEndpointEvents`.',
+    },
+  ];
+  const markdown = renderChangelogMarkdown(entries, {});
+  const headingCount = markdown.split('\n').filter((line) => line.includes('**[webhooks]')).length;
+  assert.equal(headingCount, 1, 'renders a single webhooks heading');
+  assert.equal(
+    markdown,
+    [
+      '  **Features**',
+      '  * **[webhooks](https://workos.com/docs/reference/webhooks)**:',
+      '    * Added `agent.registration.revoked` to `CreateWebhookEndpointEvents`',
+      '    * Added `agent.registration.deleted` to `CreateWebhookEndpointEvents`',
+      '',
+    ].join('\n'),
+  );
+});
+
+// De-dupe within a merged scope so an identical change staged by two commits is
+// listed once, not twice under the single heading.
+test('renderChangelogMarkdown de-dupes identical detail lines within a scope', () => {
+  const line = '- Added `agent.registration.revoked` to `CreateWebhookEndpointEvents`.';
+  const entries = [
+    { prefix: 'feat', scope: 'webhooks', docs_url: 'https://x', summary: 'a', description: line },
+    { prefix: 'feat', scope: 'webhooks', docs_url: 'https://x', summary: 'b', description: line },
+  ];
+  const markdown = renderChangelogMarkdown(entries, {});
+  const detailCount = markdown
+    .split('\n')
+    .filter((l) => l.includes('agent.registration.revoked')).length;
+  assert.equal(detailCount, 1);
+});
+
+// Distinct scopes still each get their own heading, in first-seen order.
+test('renderChangelogMarkdown keeps distinct scopes as separate headings', () => {
+  const entries = [
+    { prefix: 'feat', scope: 'pipes', docs_url: 'https://p', summary: 'p', description: '- Added `x`.' },
+    { prefix: 'feat', scope: 'sso', docs_url: 'https://s', summary: 's', description: '- Added `y`.' },
+  ];
+  const markdown = renderChangelogMarkdown(entries, {});
+  assert.ok(markdown.includes('**[pipes](https://p)**:'));
+  assert.ok(markdown.includes('**[sso](https://s)**:'));
+  assert.ok(markdown.indexOf('[pipes]') < markdown.indexOf('[sso]'));
 });

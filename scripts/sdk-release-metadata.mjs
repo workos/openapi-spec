@@ -1167,7 +1167,7 @@ function markdownScope(entry) {
   return entry.docs_url ? `[${entry.scope}](${entry.docs_url})` : entry.scope;
 }
 
-function renderEntryMarkdown(entry) {
+function entryDetailLines(entry) {
   const details = String(entry.description ?? '')
     .split('\n')
     .map((line) => line.trim())
@@ -1175,7 +1175,34 @@ function renderEntryMarkdown(entry) {
     .map((line) => line.replace(/\.$/, ''))
     .map((line) => line.replace(/^[-*]\s+/, '    * '));
   if (details.length === 0 && entry.summary) details.push(`    * ${String(entry.summary).replace(/\.$/, '')}`);
-  return [`  * **${markdownScope(entry)}**:`, ...details].join('\n');
+  return details;
+}
+
+// Render a section's entries as scope headings, collapsing every entry that
+// shares a scope (e.g. several spec commits each touching Pipes or Webhooks)
+// under a single `* **[scope]**:` heading instead of repeating it. Headings keep
+// first-seen order; identical detail lines within a scope are de-duped so a
+// merged heading never lists the same change twice.
+function renderScopeGroup(sectionEntries) {
+  const order = [];
+  const groups = new Map();
+  for (const entry of sectionEntries) {
+    let group = groups.get(entry.scope);
+    if (!group) {
+      group = { label: markdownScope(entry), seen: new Set(), details: [] };
+      groups.set(entry.scope, group);
+      order.push(entry.scope);
+    }
+    for (const line of entryDetailLines(entry)) {
+      if (group.seen.has(line)) continue;
+      group.seen.add(line);
+      group.details.push(line);
+    }
+  }
+  return order.flatMap((scope) => {
+    const group = groups.get(scope);
+    return [`  * **${group.label}**:`, ...group.details];
+  });
 }
 
 function rollupForEntries(entries) {
@@ -1208,7 +1235,7 @@ export function renderChangelogMarkdown(entries, args) {
     if (sectionEntries.length === 0) continue;
     if (lines.length > 0 && lines[lines.length - 1] !== '') lines.push('');
     lines.push(`  ${heading}`);
-    for (const entry of sectionEntries) lines.push(renderEntryMarkdown(entry));
+    lines.push(...renderScopeGroup(sectionEntries));
   }
 
   return `${lines.join('\n')}\n`;
