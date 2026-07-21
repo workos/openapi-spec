@@ -61,7 +61,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.1.1",
-    "@workos/oagen-emitters": "^0.20.1",
+    "@workos/oagen-emitters": "^0.20.2",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.1",
