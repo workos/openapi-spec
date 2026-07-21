@@ -1,5 +1,293 @@
 openapi: 3.1.1
 paths:
+  /agents/claims/attempts:
+    patch:
+      description: >-
+        Link an external user to a claim attempt and retrieve the code needed
+        for the agent to complete the claim. The user is looked up by external
+        ID; if no user exists, one is created. When the user belongs to multiple
+        organizations, an explicit organization must be provided.
+      operationId: AgentAdminController_linkClaimAttemptToExternalUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: >-
+                    The operation to perform on the claim attempt. Currently
+                    only `link_external_user` is supported.
+                  example: link_external_user
+                  const: link_external_user
+                claim_attempt_token:
+                  type: string
+                  minLength: 1
+                  description: The token identifying the claim attempt.
+                  example: cla_tkn_01EHWNCE74X7JSDV0X3SZ3KJNY
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                      description: The email address of the user.
+                      example: alice@example.com
+                    external_id:
+                      type: string
+                      minLength: 1
+                      description: The external ID of the user.
+                      example: user_abc123
+                  required:
+                    - email
+                    - external_id
+                  description: >-
+                    The user to attach to the claim attempt, identified by email
+                    and external ID.
+                  example:
+                    email: alice@example.com
+                    external_id: user_abc123
+                organization_id:
+                  type: string
+                  minLength: 1
+                  description: >-
+                    The organization to place the agent in. Required when the
+                    user belongs to more than one organization.
+                  example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+              required:
+                - type
+                - claim_attempt_token
+                - user
+      responses:
+        '200':
+          description: Claim attempt linked to external user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimViewResponse'
+        '400':
+          description: >-
+            Invalid request, email mismatch, invalid claim, invalid
+            organization, or wrong account.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_request
+                        const: invalid_request
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_claim
+                        const: invalid_claim
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_organization
+                        const: invalid_organization
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: email_mismatch
+                        const: email_mismatch
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: wrong_account
+                        const: wrong_account
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '403':
+          description: Claim denied or auth method disabled.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: claim_denied
+                        const: claim_denied
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: auth_method_disabled
+                        const: auth_method_disabled
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '409':
+          description: >-
+            Organization selection required, email already in use, or claim
+            already completed.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: organization_selection_required
+                        const: organization_selection_required
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                      organizations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The organization ID.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                            name:
+                              type: string
+                              description: The organization name.
+                              example: Acme Corp
+                          required:
+                            - id
+                            - name
+                        description: >-
+                          Organizations the user belongs to. Pick one and retry
+                          with organization_id.
+                    required:
+                      - code
+                      - message
+                      - organizations
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: email_already_in_use
+                        const: email_already_in_use
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: already_claimed
+                        const: already_claimed
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '410':
+          description: Claim or user code has expired.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: claim_expired
+                        const: claim_expired
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: user_code_expired
+                        const: user_code_expired
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+      summary: Link a claim attempt to an external user
+      tags:
+        - agents
+      x-feature-flag: agent-auth-public-api
   /agents/credentials/validate:
     post:
       description: >-
@@ -10655,6 +10943,103 @@ paths:
       summary: Remove a member from a Group
       tags:
         - groups
+  /organizations/{organization_id}/authorized_applications:
+    get:
+      description: >-
+        Get a list of all Connect applications that users in the organization
+        have authorized.
+      operationId: OrganizationAuthorizedApplicationsController_list
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records).
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  #/components/schemas/OrganizationAuthorizedConnectApplicationList
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List authorized applications
+      tags:
+        - organizations.authorized-applications
   /portal/generate_link:
     post:
       description: Generate a Portal Link scoped to an Organization.
@@ -19089,6 +19474,8 @@ tags:
     description: Manage organizations.
   - name: organizations.api_keys
     description: Manage organization-scoped API keys.
+  - name: organizations.authorized-applications
+    description: Manage authorized applications for organizations.
   - name: organizations.feature-flags
     description: Manage organization-scoped feature flags.
   - name: permissions
@@ -22483,6 +22870,47 @@ components:
         - valid
         - registration_id
         - expires_at
+    ClaimViewResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The agent registration ID.
+          example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+        status:
+          type: string
+          enum:
+            - unverified
+            - verified
+            - expired
+            - revoked
+          description: Current status of the agent registration.
+        user_code:
+          type: string
+          description: The user code the agent needs to complete the claim.
+          example: BCDF-GHJK
+        organizations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: The organization ID.
+                example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+              name:
+                type: string
+                description: The organization name.
+                example: Acme Corp
+            required:
+              - id
+              - name
+          description: Organizations the user belongs to, offered as placement choices.
+      required:
+        - id
+        - status
+        - user_code
+        - organizations
     ApiKey:
       type: object
       properties:
@@ -22842,6 +23270,81 @@ components:
               - id
               - granted_scopes
               - application
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: authorized_connect_app_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: authorized_connect_app_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
+    OrganizationAuthorizedConnectApplicationList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              object:
+                type: string
+                description: Distinguishes the authorized connect application object.
+                const: authorized_connect_application
+              id:
+                type: string
+                description: The unique ID of the authorized connect application.
+                example: authorized_connect_app_01HXYZ123456789ABCDEFGHIJ
+              granted_scopes:
+                type: array
+                items:
+                  type: string
+                description: The scopes granted by the user to the application.
+                example:
+                  - openid
+                  - profile
+                  - email
+              oauth_resource:
+                type: string
+                description: >-
+                  The OAuth resource associated with the authorized connect
+                  application, if one was requested.
+                example: https://api.example.com/resource
+              application:
+                $ref: '#/components/schemas/ConnectApplication'
+              user_id:
+                type: string
+                description: The ID of the user who authorized the application.
+                example: user_01E4ZCR3C56J083X43JQXF3JK5
+            required:
+              - object
+              - id
+              - granted_scopes
+              - application
+              - user_id
           description: The list of records for the current page.
         list_metadata:
           type: object
