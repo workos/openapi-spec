@@ -1,5 +1,293 @@
 openapi: 3.1.1
 paths:
+  /agents/claims/attempts:
+    patch:
+      description: >-
+        Link an external user to a claim attempt and retrieve the code needed
+        for the agent to complete the claim. The user is looked up by external
+        ID; if no user exists, one is created. When the user belongs to multiple
+        organizations, an explicit organization must be provided.
+      operationId: AgentAdminController_linkClaimAttemptToExternalUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: >-
+                    The operation to perform on the claim attempt. Currently
+                    only `link_external_user` is supported.
+                  example: link_external_user
+                  const: link_external_user
+                claim_attempt_token:
+                  type: string
+                  minLength: 1
+                  description: The token identifying the claim attempt.
+                  example: cla_tkn_01EHWNCE74X7JSDV0X3SZ3KJNY
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                      description: The email address of the user.
+                      example: alice@example.com
+                    external_id:
+                      type: string
+                      minLength: 1
+                      description: The external ID of the user.
+                      example: user_abc123
+                  required:
+                    - email
+                    - external_id
+                  description: >-
+                    The user to attach to the claim attempt, identified by email
+                    and external ID.
+                  example:
+                    email: alice@example.com
+                    external_id: user_abc123
+                organization_id:
+                  type: string
+                  minLength: 1
+                  description: >-
+                    The organization to place the agent in. Required when the
+                    user belongs to more than one organization.
+                  example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+              required:
+                - type
+                - claim_attempt_token
+                - user
+      responses:
+        '200':
+          description: Claim attempt linked to external user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimViewResponse'
+        '400':
+          description: >-
+            Invalid request, email mismatch, invalid claim, invalid
+            organization, or wrong account.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_request
+                        const: invalid_request
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_claim
+                        const: invalid_claim
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_organization
+                        const: invalid_organization
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: email_mismatch
+                        const: email_mismatch
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: wrong_account
+                        const: wrong_account
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '403':
+          description: Claim denied or auth method disabled.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: claim_denied
+                        const: claim_denied
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: auth_method_disabled
+                        const: auth_method_disabled
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '409':
+          description: >-
+            Organization selection required, email already in use, or claim
+            already completed.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: organization_selection_required
+                        const: organization_selection_required
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                      organizations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The organization ID.
+                              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                            name:
+                              type: string
+                              description: The organization name.
+                              example: Acme Corp
+                          required:
+                            - id
+                            - name
+                        description: >-
+                          Organizations the user belongs to. Pick one and retry
+                          with organization_id.
+                    required:
+                      - code
+                      - message
+                      - organizations
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: email_already_in_use
+                        const: email_already_in_use
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: already_claimed
+                        const: already_claimed
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '410':
+          description: Claim or user code has expired.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: claim_expired
+                        const: claim_expired
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: user_code_expired
+                        const: user_code_expired
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+      summary: Link a claim attempt to an external user
+      tags:
+        - agents
+      x-feature-flag: agent-auth-public-api
   /agents/credentials/validate:
     post:
       description: >-
@@ -22582,6 +22870,47 @@ components:
         - valid
         - registration_id
         - expires_at
+    ClaimViewResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The agent registration ID.
+          example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+        status:
+          type: string
+          enum:
+            - unverified
+            - verified
+            - expired
+            - revoked
+          description: Current status of the agent registration.
+        user_code:
+          type: string
+          description: The user code the agent needs to complete the claim.
+          example: BCDF-GHJK
+        organizations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: The organization ID.
+                example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+              name:
+                type: string
+                description: The organization name.
+                example: Acme Corp
+            required:
+              - id
+              - name
+          description: Organizations the user belongs to, offered as placement choices.
+      required:
+        - id
+        - status
+        - user_code
+        - organizations
     ApiKey:
       type: object
       properties:
