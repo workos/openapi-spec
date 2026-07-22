@@ -13838,6 +13838,20 @@ paths:
                     required:
                       - code
                       - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: organization_blocked_from_sending_invites
+                        const: organization_blocked_from_sending_invites
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
         '404':
           description: Not Found
           content:
