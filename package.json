@@ -29,9 +29,6 @@
     "./operation-overrides/node": "./dist/operationOverrides.node.json",
     "./package.json": "./package.json"
   },
-  "dependencies": {
-    "@workos/oagen": "^0.27.0"
-  },
   "scripts": {
     "generate:services": "node scripts/generate-services.mjs",
     "build:policy": "npm run generate:services && tsdown",
@@ -61,6 +58,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.1.1",
+    "@workos/oagen": "^0.27.0",
     "@workos/oagen-emitters": "^0.21.0",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
