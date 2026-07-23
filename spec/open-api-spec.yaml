@@ -21093,6 +21093,16 @@ components:
               - api_key
           example:
             - oauth
+        config:
+          type: object
+          description: >-
+            Provider-specific config values (e.g. a Snowflake
+            `account_identifier`), keyed by the config field. Only fields the
+            built-in provider declares are accepted.
+          additionalProperties:
+            type: string
+          example:
+            account_identifier: acme-prod
         credentials:
           description: >-
             The OAuth credentials to configure for the Data Integration.
@@ -35707,6 +35717,16 @@ components:
                 - organization_id
                 - api_key_last_4
             - type: 'null'
+        config:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            Provider-specific config values set on the Data Integration (e.g. a
+            Snowflake `account_identifier`), keyed by config field. Only fields
+            the provider declares are accepted.
+          example:
+            account_identifier: acme-prod
         custom_provider:
           description: >-
             The OAuth definition when this is a custom provider; `null` for
@@ -35814,6 +35834,7 @@ components:
         - auth_methods
         - credentials
         - installation
+        - config
         - custom_provider
         - created_at
         - updated_at
