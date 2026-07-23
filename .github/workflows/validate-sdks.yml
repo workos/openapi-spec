@@ -39,7 +39,9 @@ jobs:
     name: sdk_build (${{ matrix.language }})
     needs: load-matrix
     if: needs.load-matrix.outputs.spec-changed == 'true'
-    runs-on: ubuntu-latest
+    # Per-language runner from sdk-matrix.json — ios needs macOS because the
+    # SDK's hand-maintained code imports Apple-only frameworks (CryptoKit).
+    runs-on: ${{ matrix.runner || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:

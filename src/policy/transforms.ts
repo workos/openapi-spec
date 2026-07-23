@@ -1,4 +1,4 @@
-import { toCamelCase } from '@workos/oagen';
+import { toCamelCase } from './naming.js';
 import type { OpenApiDocument } from './types.js';
 
 /**

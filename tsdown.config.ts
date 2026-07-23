@@ -4,11 +4,12 @@ import { defineConfig } from 'tsdown';
  * Build the policy module for downstream consumers (`@workos/openapi-spec/policy`).
  *
  * The published artifacts are intentionally self-contained: types are
- * inlined in `src/policy/types.ts` rather than imported from `@workos/oagen`,
- * so the published .d.mts has zero external type references. The single
- * runtime import (`toCamelCase`) stays external — the package declares
- * `@workos/oagen` as a regular dependency so consumers get it installed
- * transitively.
+ * inlined in `src/policy/types.ts` and naming helpers in
+ * `src/policy/naming.ts` rather than imported from `@workos/oagen`, so the
+ * published dist has zero references to oagen — a runtime dependency on it
+ * would pull oagen's native tree-sitter toolchain into every consumer's
+ * install (workos/cli#202). `@workos/oagen` is a devDependency, used only by
+ * the repo's build/CI scripts.
  *
  * The barrel at `src/policy/index.ts` consolidates the sub-files
  * (operation-hints, mount-rules, model-hints, transforms, types) into a
@@ -31,5 +32,4 @@ export default defineConfig({
   clean: true,
   target: 'node20',
   outDir: 'dist',
-  deps: { neverBundle: ['@workos/oagen'] },
 });

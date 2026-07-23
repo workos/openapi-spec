@@ -29,9 +29,6 @@
     "./operation-overrides/node": "./dist/operationOverrides.node.json",
     "./package.json": "./package.json"
   },
-  "dependencies": {
-    "@workos/oagen": "^0.26.1"
-  },
   "scripts": {
     "generate:services": "node scripts/generate-services.mjs",
     "build:policy": "npm run generate:services && tsdown",
@@ -61,13 +58,14 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.1.1",
-    "@workos/oagen-emitters": "^0.20.3",
+    "@workos/oagen": "^0.27.0",
+    "@workos/oagen-emitters": "^0.21.0",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.1",
-    "openapi-to-postmanv2": "^6.2.0",
-    "tsdown": "^0.22.3",
-    "tsx": "^4.23.0",
-    "typescript": "^6.0.3"
+    "openapi-to-postmanv2": "^6.3.1",
+    "tsdown": "^0.22.13",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
   }
 }
