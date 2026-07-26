@@ -162,25 +162,35 @@ test('renderChangelogMarkdown keeps distinct scopes as separate headings', () =>
   assert.ok(markdown.indexOf('[pipes]') < markdown.indexOf('[sso]'));
 });
 
-// Regression: a compat surface change on a service whose PascalCase name maps
-// to a valid scope purely via snake_case (`AdminPortal` → `admin_portal`) must
-// resolve to that scope, not the `sdk` fallback. factsFromCompat distrusts the
-// trivial snake_case scope and defers to scopeFromName; without an `AdminPortal`
-// name rule the surface resolved to `sdk`, which has no docs_url and hard-failed
-// changelog scope validation in CI.
-test('factsFromCompat resolves an AdminPortal surface change to admin_portal, not sdk', () => {
-  const compatReport = {
-    changes: [
-      {
-        severity: 'breaking',
-        category: 'parameter_type_narrowed',
-        symbol: 'AdminPortal.generate_link',
-        message: 'Parameter type changed for "return_url" on "AdminPortal.generate_link"',
-      },
-    ],
-  };
-  const facts = factsFromCompat(compatReport, [], EMPTY_INDEXES);
-  assert.equal(facts.length, 1);
-  assert.equal(facts[0].scope, 'admin_portal');
-  assert.notEqual(facts[0].scope, 'sdk');
-});
+// Regression: a compat surface change must resolve to a real scope with a
+// docs_url, never the `sdk` fallback (which hard-fails --strict-scopes in CI).
+// factsFromCompat distrusts a service scope that is merely `toSnakeCase(root)`
+// and defers to scopeFromName; every root below reached CI as `sdk` because
+// scopeFromName had no rule for it. These map one-per-scope (the per-scope
+// dedup keeps a single breaking fact each) so all four resolve in one pass.
+const compatSurfaceScopeCases = [
+  { symbol: 'AdminPortal.generate_link', scope: 'admin_portal' },
+  { symbol: 'Authorization.assign_role', scope: 'authorization' },
+  { symbol: 'Agents.create_validate', scope: 'agents' },
+  { symbol: 'ClientApi.create_token', scope: 'client' },
+  { symbol: 'CreateApplicationSecret.from_dict', scope: 'connect' },
+];
+
+for (const { symbol, scope } of compatSurfaceScopeCases) {
+  test(`factsFromCompat resolves ${symbol} to ${scope}, not sdk`, () => {
+    const compatReport = {
+      changes: [
+        {
+          severity: 'breaking',
+          category: 'parameter_type_narrowed',
+          symbol,
+          message: `Parameter type changed for "x" on "${symbol}"`,
+        },
+      ],
+    };
+    const facts = factsFromCompat(compatReport, [], EMPTY_INDEXES);
+    assert.equal(facts.length, 1);
+    assert.equal(facts[0].scope, scope);
+    assert.notEqual(facts[0].scope, 'sdk');
+  });
+}
