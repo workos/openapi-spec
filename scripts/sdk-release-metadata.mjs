@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 const SCOPE_LABELS = {
   admin_portal: 'admin portal',
+  agents: 'agents',
   api_keys: 'API key',
   audit_logs: 'audit log',
   authorization: 'authorization',
@@ -36,6 +37,7 @@ const SCOPE_LABELS = {
 
 const SCOPE_DOC_URLS = {
   admin_portal: 'https://workos.com/docs/reference/admin-portal',
+  agents: 'https://workos.com/docs/reference/agents',
   api_keys: 'https://workos.com/docs/reference/authkit/api-keys',
   audit_logs: 'https://workos.com/docs/reference/audit-logs',
   authorization: 'https://workos.com/docs/reference/fga',
@@ -412,6 +414,15 @@ function scopeFromName(name) {
   if (/^Radar/.test(name)) return 'radar';
   if (/^(Vault|Object$|ObjectMetadata|ObjectSummary|ObjectVersion|ObjectWithoutValue)/.test(name)) return 'vault';
   if (/^AuditLog/.test(name)) return 'audit_logs';
+  // `/agents/*` standalone surface (`Agents.create_validate`, `.get_registration`,
+  // `.update_attempts`) and agent-registration types.
+  if (/^Agent/.test(name)) return 'agents';
+  // `/client/token` issuance (`ClientApi.create_token`). Distinct root from the
+  // bare `Client` the compat client rule already maps.
+  if (/^ClientApi/.test(name)) return 'client';
+  // Connect application secrets (`CreateApplicationSecret`, `NewConnectApplicationSecret`);
+  // the `Create`/`New` prefixes dodge the anchored `Application|Connect` rule below.
+  if (/ApplicationSecret/.test(name)) return 'connect';
   if (/^(Application|Connect|UserObject$|ApplicationCredentials|ExternalAuth|RedirectUriInput)/.test(name)) return 'connect';
   if (/^(Group|CreateGroup|UpdateGroup)/.test(name)) return 'groups';
   if (/OrganizationMembership/.test(name)) return 'organization_membership';
@@ -426,13 +437,17 @@ function scopeFromName(name) {
   if (/^(Invitation|MagicAuth|PasswordReset|RevokeSession|Session|User|CreateUser|UpdateUser|EmailChange)/.test(name)) {
     return 'user_management';
   }
-  if (/^(Role|Permission)/.test(name)) return 'authorization';
+  if (/^(Role|Permission|Authorization)/.test(name)) return 'authorization';
   if (/^Widget/.test(name)) return 'widgets';
   if (/^Event/.test(name)) return 'events';
-  // Admin Portal generate-link intent options (`GenerateLinkDto`). The SSO and
+  // Admin Portal service surface (`AdminPortal.generate_link`) and its
+  // generate-link intent options (`GenerateLinkDto`). The service scope equals
+  // `toSnakeCase('AdminPortal')` (`admin_portal`), so factsFromCompat falls back
+  // to this name rule; without it the surface resolves to `sdk`. The SSO and
   // domain-verification variants resolve to their own scopes via the rules
-  // above; this catches the bare `IntentOptions` aggregate and any other
+  // above; `IntentOptions$` catches the bare aggregate and any other
   // intent-options type not otherwise classified.
+  if (/^AdminPortal/.test(name)) return 'admin_portal';
   if (/IntentOptions$/.test(name)) return 'admin_portal';
 
   return 'sdk';
@@ -938,7 +953,7 @@ function compatChangeIsBreaking(change, indexes) {
   return true;
 }
 
-function factsFromCompat(compatReport, existingFacts, indexes) {
+export function factsFromCompat(compatReport, existingFacts, indexes) {
   const facts = [];
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
   const renames = renamesFromCompat(compatReport);

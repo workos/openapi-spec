@@ -13122,20 +13122,35 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: The error code identifying the type of error.
-                    example: daily_quota_exceeded
-                    const: daily_quota_exceeded
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: Request could not be processed.
-                required:
-                  - code
-                  - message
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: daily_quota_exceeded
+                        const: daily_quota_exceeded
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        description: The OAuth error code.
+                        example: too_many_requests
+                        const: too_many_requests
+                      error_description:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: 'The request failed due to: too_many_requests.'
+                    required:
+                      - error
+                      - error_description
       summary: Authenticate
       tags:
         - user-management.authentication

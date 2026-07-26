@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
+import { factsFromCompat, factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
 
 // factsFromDiff only reaches indexes.symbolScopes (scope resolution) for the
 // kinds under test; an empty index leaves scope unresolved, which is fine — we
@@ -161,3 +161,36 @@ test('renderChangelogMarkdown keeps distinct scopes as separate headings', () =>
   assert.ok(markdown.includes('**[sso](https://s)**:'));
   assert.ok(markdown.indexOf('[pipes]') < markdown.indexOf('[sso]'));
 });
+
+// Regression: a compat surface change must resolve to a real scope with a
+// docs_url, never the `sdk` fallback (which hard-fails --strict-scopes in CI).
+// factsFromCompat distrusts a service scope that is merely `toSnakeCase(root)`
+// and defers to scopeFromName; every root below reached CI as `sdk` because
+// scopeFromName had no rule for it. These map one-per-scope (the per-scope
+// dedup keeps a single breaking fact each) so all four resolve in one pass.
+const compatSurfaceScopeCases = [
+  { symbol: 'AdminPortal.generate_link', scope: 'admin_portal' },
+  { symbol: 'Authorization.assign_role', scope: 'authorization' },
+  { symbol: 'Agents.create_validate', scope: 'agents' },
+  { symbol: 'ClientApi.create_token', scope: 'client' },
+  { symbol: 'CreateApplicationSecret.from_dict', scope: 'connect' },
+];
+
+for (const { symbol, scope } of compatSurfaceScopeCases) {
+  test(`factsFromCompat resolves ${symbol} to ${scope}, not sdk`, () => {
+    const compatReport = {
+      changes: [
+        {
+          severity: 'breaking',
+          category: 'parameter_type_narrowed',
+          symbol,
+          message: `Parameter type changed for "x" on "${symbol}"`,
+        },
+      ],
+    };
+    const facts = factsFromCompat(compatReport, [], EMPTY_INDEXES);
+    assert.equal(facts.length, 1);
+    assert.equal(facts[0].scope, scope);
+    assert.notEqual(facts[0].scope, 'sdk');
+  });
+}

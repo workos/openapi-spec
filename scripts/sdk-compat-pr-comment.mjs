@@ -1136,6 +1136,59 @@ function renderMarkdown(languageData, options) {
   return lines.join('\n') + '\n';
 }
 
+// GitHub rejects issue comments whose body exceeds this many characters
+// (HTTP 422 "Body is too long"). Leave headroom below the hard limit for the
+// truncation footer and any <details> tags we close on the way out.
+const GITHUB_COMMENT_LIMIT = 65536;
+
+/**
+ * Cap the comment body to GitHub's issue-comment size limit.
+ *
+ * The full report can balloon on large spec diffs (every affected symbol in
+ * every language). When it overflows we trim at a line boundary, close any
+ * <details> blocks we cut through so the HTML stays balanced, and append a
+ * note pointing at the complete report (Pages URL or the run's artifact).
+ */
+function truncateForComment(markdown, { pagesUrl, runId, repo }) {
+  if (markdown.length <= GITHUB_COMMENT_LIMIT) return markdown;
+
+  const linkTarget = pagesUrl
+    ? `[the full SDK diff report](${pagesUrl})`
+    : runId && repo
+      ? `the \`sdk-diff-report.html\` artifact on [this run](https://github.com/${repo}/actions/runs/${runId}#artifacts)`
+      : 'the full SDK diff report';
+
+  const footer = [
+    '',
+    '> [!NOTE]',
+    `> This report was truncated because it exceeded GitHub's ${GITHUB_COMMENT_LIMIT.toLocaleString('en-US')}-character comment limit. See ${linkTarget} for the complete details.`,
+    '',
+  ].join('\n');
+
+  // Reserve room for the footer plus a handful of closing </details> tags.
+  const budget = GITHUB_COMMENT_LIMIT - footer.length - 256;
+
+  const kept = [];
+  let length = 0;
+  let openDetails = 0;
+  for (const line of markdown.split('\n')) {
+    const lineCost = line.length + 1; // account for the rejoined newline
+    if (length + lineCost > budget) break;
+    kept.push(line);
+    length += lineCost;
+    openDetails += (line.match(/<details[ >]/g) ?? []).length;
+    openDetails -= (line.match(/<\/details>/g) ?? []).length;
+  }
+
+  // Balance any <details> blocks the cut left open.
+  while (openDetails > 0) {
+    kept.push('</details>');
+    openDetails -= 1;
+  }
+
+  return kept.join('\n') + footer;
+}
+
 function main() {
   const args = parseArgs(process.argv);
   const artifactDirs = listArtifactDirs(args.artifactsRoot);
@@ -1147,7 +1200,12 @@ function main() {
     codeDiffAvailable: args.codeDiffAvailable,
     pagesUrl: args.pagesUrl,
   });
-  fs.writeFileSync(args.output, markdown, 'utf8');
+  const capped = truncateForComment(markdown, {
+    pagesUrl: args.pagesUrl,
+    runId: args.runId,
+    repo: args.repo,
+  });
+  fs.writeFileSync(args.output, capped, 'utf8');
 }
 
 main();
