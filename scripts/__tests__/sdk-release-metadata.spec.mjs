@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
+import { factsFromCompat, factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
 
 // factsFromDiff only reaches indexes.symbolScopes (scope resolution) for the
 // kinds under test; an empty index leaves scope unresolved, which is fine — we
@@ -160,4 +160,27 @@ test('renderChangelogMarkdown keeps distinct scopes as separate headings', () =>
   assert.ok(markdown.includes('**[pipes](https://p)**:'));
   assert.ok(markdown.includes('**[sso](https://s)**:'));
   assert.ok(markdown.indexOf('[pipes]') < markdown.indexOf('[sso]'));
+});
+
+// Regression: a compat surface change on a service whose PascalCase name maps
+// to a valid scope purely via snake_case (`AdminPortal` → `admin_portal`) must
+// resolve to that scope, not the `sdk` fallback. factsFromCompat distrusts the
+// trivial snake_case scope and defers to scopeFromName; without an `AdminPortal`
+// name rule the surface resolved to `sdk`, which has no docs_url and hard-failed
+// changelog scope validation in CI.
+test('factsFromCompat resolves an AdminPortal surface change to admin_portal, not sdk', () => {
+  const compatReport = {
+    changes: [
+      {
+        severity: 'breaking',
+        category: 'parameter_type_narrowed',
+        symbol: 'AdminPortal.generate_link',
+        message: 'Parameter type changed for "return_url" on "AdminPortal.generate_link"',
+      },
+    ],
+  };
+  const facts = factsFromCompat(compatReport, [], EMPTY_INDEXES);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'admin_portal');
+  assert.notEqual(facts[0].scope, 'sdk');
 });

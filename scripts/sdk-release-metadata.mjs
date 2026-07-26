@@ -429,10 +429,14 @@ function scopeFromName(name) {
   if (/^(Role|Permission)/.test(name)) return 'authorization';
   if (/^Widget/.test(name)) return 'widgets';
   if (/^Event/.test(name)) return 'events';
-  // Admin Portal generate-link intent options (`GenerateLinkDto`). The SSO and
+  // Admin Portal service surface (`AdminPortal.generate_link`) and its
+  // generate-link intent options (`GenerateLinkDto`). The service scope equals
+  // `toSnakeCase('AdminPortal')` (`admin_portal`), so factsFromCompat falls back
+  // to this name rule; without it the surface resolves to `sdk`. The SSO and
   // domain-verification variants resolve to their own scopes via the rules
-  // above; this catches the bare `IntentOptions` aggregate and any other
+  // above; `IntentOptions$` catches the bare aggregate and any other
   // intent-options type not otherwise classified.
+  if (/^AdminPortal/.test(name)) return 'admin_portal';
   if (/IntentOptions$/.test(name)) return 'admin_portal';
 
   return 'sdk';
@@ -938,7 +942,7 @@ function compatChangeIsBreaking(change, indexes) {
   return true;
 }
 
-function factsFromCompat(compatReport, existingFacts, indexes) {
+export function factsFromCompat(compatReport, existingFacts, indexes) {
   const facts = [];
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
   const renames = renamesFromCompat(compatReport);
