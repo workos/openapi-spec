@@ -10,7 +10,6 @@ import {
   isBreaking,
   servicesForChange,
 } from '../build-spec-changes.mjs';
-import { scopesForStaged } from '../render-changelog-preview.mjs';
 
 // A representative slice of the real mount-rules, enough to exercise remapping
 // without importing the (git-ignored) built bundle. The real-fixture test below
@@ -22,11 +21,21 @@ const MOUNT_RULES = {
   Directories: 'DirectorySync',
   UserManagementUsers: 'UserManagement',
   UserManagementInvitations: 'UserManagement',
+  UserManagementAuthentication: 'UserManagement',
   UserManagementOrganizationMembership: 'OrganizationMembership',
   UserManagementDataProviders: 'Pipes',
 };
 
-const serviceMap = (manifest) => Object.fromEntries(manifest.changedServices.map((s) => [s.service, s.hasBreaking]));
+const serviceMetadata = (manifest) =>
+  manifest.changedServices.map(({ service, specHasBreaking, sdkSeverity, hasBreaking }) => ({
+    service,
+    specHasBreaking,
+    sdkSeverity,
+    hasBreaking,
+  }));
+
+const specBreakingMap = (manifest) =>
+  Object.fromEntries(manifest.changedServices.map((s) => [s.service, s.specHasBreaking]));
 
 // ── Key scenario 1: additive op in a single-tag service ──────────────────────
 test('additive operation in a non-remounted service → that service, not breaking', () => {
@@ -34,7 +43,10 @@ test('additive operation in a non-remounted service → that service, not breaki
     changes: [{ kind: 'operation-added', serviceName: 'Vault', operationName: 'createObject', classification: 'additive' }],
   };
   const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
-  assert.deepEqual(manifest.changedServices, [{ service: 'Vault', hasBreaking: false }]);
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'Vault', specHasBreaking: false, sdkSeverity: 'additive', hasBreaking: false },
+  ]);
+  assert.equal(manifest.changedServices[0].entries.length, 1);
 });
 
 // ── Key scenario 2: removed op in a mounted sub-service → parent, breaking ────
@@ -45,7 +57,9 @@ test('removed operation in a mounted sub-service → post-mount parent flagged b
     ],
   };
   const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
-  assert.deepEqual(manifest.changedServices, [{ service: 'UserManagement', hasBreaking: true }]);
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'UserManagement', specHasBreaking: true, sdkSeverity: 'breaking', hasBreaking: true },
+  ]);
 });
 
 // ── Regression: wildcard mount rule folds a sub-service with no exact entry ───
@@ -61,7 +75,9 @@ test('wildcard-only sub-service (no exact key) folds to its post-mount parent', 
     ],
   };
   const { manifest } = buildSpecChanges({ report, mountRules: WILDCARD_RULES });
-  assert.deepEqual(manifest.changedServices, [{ service: 'UserManagement', hasBreaking: false }]);
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'UserManagement', specHasBreaking: false, sdkSeverity: 'additive', hasBreaking: false },
+  ]);
 });
 
 // ── Key scenario 3: shared-schema-only change → every referencing service ────
@@ -89,10 +105,12 @@ test('shared-model change surfaces every service that references it (incl. trans
   // Vault references SharedEnvelope directly; Connections (→ SSO) references it
   // transitively through Wrapper.
   const { manifest } = buildSpecChanges({ report, irs: [null, ir], mountRules: MOUNT_RULES });
-  assert.deepEqual(manifest.changedServices, [
-    { service: 'SSO', hasBreaking: false },
-    { service: 'Vault', hasBreaking: false },
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'SSO', specHasBreaking: false, sdkSeverity: 'additive', hasBreaking: false },
+    { service: 'Vault', specHasBreaking: false, sdkSeverity: 'additive', hasBreaking: false },
   ]);
+  assert.equal(manifest.changedServices[0].entries[0].summary, 'Add `extra` to `SharedEnvelope`');
+  assert.equal(manifest.changedServices[1].entries[0].summary, 'Add `extra` to `SharedEnvelope`');
 });
 
 // ── mount-rules remapping ────────────────────────────────────────────────────
@@ -106,10 +124,12 @@ test('service/operation changes are remapped to post-mount names and sorted/dedu
   };
   const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
   // Permissions and Authorization both fold into Authorization (deduped); Client → ClientApi.
-  assert.deepEqual(manifest.changedServices, [
-    { service: 'Authorization', hasBreaking: false },
-    { service: 'ClientApi', hasBreaking: false },
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'Authorization', specHasBreaking: false, sdkSeverity: 'additive', hasBreaking: false },
+    { service: 'ClientApi', specHasBreaking: false, sdkSeverity: 'additive', hasBreaking: false },
   ]);
+  const auth = manifest.changedServices[0];
+  assert.ok(auth.entries.some((entry) => entry.severity === 'fix' && entry.changes[0].kind === 'operation-modified'));
 });
 
 // ── breaking-flag rollup within a service ────────────────────────────────────
@@ -122,7 +142,9 @@ test('a service is breaking if ANY change touching it is breaking', () => {
   };
   const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
   // Both fold into UserManagement; the breaking removal wins the rollup.
-  assert.deepEqual(manifest.changedServices, [{ service: 'UserManagement', hasBreaking: true }]);
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'UserManagement', specHasBreaking: true, sdkSeverity: 'breaking', hasBreaking: true },
+  ]);
 });
 
 // ── behavior changes (param-default flips) are service-scoped & breaking ─────
@@ -132,7 +154,10 @@ test('behaviorChanges fold into their service as breaking', () => {
     behaviorChanges: [{ serviceName: 'UserManagementInvitations', paramName: 'order', oldDefault: 'desc', newDefault: null }],
   };
   const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
-  assert.deepEqual(manifest.changedServices, [{ service: 'UserManagement', hasBreaking: true }]);
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'UserManagement', specHasBreaking: true, sdkSeverity: 'breaking', hasBreaking: true },
+  ]);
+  assert.equal(manifest.changedServices[0].entries[0].changes[0].kind, 'param-default-changed');
 });
 
 // ── buildChangedEndpoints: method/path from IR, post-mount attribution ───────
@@ -234,72 +259,159 @@ test('manifest carries sha/parentSha/timestamp verbatim', () => {
   assert.equal(manifest.timestamp, '2026-06-20T00:00:00Z');
 });
 
-// ── enrichChangedServices: reconcile hasBreaking with the enriched evidence ──
-// The single changelog scope a non-mounted post-mount service carries — the
-// same derivation enrichChangedServices uses to filter entries to a service.
-const scopeOf = (service) => [...scopesForStaged([service], MOUNT_RULES)][0];
-
-test('enrich flips hasBreaking when a scoped changelog entry is breaking (orphaned-symbol case)', () => {
-  // Owner-attribution left Vault non-breaking (e.g. a removed webhook-event
-  // payload referenced by no operation), but the changelog scoped a
-  // feat!/breaking entry to it. The emitted flag must agree with the entry.
-  const allEntries = [
-    { scope: scopeOf('Vault'), severity: 'breaking', prefix: 'feat!', summary: 'Remove X', description: '' },
-  ];
-  const [vault] = enrichChangedServices({
-    changedServices: [{ service: 'Vault', hasBreaking: false }],
-    allEntries,
-    mountRules: MOUNT_RULES,
-  });
-  assert.equal(vault.hasBreaking, true);
-  assert.equal(vault.entries.length, 1);
-  assert.deepEqual(vault.changedEndpoints, []);
-});
-
-test('enrich flips hasBreaking when a changed endpoint is breaking', () => {
+// ── endpoint enrichment does not override canonical SDK metadata ─────────────
+test('enrich attaches raw endpoint drill-in without changing SDK severity', () => {
   const endpointsByService = new Map([
     ['Vault', [{ method: 'DELETE', path: '/vault/objects/{id}', breaking: true, kind: 'operation-removed' }]],
   ]);
+  const entry = { scope: 'vault', severity: 'fix', prefix: 'fix', summary: 'Update Vault', description: '' };
   const [vault] = enrichChangedServices({
-    changedServices: [{ service: 'Vault', hasBreaking: false }],
+    changedServices: [
+      {
+        service: 'Vault',
+        specHasBreaking: true,
+        sdkSeverity: 'fix',
+        hasBreaking: false,
+        entries: [entry],
+      },
+    ],
     endpointsByService,
-    mountRules: MOUNT_RULES,
   });
-  assert.equal(vault.hasBreaking, true);
-});
-
-test('enrich preserves an owner-attributed breaking flag with no endpoints/entries (naked-flag superset)', () => {
-  // A shared symbol flagged Authorization breaking via owner-attribution, but no
-  // operation changed and no entry scoped to it. The flag stays true — the bot
-  // renders an explanatory note for this no-detail case.
-  const [auth] = enrichChangedServices({
-    changedServices: [{ service: 'Authorization', hasBreaking: true }],
-    mountRules: MOUNT_RULES,
-  });
-  assert.equal(auth.hasBreaking, true);
-  assert.deepEqual(auth.changedEndpoints, []);
-  assert.deepEqual(auth.entries, []);
-});
-
-test('enrich keeps hasBreaking false with no breaking evidence, and scopes entries to the service', () => {
-  const allEntries = [
-    { scope: scopeOf('Vault'), severity: 'additive', prefix: 'feat', summary: 'Add Y', description: '' },
-    { scope: '__elsewhere__', severity: 'breaking', prefix: 'feat!', summary: 'Other service', description: '' },
-  ];
-  const endpointsByService = new Map([
-    ['Vault', [{ method: 'POST', path: '/vault/objects', breaking: false, kind: 'operation-added' }]],
-  ]);
-  const [vault] = enrichChangedServices({
-    changedServices: [{ service: 'Vault', hasBreaking: false }],
-    endpointsByService,
-    allEntries,
-    mountRules: MOUNT_RULES,
-  });
+  assert.equal(vault.specHasBreaking, true);
+  assert.equal(vault.sdkSeverity, 'fix');
   assert.equal(vault.hasBreaking, false);
-  // Only the Vault-scoped entry attaches; a breaking entry from another scope
-  // neither attaches nor flips the flag.
-  assert.equal(vault.entries.length, 1);
-  assert.equal(vault.entries[0].summary, 'Add Y');
+  assert.deepEqual(vault.entries, [entry]);
+  assert.deepEqual(vault.changedEndpoints, endpointsByService.get('Vault'));
+});
+
+test('strict completeness rejects an attributed change with no fact policy', () => {
+  const report = {
+    changes: [
+      {
+        kind: 'operation-mystery',
+        serviceName: 'Vault',
+        operationName: 'mystery',
+        classification: 'breaking',
+      },
+    ],
+  };
+  assert.throws(
+    () => buildSpecChanges({ report, mountRules: MOUNT_RULES }),
+    /Attributed operation-mystery change Vault\.mystery to Vault but produced no policy-normalized changelog fact/,
+  );
+});
+
+test('Pipes required field is raw-breaking but SDK-additive', () => {
+  const ir = {
+    services: [
+      {
+        name: 'UserManagementDataProviders',
+        operations: [
+          {
+            name: 'create',
+            requestBody: { kind: 'model', name: 'CreateDataIntegration' },
+            response: { kind: 'model', name: 'DataIntegration' },
+          },
+        ],
+      },
+    ],
+    models: [
+      { name: 'CreateDataIntegration', fields: [] },
+      { name: 'DataIntegration', fields: [] },
+    ],
+  };
+  const report = {
+    changes: [
+      {
+        kind: 'model-modified',
+        name: 'CreateDataIntegration',
+        classification: 'additive',
+        fieldChanges: [{ kind: 'field-added', fieldName: 'config', classification: 'additive' }],
+      },
+      {
+        kind: 'model-modified',
+        name: 'DataIntegration',
+        classification: 'breaking',
+        fieldChanges: [{ kind: 'field-added', fieldName: 'config', classification: 'breaking' }],
+      },
+    ],
+  };
+  const { manifest } = buildSpecChanges({ report, irs: [ir, ir], mountRules: MOUNT_RULES });
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'Pipes', specHasBreaking: true, sdkSeverity: 'additive', hasBreaking: false },
+  ]);
+  assert.equal(manifest.changedServices[0].entries[0].scope, 'pipes');
+  assert.equal(manifest.changedServices[0].entries[0].summary, 'Add `config` to Pipes models');
+});
+
+test('shared SSO model removal attaches its fix entry to every owner', () => {
+  const ir = {
+    services: [
+      { name: 'Connections', operations: [{ name: 'get', response: { kind: 'model', name: 'Connection' } }] },
+      { name: 'Vault', operations: [{ name: 'getShared', response: { kind: 'model', name: 'Connection' } }] },
+    ],
+    models: [{ name: 'Connection', fields: [] }],
+  };
+  const report = {
+    changes: [
+      {
+        kind: 'model-modified',
+        name: 'Connection',
+        classification: 'breaking',
+        fieldChanges: [{ kind: 'field-removed', fieldName: 'callback_endpoint', classification: 'breaking' }],
+      },
+    ],
+  };
+  const { manifest } = buildSpecChanges({ report, irs: [ir, ir], mountRules: MOUNT_RULES });
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'SSO', specHasBreaking: true, sdkSeverity: 'fix', hasBreaking: false },
+    { service: 'Vault', specHasBreaking: true, sdkSeverity: 'fix', hasBreaking: false },
+  ]);
+  for (const service of manifest.changedServices) {
+    assert.equal(service.entries.length, 1);
+    assert.equal(service.entries[0].scope, 'sso');
+    assert.equal(service.entries[0].changes[0].kind, 'field-removed');
+  }
+});
+
+test('UserManagement inline error response change becomes an SDK fix entry', () => {
+  const ir = {
+    services: [
+      {
+        name: 'UserManagementAuthentication',
+        operations: [
+          {
+            name: 'authenticate',
+            httpMethod: 'post',
+            path: '/user_management/authenticate',
+          },
+        ],
+      },
+    ],
+  };
+  const report = {
+    changes: [
+      {
+        kind: 'operation-modified',
+        serviceName: 'UserManagementAuthentication',
+        operationName: 'authenticate',
+        paramChanges: [],
+        responseChanged: false,
+        requestBodyChanged: false,
+        errorsChanged: true,
+        classification: 'breaking',
+      },
+    ],
+  };
+  const { manifest } = buildSpecChanges({ report, irs: [ir, ir], mountRules: MOUNT_RULES });
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'UserManagement', specHasBreaking: true, sdkSeverity: 'fix', hasBreaking: false },
+  ]);
+  const [entry] = manifest.changedServices[0].entries;
+  assert.equal(entry.scope, 'user_management');
+  assert.equal(entry.severity, 'fix');
+  assert.equal(entry.changes[0].kind, 'errors-changed');
+  assert.match(entry.description, /POST \/user_management\/authenticate/);
 });
 
 // ── real captured oagen-diff report against the REAL mount-rules ─────────────
@@ -326,7 +438,7 @@ test('real diff fixture maps to valid post-mount service names', async (t) => {
   // exactly the operation/service-derived services. This isolates the mapping
   // we can assert deterministically without committing a 1.4 MB IR fixture.
   const { manifest } = buildSpecChanges({ report, mountRules });
-  const map = serviceMap(manifest);
+  const map = specBreakingMap(manifest);
 
   // Every emitted name is a real post-mount service (no snake_case, no raw
   // pre-mount names like UserManagementInvitations).

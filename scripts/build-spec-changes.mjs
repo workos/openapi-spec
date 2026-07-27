@@ -12,8 +12,13 @@
 //     "parentSha": "def456",
 //     "timestamp": "2026-06-18T20:00:00Z",
 //     "changedServices": [
-//       { "service": "Vault", "hasBreaking": false },
-//       { "service": "UserManagement", "hasBreaking": true }
+//       {
+//         "service": "Vault",
+//         "specHasBreaking": true,
+//         "sdkSeverity": "fix",
+//         "hasBreaking": false,
+//         "entries": [...]
+//       }
 //     ]
 //   }
 //
@@ -38,9 +43,9 @@ import {
   factsFromDiff,
   groupFacts,
 } from "./sdk-release-metadata.mjs";
-import { scopesForStaged } from "./render-changelog-preview.mjs";
 
 const BREAKING = "breaking";
+const SDK_SEVERITIES = ["breaking", "additive", "fix"];
 
 // ── arg parsing ────────────────────────────────────────────────────────────
 function parseArgs(argv) {
@@ -262,11 +267,18 @@ export function buildSpecChanges({
   mountRules = {},
 }) {
   const owners = buildSymbolOwners(irs, mountRules);
-  const byService = new Map(); // postMountService -> hasBreaking
+  const indexes = buildIndexes(irs);
+  const byService = new Map(); // postMountService -> { specHasBreaking, facts }
   let unattributedSymbolChanges = 0;
 
-  const touch = (service, breaking) => {
-    byService.set(service, (byService.get(service) ?? false) || breaking);
+  const touch = (service, specHasBreaking, facts) => {
+    const state = byService.get(service) ?? {
+      specHasBreaking: false,
+      facts: [],
+    };
+    state.specHasBreaking ||= specHasBreaking;
+    state.facts.push(...facts);
+    byService.set(service, state);
   };
 
   for (const change of report.changes ?? []) {
@@ -278,8 +290,18 @@ export function buildSpecChanges({
     ) {
       unattributedSymbolChanges += 1;
     }
-    const breaking = isBreaking(change);
-    for (const service of services) touch(service, breaking);
+    const facts = factsFromDiff({ changes: [change] }, indexes);
+    if (services.length > 0 && facts.length === 0) {
+      const target = change.operationName
+        ? `${change.serviceName}.${change.operationName}`
+        : change.name ?? change.serviceName ?? "unknown";
+      throw new Error(
+        `Attributed ${change.kind ?? "unknown"} change ${target} to ${services.join(", ")} ` +
+          "but produced no policy-normalized changelog fact",
+      );
+    }
+    const specHasBreaking = isBreaking(change);
+    for (const service of services) touch(service, specHasBreaking, facts);
   }
 
   // Behavior changes (e.g. a removed server-side query-param default) are
@@ -287,11 +309,36 @@ export function buildSpecChanges({
   // top-level array; fold them into the same per-service rollup.
   for (const behaviorChange of report.behaviorChanges ?? []) {
     const service = toPostMount(behaviorChange.serviceName, mountRules);
-    if (service) touch(service, true);
+    if (!service) continue;
+    const facts = factsFromDiff({ behaviorChanges: [behaviorChange] }, indexes);
+    if (facts.length === 0) {
+      throw new Error(
+        `Attributed behavior change in ${behaviorChange.serviceName} to ${service} ` +
+          "but produced no policy-normalized changelog fact",
+      );
+    }
+    touch(service, true, facts);
   }
 
   const changedServices = [...byService.entries()]
-    .map(([service, hasBreaking]) => ({ service, hasBreaking }))
+    .map(([service, state]) => {
+      // Group only the facts owned by this service. The entry's scope/docs fields
+      // remain presentation metadata; they no longer decide whether a fact
+      // attaches to a selected post-mount service.
+      const entries = entriesFromGroups(groupFacts(state.facts), []);
+      const sdkSeverity =
+        SDK_SEVERITIES.find((severity) => entries.some((entry) => entry.severity === severity)) ??
+        "none";
+      return {
+        service,
+        specHasBreaking: state.specHasBreaking,
+        sdkSeverity,
+        // Compatibility alias for older consumers. SDK release policy, not the
+        // raw OpenAPI analyzer, is canonical for generation/versioning.
+        hasBreaking: sdkSeverity === BREAKING,
+        entries,
+      };
+    })
     .sort((a, b) => a.service.localeCompare(b.service));
 
   return {
@@ -300,32 +347,17 @@ export function buildSpecChanges({
   };
 }
 
-// ── enrich + reconcile the emitted manifest ──────────────────────────────────
-// Attach each service's changed endpoints + changelog entries, and reconcile
-// hasBreaking. buildSpecChanges derives hasBreaking purely from IR
-// owner-attribution, which misses symbols referenced by no operation — e.g. a
-// removed webhook-event payload that the changelog pipeline scopes to a service
-// but the owner index leaves orphaned (under-reports breaking), and shared
-// symbols flagged against services that get no endpoint/entry of their own
-// (a breaking pill with nothing behind it). OR the owner flag together with the
-// enriched evidence so the emitted hasBreaking is a true superset of what the
-// dashboard and the shipped changelog actually render as breaking.
+// ── enrich the emitted manifest ───────────────────────────────────────────────
+// Entries and their canonical SDK severity are already assigned by the same
+// servicesForChange ownership pass that marks a service pending. This final
+// enrichment attaches raw endpoint drill-in data without changing SDK policy.
 export function enrichChangedServices({
   changedServices,
   endpointsByService = new Map(),
-  allEntries = [],
-  mountRules = {},
-  operationHints = {},
 }) {
   return changedServices.map((s) => {
-    const scopes = scopesForStaged([s.service], mountRules, operationHints);
     const changedEndpoints = endpointsByService.get(s.service) ?? [];
-    const entries = allEntries.filter((e) => scopes.has(e.scope));
-    const hasBreaking =
-      s.hasBreaking ||
-      changedEndpoints.some((e) => e.breaking) ||
-      entries.some((e) => e.severity === BREAKING);
-    return { ...s, hasBreaking, changedEndpoints, entries };
+    return { ...s, changedEndpoints };
   });
 }
 
@@ -333,7 +365,7 @@ export function enrichChangedServices({
 async function loadPolicy() {
   try {
     const mod = await import(new URL("../dist/policy.mjs", import.meta.url));
-    return { mountRules: mod.mountRules ?? {}, operationHints: mod.operationHints ?? {} };
+    return { mountRules: mod.mountRules ?? {} };
   } catch (err) {
     throw new Error(
       `Failed to import policy from dist/policy.mjs (${err.message}). ` +
@@ -349,7 +381,7 @@ async function main() {
     throw new Error(`Diff report not found or empty: ${args.report}`);
 
   const irs = [readJson(args.oldIr, null), readJson(args.newIr, null)];
-  const { mountRules, operationHints } = await loadPolicy();
+  const { mountRules } = await loadPolicy();
   const timestamp = args.timestamp || new Date().toISOString();
 
   const { manifest, unattributedSymbolChanges } = buildSpecChanges({
@@ -361,26 +393,13 @@ async function main() {
     mountRules,
   });
 
-  // Enrich the emitted manifest the bot reads: per-service changed endpoints,
-  // per-service changelog entries, the originating commit/PR, and a reconciled
-  // hasBreaking (see enrichChangedServices). The exported buildSpecChanges
-  // rollup above stays a pure owner-attribution pass.
+  // Enrich the emitted manifest the bot reads with per-service changed
+  // endpoints. Changelog entries and SDK severity were already assigned by the
+  // same owner-attribution pass in buildSpecChanges.
   const endpointsByService = buildChangedEndpoints({ report, irs, mountRules });
-
-  // This commit's changelog entries, computed from the SAME diff report + IRs
-  // via the exact pipeline the changelog renderer uses (facts -> groups ->
-  // entries) — no extra `oagen` run, no git. Entries are scoped per service the
-  // same way the renderer scopes a staged set (scopesForStaged), so the SDK bot
-  // renders the "Generate staged" preview straight from D1, with no on-demand
-  // changelog-preview workflow dispatch.
-  const indexes = buildIndexes(irs);
-  const allEntries = entriesFromGroups(groupFacts(factsFromDiff(report, indexes)), []);
   manifest.changedServices = enrichChangedServices({
     changedServices: manifest.changedServices,
     endpointsByService,
-    allEntries,
-    mountRules,
-    operationHints,
   });
   if (args.commitMessage) manifest.commitMessage = args.commitMessage;
   if (args.prNumber && /^\d+$/.test(args.prNumber)) manifest.prNumber = Number(args.prNumber);

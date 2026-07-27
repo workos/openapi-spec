@@ -423,13 +423,16 @@ function scopeFromName(name) {
   // Connect application secrets (`CreateApplicationSecret`, `NewConnectApplicationSecret`);
   // the `Create`/`New` prefixes dodge the anchored `Application|Connect` rule below.
   if (/ApplicationSecret/.test(name)) return 'connect';
+  // Match the SSO `Connection` model before the broader `Connect*` family.
+  // Otherwise `Connection` is classified as Connect even when IR ownership
+  // unambiguously points at the SSO service.
+  if (/^(Connection|SSO|Sso)/.test(name)) return 'sso';
   if (/^(Application|Connect|UserObject$|ApplicationCredentials|ExternalAuth|RedirectUriInput)/.test(name)) return 'connect';
   if (/^(Group|CreateGroup|UpdateGroup)/.test(name)) return 'groups';
   if (/OrganizationMembership/.test(name)) return 'organization_membership';
   if (/^OrganizationDomain/.test(name)) return 'organization_domains';
   if (/^DomainVerification/.test(name)) return 'organization_domains';
   if (/^Organization/.test(name)) return 'organizations';
-  if (/^(Connection|SSO|Sso)/.test(name)) return 'sso';
   if (/^(AuthenticationFactor|AuthenticationChallenge|ChallengeAuthenticationFactor|MultiFactor|Mfa)/.test(name)) {
     return 'multi_factor_auth';
   }
@@ -665,6 +668,7 @@ const BACKEND_ONLY_DIFF_KINDS = new Set([
   'value-modified',
   'response-changed',
   'request-body-changed',
+  'errors-changed',
 ]);
 // Pure additions can't break a caller and aren't a fix — a new field/value is a
 // feature. Floor these at `additive` (→ feat) regardless of what the differ
@@ -681,12 +685,14 @@ function capSeverity(kind, severity) {
 }
 
 function addFact(facts, fact) {
+  const severity = ['breaking', 'additive', 'fix'].includes(fact.severity) ? fact.severity : 'fix';
   facts.push({
     symbols: [],
     scope_source: 'unknown',
     scope_candidates: [],
     ...fact,
-    prefix: severityToPrefix(fact.severity),
+    severity,
+    prefix: severityToPrefix(severity),
   });
 }
 
@@ -721,6 +727,7 @@ export function factsFromDiff(diffReport, indexes) {
       });
     } else if (change.kind === 'model-modified') {
       const scope = resolveSymbolScope('model', change.name, indexes);
+      const factCount = facts.length;
       for (const fieldChange of change.fieldChanges ?? []) {
         // The spec differ encodes a field's required/optional *direction* in the
         // classification (made-required reads as breaking). Capture it before the
@@ -753,6 +760,18 @@ export function factsFromDiff(diffReport, indexes) {
           detail,
         });
       }
+      // Some differ versions can report a modified model without a structured
+      // fieldChanges payload. Keep the service represented with a conservative
+      // fix fact rather than silently dropping it from release metadata.
+      if (facts.length === factCount) {
+        addFact(facts, {
+          severity: 'fix',
+          ...scopeFields(scope),
+          kind: change.kind,
+          symbols: [change.name],
+          detail: `Updated model \`${change.name}\`.`,
+        });
+      }
     } else if (change.kind === 'enum-added') {
       const scope = resolveSymbolScope('enum', change.name, indexes);
       addFact(facts, {
@@ -773,6 +792,7 @@ export function factsFromDiff(diffReport, indexes) {
       });
     } else if (change.kind === 'enum-modified') {
       const scope = resolveSymbolScope('enum', change.name, indexes);
+      const factCount = facts.length;
       for (const valueChange of change.valueChanges ?? []) {
         let detail;
         if (valueChange.kind === 'value-added') {
@@ -792,6 +812,15 @@ export function factsFromDiff(diffReport, indexes) {
           detail,
         });
       }
+      if (facts.length === factCount) {
+        addFact(facts, {
+          severity: 'fix',
+          ...scopeFields(scope),
+          kind: change.kind,
+          symbols: [change.name],
+          detail: `Updated enum \`${change.name}\`.`,
+        });
+      }
     } else if (change.kind === 'service-added') {
       const scope = resolveServiceScope(change.name);
       addFact(facts, {
@@ -809,6 +838,15 @@ export function factsFromDiff(diffReport, indexes) {
         kind: change.kind,
         symbols: [change.name],
         detail: `Removed service \`${change.name}\`.`,
+      });
+    } else if (change.kind === 'service-modified') {
+      const scope = resolveServiceScope(change.name);
+      addFact(facts, {
+        severity: 'fix',
+        ...scopeFields(scope),
+        kind: change.kind,
+        symbols: [change.name],
+        detail: `Updated service \`${change.name}\`.`,
       });
     } else if (change.kind === 'operation-added') {
       const scope = resolveServiceScope(change.serviceName);
@@ -830,6 +868,7 @@ export function factsFromDiff(diffReport, indexes) {
       });
     } else if (change.kind === 'operation-modified') {
       const scope = resolveServiceScope(change.serviceName);
+      const factCount = facts.length;
       for (const paramChange of change.paramChanges ?? []) {
         const severity = paramChange.classification;
         const param = `\`${change.serviceName}.${change.operationName}.${paramChange.paramName}\``;
@@ -876,7 +915,58 @@ export function factsFromDiff(diffReport, indexes) {
               : `Changed request body for \`${opKey}\`.`,
         });
       }
+      if (change.errorsChanged) {
+        addFact(facts, {
+          severity: capSeverity('errors-changed', change.classification),
+          ...scopeFields(scope),
+          kind: 'errors-changed',
+          symbols: [change.serviceName, change.operationName],
+          detail: operationDetail(change, indexes, 'Changed errors for'),
+        });
+      }
+      for (const [flag, label, kind] of [
+        ['httpMethodChanged', 'HTTP method', 'http-method-changed'],
+        ['pathChanged', 'path', 'path-changed'],
+        ['paginatedChanged', 'pagination contract', 'pagination-changed'],
+        ['injectIdempotencyKeyChanged', 'idempotency-key contract', 'idempotency-key-changed'],
+      ]) {
+        if (!change[flag]) continue;
+        addFact(facts, {
+          // These alter the generated callable surface and therefore retain the
+          // differ's classification instead of receiving the backend-only cap.
+          severity: change.classification === 'additive' ? 'additive' : 'breaking',
+          ...scopeFields(scope),
+          kind,
+          symbols: [change.serviceName, change.operationName],
+          detail: operationDetail(change, indexes, `Changed ${label} for`),
+        });
+      }
+      // An operation may be modified only in an SDK-opaque response detail that
+      // the differ reports without one of the structured flags above. Recording
+      // a fix fact is explicit completeness handling for that legitimate case.
+      if (facts.length === factCount) {
+        addFact(facts, {
+          severity: 'fix',
+          ...scopeFields(scope),
+          kind: change.kind,
+          symbols: [change.serviceName, change.operationName],
+          detail: operationDetail(change, indexes, 'Updated'),
+        });
+      }
     }
+  }
+  for (const behaviorChange of diffReport.behaviorChanges ?? []) {
+    const scope = resolveServiceScope(behaviorChange.serviceName);
+    const symbol = [behaviorChange.serviceName, behaviorChange.operationName, behaviorChange.paramName]
+      .filter(Boolean)
+      .join('.');
+    addFact(facts, {
+      severity: 'breaking',
+      ...scopeFields(scope),
+      kind: 'param-default-changed',
+      symbols: [behaviorChange.serviceName, behaviorChange.operationName, behaviorChange.paramName].filter(Boolean),
+      detail: `Changed server default for parameter \`${symbol}\`.`,
+    });
   }
   return facts;
 }
