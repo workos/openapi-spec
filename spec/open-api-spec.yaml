@@ -13867,6 +13867,20 @@ paths:
                     required:
                       - code
                       - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: email_domain_not_deliverable
+                        const: email_domain_not_deliverable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
         '404':
           description: Not Found
           content:
@@ -14212,6 +14226,20 @@ paths:
                     required:
                       - code
                       - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: email_domain_not_deliverable
+                        const: email_domain_not_deliverable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
         '404':
           description: Not Found
           content:
@@ -14552,6 +14580,20 @@ paths:
                     required:
                       - error
                       - error_description
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: email_domain_not_deliverable
+                        const: email_domain_not_deliverable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
         '422':
           description: Unprocessable Entity
           content:
