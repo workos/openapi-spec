@@ -1,0 +1,91 @@
+name: Replay spec changes
+
+# Rebuild historical spec-change manifests with the CURRENT main-branch
+# analyzer, policy, and manifest builder. This is intentionally separate from
+# the push-triggered producer so repairing historical rows cannot change normal
+# recording behavior.
+
+run-name: Replay spec changes (${{ inputs.mode }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_shas:
+        description: 'Full 40-character merge SHAs, separated by commas or spaces'
+        required: true
+        type: string
+      mode:
+        description: Preview manifests or idempotently upsert them to the SDK bot
+        required: true
+        type: choice
+        default: dry-run
+        options:
+          - dry-run
+          - push
+
+concurrency:
+  # Share the producer's concurrency group so a replay cannot race a normal
+  # spec-change delivery. Every requested SHA is processed sequentially.
+  group: spec-changes
+  cancel-in-progress: false
+
+env:
+  SDK_BOT_URL: https://sdk-automation-bot.workos.tools
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build current policy module
+        # Historical commits provide only the two spec snapshots. The replay
+        # script deliberately imports policy and analysis code from this
+        # current checkout.
+        run: npm run build:policy
+
+      - name: Preview rebuilt manifests
+        if: inputs.mode == 'dry-run'
+        env:
+          TARGET_SHAS: ${{ inputs.target_shas }}
+        run: |
+          node scripts/replay-spec-changes.mjs \
+            --shas "$TARGET_SHAS" \
+            --repository "$GITHUB_REPOSITORY"
+
+      - name: Verify push runs from the default branch
+        if: inputs.mode == 'push'
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "::error::Push replays must run from the default branch ($DEFAULT_BRANCH)."
+            exit 1
+          fi
+
+      - name: Rebuild and idempotently push manifests
+        if: inputs.mode == 'push'
+        env:
+          TARGET_SHAS: ${{ inputs.target_shas }}
+          SPEC_CHANGES_SECRET: ${{ secrets.SPEC_CHANGES_SECRET }}
+        run: |
+          node scripts/replay-spec-changes.mjs \
+            --shas "$TARGET_SHAS" \
+            --repository "$GITHUB_REPOSITORY" \
+            --bot-url "$SDK_BOT_URL" \
+            --push \
+            --confirm REPLAY_SPEC_CHANGES
