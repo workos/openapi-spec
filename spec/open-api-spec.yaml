@@ -35688,6 +35688,7 @@ components:
             enum:
               - oauth
               - api_key
+              - client_credentials
           description: >-
             How accounts authenticate with the provider for this Data
             Integration.
@@ -36202,9 +36203,10 @@ components:
           enum:
             - oauth
             - api_key
+            - client_credentials
           description: >-
-            The authentication method used for this connection (`oauth` or
-            `api_key`). Defaults to `oauth` if absent.
+            The authentication method used for this connection (`oauth`,
+            `api_key`, or `client_credentials`). Defaults to `oauth` if absent.
           example: oauth
         api_key_last_4:
           type:
@@ -36312,10 +36314,11 @@ components:
                   enum:
                     - oauth
                     - api_key
+                    - client_credentials
                 description: >-
                   The authentication methods supported by this provider
-                  (`oauth`, `api_key`, or both). Defaults to `["oauth"]` if
-                  absent.
+                  (`oauth`, `api_key`, `client_credentials`, or a combination).
+                  Defaults to `["oauth"]` if absent.
                 example:
                   - oauth
               ownership:
@@ -36394,9 +36397,11 @@ components:
                         enum:
                           - oauth
                           - api_key
+                          - client_credentials
                         description: >-
                           The authentication method used for this connection
-                          (`oauth` or `api_key`). Defaults to `oauth` if absent.
+                          (`oauth`, `api_key`, or `client_credentials`).
+                          Defaults to `oauth` if absent.
                         example: oauth
                       api_key_last_4:
                         type:
