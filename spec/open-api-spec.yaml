@@ -7737,6 +7737,18 @@ paths:
                   format: uri
                   description: The URL to redirect the user to after authorization.
                   example: https://example.com/callback
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Connect-time config values for the provider-declared
+                    `installation`-scope fields (e.g. a Zendesk `subdomain`),
+                    keyed by the config field. Only fields the provider declares
+                    may be supplied, and required fields must be provided unless
+                    already pinned on the integration.
+                  example:
+                    subdomain: acme
               required:
                 - user_id
       responses:
@@ -10193,10 +10205,13 @@ paths:
         '400':
           description: >-
             The request body is invalid. Possible reasons: the body is empty (at
-            least one of `enabled`, `scopes`, or `client_id` must be provided);
-            `client_id` and `client_secret` are not provided together; or
-            `client_id`/`client_secret` were supplied for a provider that does
-            not support organization-managed credentials.
+            least one of `enabled`, `scopes`, `client_id`, or `config` must be
+            provided); `client_id` and `client_secret` are not provided
+            together; `client_id`/`client_secret` were supplied for a provider
+            that does not support organization-managed credentials; or `config`
+            contains a field the provider does not declare, a value that does
+            not match that field's pattern, or was supplied for a provider whose
+            credentials are not organization-managed.
           content:
             application/json:
               schema:
@@ -35555,6 +35570,17 @@ components:
               items:
                 type: string
             - type: 'null'
+        config:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            The provider-specific config values in effect for this organization,
+            keyed by config field. Reflects the organization override for
+            organization-credential providers, otherwise the provider root.
+            Empty when none are configured.
+          example:
+            account_identifier: acme-prod
         created_at:
           type: string
           description: The timestamp when the configuration was created.
@@ -35573,6 +35599,7 @@ components:
         - name
         - enabled
         - scopes
+        - config
         - created_at
         - updated_at
     DataIntegrationConfigurationListResponse:
@@ -35624,6 +35651,20 @@ components:
             The OAuth client secret of the organization's own application. Must
             be provided together with `client_id`.
           example: ••••••••
+        config:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            Provider-specific config values to set for the organization, keyed
+            by config field. Only fields the provider declares are accepted, and
+            each value must match that field's pattern. Accepted only for
+            providers whose credentials are organization-managed; for shared or
+            custom credential providers, config belongs on the integration
+            itself (via the data-integrations API) and supplying it here is
+            rejected.
+          example:
+            account_identifier: acme-prod
     DataIntegration:
       type: object
       properties:
