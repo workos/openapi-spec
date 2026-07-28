@@ -69,7 +69,14 @@ jobs:
   generate_pr:
     name: generate_pr (${{ matrix.language }})
     needs: load-matrix
-    runs-on: ubuntu-latest
+    # Generation itself is pure text emission and runs anywhere, so the real-PR
+    # path stays on cheap Linux for every language. Previews additionally run the
+    # SDK's own script/ci below, which needs the platform the SDK actually
+    # targets (ios: swift build imports CryptoKit, Apple-only — no such module on
+    # Linux), so honour sdk-matrix.json's `runner` in dry_run only. macOS runners
+    # bill 10x minutes; validate-sdks.yml always honours `runner` because it only
+    # exists to run that CI.
+    runs-on: ${{ (inputs.dry_run && matrix.runner) || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
