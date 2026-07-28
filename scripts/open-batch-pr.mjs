@@ -107,20 +107,56 @@ function rollupPrefix(entries) {
   return 'fix(generated)';
 }
 
-// PR title. When classify entries with a usable summary are present, derive a
-// descriptive, conventional-commit title from them — the lead entry's summary
-// (entries ordered feat! → feat → fix → chore) plus a `(+N more)` suffix — so
-// every language's PR says what changed and the title-lint check still passes.
-// Otherwise (no entries, or malformed input with no recognized prefix or no
-// summary) fall back to the services/batch title rather than throwing or
-// emitting a literal `undefined`.
-export function prTitle(services, batchId, entries = []) {
-  const ordered = orderedEntries(entries ?? []);
-  const lead = ordered[0]?.summary;
-  if (lead) {
-    const more = ordered.length - 1;
-    return `${rollupPrefix(entries)}: ${lead}${more > 0 ? ` (+${more} more)` : ''}`;
+// The distinct scopes contributing to a batch, in changelog order (feat! → feat
+// → fix → chore, first-seen within each). These are the docs-facing CHANGELOG
+// scopes (`pipes`, `connect`, `user_management`) — deliberately not the staged
+// service names (`Pipes`, `PipesProvider`, `UserManagement`), which can differ:
+// PipesProvider's entries carry the `connect` scope. Listing scopes keeps the
+// title naming exactly what the body's changelog sections name.
+export function titleScopes(entries) {
+  const scopes = new Set();
+  for (const entry of orderedEntries(entries ?? [])) {
+    if (entry?.scope) scopes.add(String(entry.scope));
   }
+  return [...scopes];
+}
+
+// Beyond this many scopes the title summarizes the tail as `and N more services`
+// so a wide batch cannot run past GitHub's 256-char title limit.
+const MAX_TITLE_SCOPES = 3;
+
+// Join scopes into an English list: 1 → `pipes`, 2 → `pipes and connect`, 3 →
+// `pipes, connect, and user_management`, more → `pipes, connect,
+// user_management, and 4 more services`. Returns '' for an empty list so the
+// caller can fall back.
+export function joinScopes(scopes) {
+  const list = scopes ?? [];
+  if (list.length === 0) return '';
+  if (list.length === 1) return list[0];
+  if (list.length === 2) return `${list[0]} and ${list[1]}`;
+  if (list.length <= MAX_TITLE_SCOPES) {
+    return `${list.slice(0, -1).join(', ')}, and ${list[list.length - 1]}`;
+  }
+  const rest = list.length - MAX_TITLE_SCOPES;
+  const head = list.slice(0, MAX_TITLE_SCOPES).join(', ');
+  return `${head}, and ${rest} more service${rest === 1 ? '' : 's'}`;
+}
+
+// PR title. When classify entries carrying a scope are present, name the scopes
+// the batch touches rather than one arbitrary entry's summary: a batch's lead
+// entry is whichever change happened to sort first, so a title built from it
+// advertises a detail while burying the rest, whereas the scope list is stable
+// and tells a reviewer at a glance whether the PR concerns them. The rollup
+// type+bang still leads, so breaking batches read `feat(generated)!: ...` and
+// each SDK repo's title-lint check keeps passing. The per-entry detail lives in
+// the body (and its BEGIN_COMMIT_OVERRIDE block, which is what release-please
+// actually reads), so nothing is lost by not repeating one line of it here.
+// Otherwise (no entries, or malformed input with no recognized prefix or no
+// scope) fall back to the services/batch title rather than throwing or emitting
+// a literal `undefined`.
+export function prTitle(services, batchId, entries = []) {
+  const scopes = joinScopes(titleScopes(entries));
+  if (scopes) return `${rollupPrefix(entries)}: Changes to ${scopes}`;
   const list = parseServices(services);
   const label = list.length > 0 ? list.join(', ') : 'all services';
   return `feat(generated): ${label} (batch ${batchId})`;

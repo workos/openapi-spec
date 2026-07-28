@@ -10,10 +10,12 @@ import {
   batchBranchName,
   catchAllMessage,
   entryHeadline,
+  joinScopes,
   orderedEntries,
   parseServices,
   prTitle,
   rewriteOverrideRefs,
+  titleScopes,
 } from '../open-batch-pr.mjs';
 
 // A conventional-commit title must start with a valid type, an optional
@@ -37,44 +39,83 @@ test('prTitle with no entries falls back to services; empty → all services', (
   assert.match(prTitle('', 'b1'), CONVENTIONAL_TITLE);
 });
 
-test('prTitle with a single entry uses that entry summary', () => {
+test('prTitle with a single entry names that entry scope', () => {
   const entries = [{ prefix: 'feat', scope: 'organization_membership', summary: 'Add `roles` to organization membership models' }];
   assert.equal(
     prTitle('OrganizationMembership', 'e471ddef', entries),
-    'feat(generated): Add `roles` to organization membership models',
+    'feat(generated): Changes to organization_membership',
   );
   assert.match(prTitle('OrganizationMembership', 'e471ddef', entries), CONVENTIONAL_TITLE);
 });
 
-test('prTitle with multiple entries leads with the top entry and counts the rest', () => {
+test('prTitle names every scope the batch touches, in changelog order', () => {
   const entries = [
     { prefix: 'feat', scope: 'sso', summary: 'Add SSO API surface' },
     { prefix: 'fix', scope: 'vault', summary: 'Change vault response' },
     { prefix: 'chore', scope: 'events', summary: 'Update events' },
   ];
-  assert.equal(prTitle('SSO,Vault,Events', 'b2', entries), 'feat(generated): Add SSO API surface (+2 more)');
+  // feat → fix → chore ordering, Oxford comma at three.
+  assert.equal(prTitle('SSO,Vault,Events', 'b2', entries), 'feat(generated): Changes to sso, vault, and events');
   assert.match(prTitle('SSO,Vault,Events', 'b2', entries), CONVENTIONAL_TITLE);
+
+  // Two scopes need no comma.
+  assert.equal(prTitle('SSO,Vault', 'b2', entries.slice(0, 2)), 'feat(generated): Changes to sso and vault');
 });
 
-test('prTitle rolls the type up feat! → feat → fix and orders by it', () => {
-  // A breaking entry promotes the whole title to feat(generated)! and leads it,
-  // matching how the changelog override block's rollup type is computed.
+test('prTitle dedupes repeated scopes and follows changelog scopes, not service names', () => {
+  // Several spec commits touching one scope collapse to a single mention, the
+  // same way renderScopeGroup collapses them in the body.
+  const entries = [
+    { prefix: 'feat', scope: 'pipes', summary: 'Add `config` to Pipes models' },
+    { prefix: 'feat', scope: 'pipes', summary: 'Add `client_credentials` to DataIntegrationAuthMethods' },
+    // PipesProvider is staged as a service but its entries carry the `connect`
+    // scope — the title must follow the scope, not the staged service name.
+    { prefix: 'feat', scope: 'connect', summary: 'Add `client_credentials` to ConnectedAccountAuthMethod' },
+    { prefix: 'fix', scope: 'user_management', summary: 'Changed errors for `POST /user_management/invitations`' },
+  ];
+  assert.equal(
+    prTitle('Pipes,PipesProvider,UserManagement', 'b8', entries),
+    'feat(generated): Changes to pipes, connect, and user_management',
+  );
+  assert.match(prTitle('Pipes,PipesProvider,UserManagement', 'b8', entries), CONVENTIONAL_TITLE);
+});
+
+test('prTitle caps a wide batch at three scopes and counts the rest', () => {
+  const scopes = ['sso', 'vault', 'events', 'directory_sync', 'audit_logs'];
+  const entries = scopes.map((scope) => ({ prefix: 'feat', scope, summary: `Add ${scope}` }));
+  assert.equal(prTitle('', 'b9', entries), 'feat(generated): Changes to sso, vault, events, and 2 more services');
+  assert.match(prTitle('', 'b9', entries), CONVENTIONAL_TITLE);
+
+  // Exactly one over the cap stays singular.
+  assert.equal(
+    prTitle('', 'b9', entries.slice(0, 4)),
+    'feat(generated): Changes to sso, vault, events, and 1 more service',
+  );
+
+  // Titles stay inside GitHub's 256-char limit however wide the batch gets.
+  const wide = Array.from({ length: 40 }, (_, i) => ({ prefix: 'feat', scope: `service_number_${i}`, summary: 'x' }));
+  assert.ok(prTitle('', 'b9', wide).length < 256);
+});
+
+test('prTitle rolls the type up feat! → feat → fix and orders scopes by it', () => {
+  // A breaking entry promotes the whole title to feat(generated)! and its scope
+  // leads, matching how the changelog override block's rollup type is computed.
   const breaking = [
     { prefix: 'fix', scope: 'vault', summary: 'Change vault response' },
     { prefix: 'feat!', scope: 'sso', summary: 'Remove SSO API surface' },
   ];
-  assert.equal(prTitle('Vault,SSO', 'b3', breaking), 'feat(generated)!: Remove SSO API surface (+1 more)');
+  assert.equal(prTitle('Vault,SSO', 'b3', breaking), 'feat(generated)!: Changes to sso and vault');
   assert.match(prTitle('Vault,SSO', 'b3', breaking), CONVENTIONAL_TITLE);
 
   // No feat at all → fix(generated).
   const fixesOnly = [{ prefix: 'fix', scope: 'vault', summary: 'Change vault response' }];
-  assert.equal(prTitle('Vault', 'b4', fixesOnly), 'fix(generated): Change vault response');
+  assert.equal(prTitle('Vault', 'b4', fixesOnly), 'fix(generated): Changes to vault');
   assert.match(prTitle('Vault', 'b4', fixesOnly), CONVENTIONAL_TITLE);
 
   // chore-only rolls up to fix(generated), mirroring rollupForEntries exactly
   // (which never returns chore) so the title type matches the changelog override.
   const choreOnly = [{ prefix: 'chore', scope: 'events', summary: 'Regenerate boilerplate' }];
-  assert.equal(prTitle('Events', 'b5', choreOnly), 'fix(generated): Regenerate boilerplate');
+  assert.equal(prTitle('Events', 'b5', choreOnly), 'fix(generated): Changes to events');
   assert.match(prTitle('Events', 'b5', choreOnly), CONVENTIONAL_TITLE);
 });
 
@@ -84,12 +125,37 @@ test('prTitle falls back gracefully on malformed entries (never throws or emits 
   assert.equal(prTitle('Vault', 'b6', unrecognized), 'feat(generated): Vault (batch b6)');
   assert.match(prTitle('Vault', 'b6', unrecognized), CONVENTIONAL_TITLE);
 
-  // Recognized prefix but missing summary → fall back rather than emit `undefined`.
-  const noSummary = [{ prefix: 'feat', scope: 'sso' }];
-  const title = prTitle('SSO', 'b7', noSummary);
+  // Recognized prefix but missing scope → fall back rather than emit `undefined`.
+  const noScope = [{ prefix: 'feat', summary: 'Add a thing' }];
+  const title = prTitle('SSO', 'b7', noScope);
   assert.equal(title, 'feat(generated): SSO (batch b7)');
   assert.doesNotMatch(title, /undefined/);
   assert.match(title, CONVENTIONAL_TITLE);
+
+  // A scoped entry with no summary still titles fine — the title no longer
+  // depends on summaries at all.
+  assert.equal(prTitle('SSO', 'b7', [{ prefix: 'feat', scope: 'sso' }]), 'feat(generated): Changes to sso');
+});
+
+test('joinScopes shapes the English list', () => {
+  assert.equal(joinScopes([]), '');
+  assert.equal(joinScopes(['a']), 'a');
+  assert.equal(joinScopes(['a', 'b']), 'a and b');
+  assert.equal(joinScopes(['a', 'b', 'c']), 'a, b, and c');
+  assert.equal(joinScopes(['a', 'b', 'c', 'd']), 'a, b, c, and 1 more service');
+  assert.equal(joinScopes(['a', 'b', 'c', 'd', 'e']), 'a, b, c, and 2 more services');
+});
+
+test('titleScopes dedupes and follows feat! → feat → fix → chore', () => {
+  const entries = [
+    { prefix: 'chore', scope: 'events' },
+    { prefix: 'fix', scope: 'vault' },
+    { prefix: 'feat!', scope: 'sso' },
+    { prefix: 'feat', scope: 'vault' },
+  ];
+  assert.deepEqual(titleScopes(entries), ['sso', 'vault', 'events']);
+  assert.deepEqual(titleScopes([]), []);
+  assert.deepEqual(titleScopes(undefined), []);
 });
 
 test('catchAllMessage names the services and stays a chore(...) prefix', () => {
@@ -277,7 +343,7 @@ test('--dry-run prints the gh pr create command with the fallback batch title (n
   }
 });
 
-test('--dry-run derives a descriptive PR title from the classify entries', () => {
+test('--dry-run derives a scope-list PR title from the classify entries', () => {
   const { root, origin } = setupOrigin();
   try {
     const work = freshClone(root, origin, 'work');
@@ -295,8 +361,8 @@ test('--dry-run derives a descriptive PR title from the classify entries', () =>
     ]);
     assert.equal(r.code, 0, r.stderr);
     assert.match(r.stdout, /DRY-RUN gh pr create/);
-    // Title is entry-derived, not the generic services/batch fallback.
-    assert.match(r.stdout, /feat\(generated\): Add `roles` to vault models \(\+1 more\)/);
+    // Title is entry-scope-derived, not the generic services/batch fallback.
+    assert.match(r.stdout, /feat\(generated\): Changes to vault and sso/);
     assert.doesNotMatch(r.stdout, /Vault, SSO \(batch t10\)/);
   } finally {
     rmSync(root, { recursive: true, force: true });
