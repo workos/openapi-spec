@@ -11606,8 +11606,8 @@ paths:
             const: login
           description: >-
             If set to `login`, forces re-authentication at the identity
-            provider. For SAML connections this sets `ForceAuthn="true"` in the
-            SAML request.
+            provider. For supported SAML providers this sets `ForceAuthn="true"`
+            in the SAML request; providers that don't support it are unaffected.
       responses:
         '200':
           description: OK
