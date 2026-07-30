@@ -7273,7 +7273,9 @@ paths:
         `custom` to use your own OAuth app credentials or `organization` to have
         each organization supply its own. Set `auth_methods` to `["api_key"]` to
         create an API key integration; you may optionally supply an `api_key`
-        block to install a first tenant in the same call. For a built-in
+        block to install a first tenant in the same call. Set `auth_methods` to
+        `["client_credentials"]` to create a client-credentials integration;
+        client credentials are installed per-tenant afterwards. For a built-in
         provider, pass its slug as `provider`. For a custom provider, pass a new
         slug plus a `custom_provider` definition.
       operationId: DataIntegrationsManagementController_createDataIntegration
@@ -7802,6 +7804,133 @@ paths:
       summary: Get authorization URL
       tags:
         - pipes
+  /data-integrations/{slug}/client-credentials:
+    put:
+      description: >-
+        Creates or updates a client-credentials-based installation for the
+        specified integration and user. If an installation already exists, the
+        stored client credentials are rotated to the new values.
+      operationId: DataIntegrationsController_upsertClientCredentials
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The identifier of the integration.
+          schema:
+            example: salesforce
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: A [User](/reference/authkit/user) identifier.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An [Organization](/reference/organization) identifier.
+                    Optional parameter to scope the connection to a specific
+                    organization.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                client_id:
+                  type: string
+                  minLength: 1
+                  description: The OAuth client ID to store for this integration.
+                  example: 3MVG9...
+                client_secret:
+                  type: string
+                  minLength: 1
+                  description: The OAuth client secret to store for this integration.
+                  example: shhh-secret
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Provider-specific configuration values collected for this
+                    installation, keyed by the provider's config field
+                    descriptors.
+                  example:
+                    mydomain: acme
+              required:
+                - user_id
+                - client_id
+                - client_secret
+      responses:
+        '200':
+          description: The resulting connected account after the upsert.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+              example:
+                object: connected_account
+                id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                scopes: []
+                auth_method: client_credentials
+                state: connected
+                created_at: '2024-01-16T14:20:00.000Z'
+                updated_at: '2024-01-16T14:20:00.000Z'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Data integration not found for the given provider slug.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: >-
+            The matched installation uses a different auth method than this
+            endpoint expects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMethodMismatchError'
+      summary: Upsert client credentials for a connected account
+      tags:
+        - pipes
+      x-feature-flag: pipes-client-credentials
   /data-integrations/{slug}/credentials:
     post:
       description: >-
@@ -21157,12 +21286,16 @@ components:
             How accounts authenticate with the provider. Defaults to
             `["oauth"]`. Use `["api_key"]` to declare an API key integration;
             `credentials` is then not required and keys are supplied per-tenant
-            (optionally via `api_key` on this request).
+            (optionally via `api_key` on this request). Use
+            `["client_credentials"]` to declare a client-credentials
+            integration; `credentials` is likewise not required and client
+            credentials are supplied per-tenant.
           items:
             type: string
             enum:
               - oauth
               - api_key
+              - client_credentials
           example:
             - oauth
         config:
