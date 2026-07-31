@@ -79,7 +79,16 @@ jobs:
           language: ${{ matrix.language }}
           sdk-path: ${{ env.SDK_CHECKOUT_PATH }}
 
+      # Compatibility checking is skipped for android: no extractor is registered
+      # for it, so `sdk:compat-extract` exits 1 and would fail the whole matrix.
+      # There is nothing to protect yet either — android is unreleased, so it has
+      # no published surface a baseline could guard. Remove this condition (here
+      # and on the two steps below) once src/compat/extractors/android.ts exists.
+      # Downstream steps already tolerate the absence: the PR-comment script has
+      # an explicit "compat-report.json missing" branch, the diff report needs
+      # only sdk-code.diff, and both jq aggregations skip absent files.
       - name: Extract baseline snapshot
+        if: matrix.language != 'android'
         working-directory: openapi-spec
         run: |
           npm run sdk:compat-extract -- \
@@ -114,6 +123,7 @@ jobs:
               > "$GITHUB_WORKSPACE/openapi-spec/.oagen/${{ matrix.language }}/sdk-code.diff" || true
 
       - name: Extract candidate snapshot
+        if: matrix.language != 'android'
         working-directory: openapi-spec
         run: |
           npm run sdk:compat-extract -- \
@@ -129,8 +139,11 @@ jobs:
           cp "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}/.oagen-manifest.json" \
              .oagen/${{ matrix.language }}/sdk/ 2>/dev/null || true
 
+      # Skipping this sets steps.compat-diff.outcome to 'skipped', which the
+      # "Compat summary" step below already guards against.
       - name: Compat diff
         id: compat-diff
+        if: matrix.language != 'android'
         continue-on-error: true
         working-directory: openapi-spec
         run: npm run sdk:compat-diff -- --lang ${{ matrix.language }}

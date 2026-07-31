@@ -47,9 +47,9 @@ if [[ -z "$OUTPUT" ]]; then
 fi
 
 # Default namespace: WorkOS for languages whose namespace is a cased type/module
-# name (php namespace, Swift module), workos for everything else
+# name (php namespace, Swift module, Kotlin type prefix), workos for everything else
 if [[ -z "$NAMESPACE" ]]; then
-  if [[ "$LANG" == "php" || "$LANG" == "ios" ]]; then
+  if [[ "$LANG" == "php" || "$LANG" == "ios" || "$LANG" == "android" ]]; then
     NAMESPACE="WorkOS"
   else
     NAMESPACE="workos"
@@ -121,4 +121,9 @@ PY
   EXTRA_ARGS+=(--api-surface "$TMP_SURFACE")
 fi
 
-exec npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" --output "$OUTPUT" "${EXTRA_ARGS[@]}"
+# `${EXTRA_ARGS[@]+…}` rather than a bare `"${EXTRA_ARGS[@]}"`: under `set -u`,
+# bash 3.2 (still what macOS ships as /bin/bash) treats expanding an empty array
+# as an unbound variable. Only the node branch appends to EXTRA_ARGS, so every
+# other language hit that error locally while Linux CI's bash 5 was unaffected.
+exec npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" \
+  --output "$OUTPUT" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
