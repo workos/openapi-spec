@@ -3,7 +3,7 @@ description: Install the language runtime and formatter tools needed by an SDK e
 
 inputs:
   language:
-    description: Target language (ruby, python, go, dotnet, php, kotlin)
+    description: Target language (ruby, python, go, dotnet, php, kotlin, android)
     required: true
   sdk-path:
     description: Path to the checked-out SDK repo
@@ -24,6 +24,10 @@ runs:
           dotnet) echo "version=$(grep -Po '(?<=<TargetFramework>net)\d+\.\d+' $(find . -name '*.csproj' -path '*/src/*' | head -1))" >> "$GITHUB_OUTPUT" ;;
           php)    echo "version=$(grep -Po '\"php\":\s*\"\^?\K[\d.]+' composer.json)" >> "$GITHUB_OUTPUT" ;;
           kotlin) echo "version=$(grep -Po '(?<=JavaVersion\.VERSION_)\d+' build.gradle.kts | head -1)" >> "$GITHUB_OUTPUT" ;;
+          # android needs its own pattern: it sets the JVM target with
+          # `jvmToolchain(17)` and never mentions `JavaVersion.VERSION_`, so the
+          # kotlin branch above would yield an empty version.
+          android) echo "version=$(grep -Po 'jvmToolchain\(\K\d+' build.gradle.kts | head -1)" >> "$GITHUB_OUTPUT" ;;
         esac
 
     - name: Setup Ruby
@@ -65,15 +69,18 @@ runs:
       with:
         php-version: ${{ steps.sdk-version.outputs.version }}
 
+    # Both Kotlin SDKs build with Gradle on a JDK. `android` targets the JVM
+    # (`kotlin("jvm")`), so it needs no Android SDK — the same JDK + Gradle pair
+    # the kotlin SDK uses is sufficient, on ubuntu.
     - name: Setup Java
-      if: inputs.language == 'kotlin'
+      if: inputs.language == 'kotlin' || inputs.language == 'android'
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
       with:
         distribution: temurin
         java-version: ${{ steps.sdk-version.outputs.version }}
 
     - name: Setup Gradle
-      if: inputs.language == 'kotlin'
+      if: inputs.language == 'kotlin' || inputs.language == 'android'
       uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v6.1.0
 
     - name: Install SDK formatter tools
