@@ -35908,40 +35908,46 @@ components:
           example:
             - oauth
         credentials:
-          type: object
-          properties:
-            type:
-              type: string
-              enum:
-                - custom
-                - organization
-              description: >-
-                The credentials type. `custom` uses your own OAuth app
-                credentials; `organization` has each organization supply its own
-                credentials (so `client_id`/`redacted_client_secret` are null on
-                the integration itself).
-              example: custom
-            client_id:
-              type:
-                - string
-                - 'null'
-              description: >-
-                The OAuth client ID configured for the provider app. Null for
-                `organization` credentials.
-              example: Iv1.abc123
-            redacted_client_secret:
-              type:
-                - string
-                - 'null'
-              description: >-
-                The last four characters of the OAuth client secret. The full
-                secret is never returned. Null for `organization` credentials.
-              example: '6789'
-          required:
-            - type
-            - client_id
-            - redacted_client_secret
-          description: The credentials configured for the Data Integration.
+          description: >-
+            The integration-level OAuth app credentials. `null` for `api_key`
+            integrations, which hold no OAuth credentials (keys are installed
+            per-tenant).
+          oneOf:
+            - type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - custom
+                    - organization
+                  description: >-
+                    The credentials type. `custom` uses your own OAuth app
+                    credentials; `organization` has each organization supply its
+                    own credentials (so `client_id`/`redacted_client_secret` are
+                    null on the integration itself).
+                  example: custom
+                client_id:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The OAuth client ID configured for the provider app. Null
+                    for `organization` credentials.
+                  example: Iv1.abc123
+                redacted_client_secret:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The last four characters of the OAuth client secret. The
+                    full secret is never returned. Null for `organization`
+                    credentials.
+                  example: '6789'
+              required:
+                - type
+                - client_id
+                - redacted_client_secret
+            - type: 'null'
         installation:
           description: >-
             The tenant installation created when an API key was supplied at
