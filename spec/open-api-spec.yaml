@@ -25917,6 +25917,12 @@ components:
             The timestamp when the Waitlist User was approved, or null if not
             yet approved.
           example: null
+        waitlist_id:
+          type:
+            - string
+            - 'null'
+          description: The unique ID of the Waitlist that the Waitlist User joined.
+          example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
         created_at:
           format: date-time
           type: string
