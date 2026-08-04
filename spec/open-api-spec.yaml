@@ -21184,12 +21184,16 @@ components:
         authorization_url:
           type: string
           format: uri
-          description: The provider's OAuth authorization endpoint.
+          description: >-
+            The provider's OAuth authorization endpoint. Required for OAuth
+            providers; omit for `api_key` providers.
           example: https://provider.example.com/oauth/authorize
         token_url:
           type: string
           format: uri
-          description: The provider's OAuth token endpoint.
+          description: >-
+            The provider's OAuth token endpoint. Required for OAuth providers;
+            omit for `api_key` providers.
           example: https://provider.example.com/oauth/token
         refresh_token_url:
           type:
@@ -21246,8 +21250,6 @@ components:
           example: request_body
       required:
         - name
-        - authorization_url
-        - token_url
     CreateDataIntegrationDto:
       type: object
       properties:
