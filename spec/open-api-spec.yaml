@@ -7088,6 +7088,7 @@ paths:
               - GoogleOAuth
               - GoogleOIDC
               - GoogleSAML
+              - GrokOAuth
               - IntuitOAuth
               - JumpCloudSAML
               - KeycloakSAML
@@ -17715,6 +17716,7 @@ paths:
                         - GithubOAuth
                         - GitLabOAuth
                         - GoogleOAuth
+                        - GrokOAuth
                         - IntuitOAuth
                         - LinkedInOAuth
                         - MicrosoftOAuth
@@ -24808,6 +24810,7 @@ components:
             - GoogleOAuth
             - GoogleOIDC
             - GoogleSAML
+            - GrokOAuth
             - IntuitOAuth
             - JumpCloudSAML
             - KeycloakSAML
@@ -28606,6 +28609,7 @@ components:
                         - GoogleOAuth
                         - GoogleOIDC
                         - GoogleSAML
+                        - GrokOAuth
                         - IntuitOAuth
                         - JumpCloudSAML
                         - KeycloakSAML
@@ -28771,6 +28775,7 @@ components:
                         - GoogleOAuth
                         - GoogleOIDC
                         - GoogleSAML
+                        - GrokOAuth
                         - IntuitOAuth
                         - JumpCloudSAML
                         - KeycloakSAML
@@ -28936,6 +28941,7 @@ components:
                         - GoogleOAuth
                         - GoogleOIDC
                         - GoogleSAML
+                        - GrokOAuth
                         - IntuitOAuth
                         - JumpCloudSAML
                         - KeycloakSAML
@@ -37712,6 +37718,7 @@ components:
             - GitHubOAuth
             - GitLabOAuth
             - GoogleOAuth
+            - GrokOAuth
             - IntuitOAuth
             - LinkedInOAuth
             - MicrosoftOAuth
@@ -37990,6 +37997,7 @@ components:
             - GoogleOAuth
             - GoogleOIDC
             - GoogleSAML
+            - GrokOAuth
             - IntuitOAuth
             - JumpCloudSAML
             - KeycloakSAML
