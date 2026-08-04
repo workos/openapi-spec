@@ -8013,6 +8013,21 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '422':
+          description: >-
+            The installation uses an auth method that is not yet supported by
+            this endpoint.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
       summary: Vend credentials for a connected account
       tags:
         - pipes
@@ -36294,6 +36309,7 @@ components:
                   x-extensible-enum:
                     - oauth
                     - api_key
+                    - client_credentials
                   const: oauth
                 value:
                   type: string
@@ -36356,6 +36372,7 @@ components:
                   x-extensible-enum:
                     - oauth
                     - api_key
+                    - client_credentials
                   const: api_key
                 value:
                   type: string
@@ -36365,6 +36382,78 @@ components:
                 - object
                 - auth_method
                 - value
+              description: The credential object containing the vended secret.
+          required:
+            - active
+            - credential
+        - type: object
+          properties:
+            active:
+              type: boolean
+              description: Indicates credentials are available.
+              const: true
+            credential:
+              type: object
+              properties:
+                object:
+                  type: string
+                  description: Distinguishes the credential object.
+                  const: credential
+                auth_method:
+                  type: string
+                  description: >-
+                    The authentication method for this credential. Additional
+                    values may be added in the future; handle unknown values
+                    gracefully.
+                  x-extensible-enum:
+                    - oauth
+                    - api_key
+                    - client_credentials
+                  const: client_credentials
+                value:
+                  type: string
+                  description: The client-credentials access token.
+                  example: 00D5g000000XXXX!AQEAQ...
+                expires_at:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The ISO-8601 formatted timestamp indicating when the
+                    credential expires.
+                  example: '2025-12-31T23:59:59.000Z'
+                scopes:
+                  type: array
+                  items:
+                    type: string
+                  description: The scopes granted to the access token.
+                  example:
+                    - api
+                missing_scopes:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    If the integration has requested scopes that aren't present
+                    on the access token, they're listed here.
+                  example: []
+                metadata:
+                  type: object
+                  additionalProperties: {}
+                  description: >-
+                    Non-sensitive fields captured from the provider token
+                    response (e.g. Salesforce `instance_url`), as configured for
+                    the provider.
+                  example:
+                    instance_url: https://acme.my.salesforce.com
+              required:
+                - object
+                - auth_method
+                - value
+                - expires_at
+                - scopes
+                - missing_scopes
+                - metadata
               description: The credential object containing the vended secret.
           required:
             - active
