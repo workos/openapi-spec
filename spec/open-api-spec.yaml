@@ -12531,11 +12531,19 @@ paths:
                       example: '123456'
                     verification_id:
                       type: string
-                      description: The ID of the Radar SMS verification being confirmed.
+                      description: >-
+                        The ID of the Radar SMS verification being confirmed.
+                        Required for sign-up challenges; omitted for sign-in
+                        challenges, where the verification is resolved
+                        server-side.
                       example: vrf_01HXYZ123456789ABCDEFGHIJ
                     phone_number:
                       type: string
-                      description: The phone number the Radar SMS challenge was sent to.
+                      description: >-
+                        The phone number the Radar SMS challenge was sent to.
+                        Required for sign-up challenges; omitted for sign-in
+                        challenges, where the phone number on file is resolved
+                        server-side.
                       example: '+15555550123'
                     pending_authentication_token:
                       type: string
@@ -12560,8 +12568,6 @@ paths:
                     - client_secret
                     - grant_type
                     - code
-                    - verification_id
-                    - phone_number
                     - pending_authentication_token
                 - type: object
                   properties:
@@ -12724,6 +12730,34 @@ paths:
                         description: The error code identifying the type of error.
                         example: user_mismatch
                         const: user_mismatch
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: phone_number_required
+                        const: phone_number_required
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: verification_id_required
+                        const: verification_id_required
                       message:
                         type: string
                         description: A human-readable description of the error.
@@ -13224,6 +13258,20 @@ paths:
                         description: The error code identifying the type of error.
                         example: radar_sign_up_challenge
                         const: radar_sign_up_challenge
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: radar_sms_sign_in_challenge
+                        const: radar_sms_sign_in_challenge
                       message:
                         type: string
                         description: A human-readable description of the error.
