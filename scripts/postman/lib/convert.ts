@@ -1,11 +1,7 @@
-import Converter from "openapi-to-postmanv2";
-import type {
-  ConversionOptions,
-  ConversionResult,
-  PostmanCollection,
-} from "./types.js";
+import Converter, { type Options } from "openapi-to-postmanv2";
+import type { PostmanCollection } from "./types.js";
 
-const OPTIONS: ConversionOptions = {
+const OPTIONS: Options = {
   schemaFaker: true,
   requestParametersResolution: "Example",
   exampleParametersResolution: "Example",
@@ -20,16 +16,21 @@ export function convertSpec(
     Converter.convert(
       { type: "string", data: specString },
       OPTIONS,
-      (err: Error | null, result: ConversionResult) => {
+      (err, result) => {
         if (err) {
           reject(new Error(`Conversion error: ${err.message}`));
           return;
         }
-        if (!result.result) {
-          reject(new Error(`Conversion failed: ${result.reason}`));
+        if (!result?.result) {
+          reject(new Error(`Conversion failed: ${result?.reason}`));
           return;
         }
-        resolve(result.output[0].data as PostmanCollection);
+        const output = result.output?.[0];
+        if (!output) {
+          reject(new Error("Conversion produced no output"));
+          return;
+        }
+        resolve(output.data as PostmanCollection);
       }
     );
   });
