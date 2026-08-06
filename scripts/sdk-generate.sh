@@ -47,9 +47,12 @@ if [[ -z "$OUTPUT" ]]; then
 fi
 
 # Default namespace: WorkOS for languages whose namespace is a cased type/module
-# name (php namespace, Swift module), workos for everything else
+# name (php namespace, Swift module, Kotlin client class), workos for everything
+# else. oagen copies --namespace into `namespacePascal` verbatim, so a language
+# that renders the namespace as a type name needs the cased form here; the
+# android emitter lowercases it independently for Kotlin package segments.
 if [[ -z "$NAMESPACE" ]]; then
-  if [[ "$LANG" == "php" || "$LANG" == "ios" ]]; then
+  if [[ "$LANG" == "php" || "$LANG" == "ios" || "$LANG" == "android" ]]; then
     NAMESPACE="WorkOS"
   else
     NAMESPACE="workos"

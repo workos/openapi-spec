@@ -389,7 +389,7 @@ function getRequestBodySchema(
   if (!operation?.requestBody?.content?.["application/json"]?.schema)
     return null;
 
-  let schema = operation.requestBody.content["application/json"].schema;
+  let schema: OpenApiSchema | null = operation.requestBody.content["application/json"].schema;
   if (schema.$ref) {
     schema = resolveRef(spec, schema.$ref);
   }

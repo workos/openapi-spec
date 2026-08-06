@@ -1,17 +1,3 @@
-export interface ConversionOptions {
-  schemaFaker: boolean;
-  requestParametersResolution: string;
-  exampleParametersResolution: string;
-  folderStrategy: string;
-  includeAuthInfoInExample: boolean;
-}
-
-export interface ConversionResult {
-  result: boolean;
-  reason?: string;
-  output: Array<{ type: string; data: PostmanCollection }>;
-}
-
 export interface PostmanCollection {
   info: {
     name: string;
@@ -38,6 +24,7 @@ export interface PostmanRequest {
   url?: PostmanUrl;
   header?: PostmanHeader[];
   body?: { mode?: string; raw?: string; [key: string]: unknown };
+  description?: string | { content: string; type: string };
   [key: string]: unknown;
 }
 

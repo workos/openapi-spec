@@ -411,7 +411,9 @@ function scopeFromName(name) {
   if (/WebhookEndpointEvents|Webhook/.test(name)) return 'webhooks';
   if (/^(ApiKey|ExpireApiKey|OrganizationApiKey|UserApiKey)/.test(name)) return 'api_keys';
   if (/^(Dsync|Directory)/.test(name)) return 'directory_sync';
-  if (/^Radar/.test(name)) return 'radar';
+  // Unanchored so mid-name radar surfaces (`AuthenticateWithRadarSmsChallengeParams`)
+  // resolve to `radar`, matching the `scopeFromFile` `/radar/` rule.
+  if (/Radar/.test(name)) return 'radar';
   if (/^(Vault|Object$|ObjectMetadata|ObjectSummary|ObjectVersion|ObjectWithoutValue)/.test(name)) return 'vault';
   if (/^AuditLog/.test(name)) return 'audit_logs';
   // `/agents/*` standalone surface (`Agents.create_validate`, `.get_registration`,
