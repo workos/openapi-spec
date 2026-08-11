@@ -10617,6 +10617,13 @@ paths:
             `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
+        - name: search
+          required: false
+          in: query
+          description: Search groups by name or by group ID.
+          schema:
+            example: Engineering
+            type: string
       responses:
         '200':
           description: OK
@@ -21425,13 +21432,13 @@ components:
         config:
           type: object
           description: >-
-            Provider-specific config values (e.g. a Snowflake
-            `account_identifier`), keyed by the config field. Only fields the
-            built-in provider declares are accepted.
+            Provider-specific config values (e.g. a Snowflake `account`), keyed
+            by the config field. Only fields the built-in provider declares are
+            accepted.
           additionalProperties:
             type: string
           example:
-            account_identifier: acme-prod
+            account: myorg-myaccount
         credentials:
           description: >-
             The OAuth credentials to configure for the Data Integration.
@@ -35936,7 +35943,7 @@ components:
             organization-credential providers, otherwise the provider root.
             Empty when none are configured.
           example:
-            account_identifier: acme-prod
+            account: myorg-myaccount
         created_at:
           type: string
           description: The timestamp when the configuration was created.
@@ -36020,7 +36027,7 @@ components:
             itself (via the data-integrations API) and supplying it here is
             rejected.
           example:
-            account_identifier: acme-prod
+            account: myorg-myaccount
     DataIntegration:
       type: object
       properties:
@@ -36177,10 +36184,10 @@ components:
             type: string
           description: >-
             Provider-specific config values set on the Data Integration (e.g. a
-            Snowflake `account_identifier`), keyed by config field. Only fields
-            the provider declares are accepted.
+            Snowflake `account`), keyed by config field. Only fields the
+            provider declares are accepted.
           example:
-            account_identifier: acme-prod
+            account: myorg-myaccount
         custom_provider:
           description: >-
             The OAuth definition when this is a custom provider; `null` for
