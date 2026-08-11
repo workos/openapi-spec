@@ -8711,7 +8711,7 @@ paths:
           schema:
             $ref: '#/components/schemas/PaginationOrder'
         - name: events
-          required: false
+          required: true
           in: query
           description: >-
             Filter events by one or more event types (e.g.
