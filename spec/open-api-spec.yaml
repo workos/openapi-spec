@@ -10617,6 +10617,13 @@ paths:
             `after` fetches newer records).
           schema:
             $ref: '#/components/schemas/PaginationOrder'
+        - name: search
+          required: false
+          in: query
+          description: Search groups by name or by group ID.
+          schema:
+            example: Engineering
+            type: string
       responses:
         '200':
           description: OK
