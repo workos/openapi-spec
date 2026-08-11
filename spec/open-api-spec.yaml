@@ -21164,6 +21164,7 @@ components:
             `domain_data`.
           example:
             - example.com
+          deprecated: true
           type: array
           items:
             type: string
