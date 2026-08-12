@@ -17136,25 +17136,6 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
-        '409':
-          description: ''
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: The error code identifying the type of error.
-                    example: user_deletion_not_allowed
-                    const: user_deletion_not_allowed
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: Request could not be processed.
-                required:
-                  - code
-                  - message
       summary: Delete a user
       tags:
         - user-management.users
