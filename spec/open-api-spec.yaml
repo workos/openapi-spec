@@ -26093,6 +26093,16 @@ components:
             The timestamp when the entry was approved, or null if not yet
             approved.
           example: null
+        additional_fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            Additional fields submitted when the user joined the waitlist.
+            Values are user-provided — treat them as untrusted input when
+            rendering or exporting.
+          example:
+            company: Example Corp
         waitlist_id:
           type:
             - string
