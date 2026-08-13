@@ -2292,7 +2292,10 @@ paths:
       description: >-
         Returns all permissions the organization membership effectively has on a
         resource, including permissions inherited through roles assigned to
-        ancestor resources.
+        ancestor resources. Results are not filtered by the resource type: a
+        permission is returned whenever a check for it on this resource would be
+        authorized, and each permission is labeled with the resource type it is
+        declared on.
       operationId: AuthorizationController_listEffectivePermissions
       parameters:
         - name: organization_membership_id
@@ -2409,7 +2412,10 @@ paths:
       description: >-
         Returns all permissions the organization membership effectively has on a
         resource identified by its external ID, including permissions inherited
-        through roles assigned to ancestor resources.
+        through roles assigned to ancestor resources. Results are not filtered
+        by the resource type: a permission is returned whenever a check for it
+        on this resource would be authorized, and each permission is labeled
+        with the resource type it is declared on.
       operationId: AuthorizationController_listEffectivePermissionsByExternalId
       parameters:
         - name: organization_membership_id
