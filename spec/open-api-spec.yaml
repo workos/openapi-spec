@@ -11214,6 +11214,231 @@ paths:
       summary: List authorized applications
       tags:
         - organizations.authorized-applications
+  /organizations/{organization_id}/it_contacts:
+    get:
+      description: Get the IT contacts for an organization.
+      operationId: ItContactsController_list
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItContactList'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List IT contacts
+      tags:
+        - organizations.it-contacts
+    post:
+      description: >-
+        Add an IT contact to an organization. No Admin Portal invitation is
+        sent, though the contact is notified if the organization has a
+        connection certificate nearing expiry.
+      operationId: ItContactsController_create
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItContactDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItContact'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: The email address is already an IT contact of the organization.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: it_contact_already_exists
+                    const: it_contact_already_exists
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '503':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_request
+                    const: concurrent_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Create an IT contact
+      tags:
+        - organizations.it-contacts
+  /organizations/{organization_id}/it_contacts/{contact_id}:
+    delete:
+      description: Remove an IT contact from an organization.
+      operationId: ItContactsController_delete
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: contact_id
+          required: true
+          in: path
+          description: The ID of the IT contact.
+          schema:
+            type: string
+            example: it_contact_01HXYZ123456789ABCDEFGHIJ
+      responses:
+        '204':
+          description: No Content
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '503':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_request
+                    const: concurrent_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Delete an IT contact
+      tags:
+        - organizations.it-contacts
   /portal/generate_link:
     post:
       description: Generate a Portal Link scoped to an Organization.
@@ -19809,6 +20034,8 @@ tags:
     description: Manage authorized applications for organizations.
   - name: organizations.feature-flags
     description: Manage organization-scoped feature flags.
+  - name: organizations.it-contacts
+    description: Manage IT contacts for organizations.
   - name: permissions
     description: Manage permissions.
   - name: pipes
@@ -21115,6 +21342,16 @@ components:
           example: '2030-01-01T00:00:00.000Z'
       required:
         - name
+    CreateItContactDto:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The email address of the IT contact.
+          example: it-contact@example.com
+      required:
+        - email
     OrganizationDomainDataDto:
       type: object
       properties:
@@ -35585,6 +35822,78 @@ components:
         - created_at
         - updated_at
         - value
+    ItContact:
+      type: object
+      properties:
+        object:
+          type: string
+          description: The IT Contact object.
+          example: it_contact
+          const: it_contact
+        id:
+          type: string
+          description: The unique ID of the IT Contact.
+          example: it_contact_01HXYZ123456789ABCDEFGHIJ
+        email:
+          type: string
+          format: email
+          description: The email address of the IT Contact.
+          example: it-contact@example.com
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - email
+        - created_at
+        - updated_at
+    ItContactList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItContact'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: it_contact_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: it_contact_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     Organization:
       type: object
       properties:
