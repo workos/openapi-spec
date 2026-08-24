@@ -66,7 +66,22 @@ jobs:
           # (see #99/#114), package.json trails the registry — bump from
           # whichever is ahead so a stale manifest can't wedge publishing.
           manifest="$(node -p "require('./package.json').version")"
-          published="$(npm view "$(node -p "require('./package.json').name")" version 2>/dev/null || echo 0.0.0)"
+          set +e
+          view_out="$(npm view "$(node -p "require('./package.json').name")" version 2>&1)"
+          view_rc=$?
+          set -e
+          if [ "$view_rc" -eq 0 ]; then
+            published="$view_out"
+          elif grep -q E404 <<< "$view_out"; then
+            # Never published: the manifest is the only source of truth.
+            published="0.0.0"
+          else
+            # A transient registry error must not silently fall back to a
+            # possibly-stale manifest base; fail here and let a re-run heal.
+            echo "$view_out"
+            echo "::error::npm registry lookup failed; refusing to derive a version base"
+            exit 1
+          fi
           current="$(printf '%s\n%s\n' "$manifest" "$published" | sort -V | tail -n1)"
           npm version "$current" --no-git-tag-version --allow-same-version
           npm version "$bump" --no-git-tag-version
@@ -116,7 +131,10 @@ jobs:
         run: |
           set -euo pipefail
           tag="v${{ steps.version.outputs.next }}"
-          git tag -a "$tag" -m "Release $tag"
+          # Tag the commit the artifact was built from, not post-rebase HEAD —
+          # a merge landing mid-run would otherwise put newer spec content
+          # under the tag than what npm serves for this version.
+          git tag -a "$tag" -m "Release $tag" "$GITHUB_SHA"
           git push origin "$tag"
 
       - name: Create GitHub Release
