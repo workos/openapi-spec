@@ -19445,6 +19445,630 @@ paths:
       summary: List authentication factors
       tags:
         - user-management.multi-factor-authentication
+  /user_management/waitlist_entries/{id}:
+    delete:
+      description: >-
+        Removes the entry from the waitlist. An invitation created by approving
+        the entry stays valid, so revoke that invitation to withdraw access.
+      operationId: WaitlistEntriesController_delete
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the waitlist entry.
+          schema:
+            example: wl_user_01E4ZCR3C56J083X43JQXF3JK5
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Delete a waitlist entry
+      tags:
+        - user-management.waitlists
+  /user_management/waitlist_entries/{id}/approve:
+    post:
+      description: >-
+        Approve a waitlist entry and send the resulting user invitation email.
+        Also reverses a denial: a denied entry can be approved.
+      operationId: WaitlistEntriesController_approve
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the waitlist entry.
+          schema:
+            example: wl_user_01E4ZCR3C56J083X43JQXF3JK5
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique ID of the waitlist entry.
+                    example: wl_user_01E4ZCR3C56J083X43JQXF3JK5
+                  email:
+                    type: string
+                    description: The email address of the user on the waitlist.
+                    example: marcelina.davis@example.com
+                  state:
+                    type: string
+                    enum:
+                      - pending
+                      - approved
+                      - denied
+                    description: The state of the waitlist entry.
+                    example: approved
+                  approved_at:
+                    format: date-time
+                    type:
+                      - string
+                      - 'null'
+                    description: >-
+                      The timestamp when the entry was approved, or null if not
+                      yet approved.
+                    example: '2026-01-15T12:00:00.000Z'
+                  additional_fields:
+                    type: object
+                    additionalProperties:
+                      type: string
+                    description: >-
+                      Additional fields submitted when the user joined the
+                      waitlist. Values are user-provided — treat them as
+                      untrusted input when rendering or exporting.
+                    example:
+                      company: Example Corp
+                  waitlist_id:
+                    type:
+                      - string
+                      - 'null'
+                    description: The unique ID of the waitlist the entry belongs to.
+                    example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
+                  created_at:
+                    format: date-time
+                    type: string
+                    description: An ISO 8601 timestamp.
+                    example: '2026-01-15T12:00:00.000Z'
+                  updated_at:
+                    format: date-time
+                    type: string
+                    description: An ISO 8601 timestamp.
+                    example: '2026-01-15T12:00:00.000Z'
+                  object:
+                    type: string
+                    description: Distinguishes the Waitlist Entry object.
+                    const: waitlist_entry
+                required:
+                  - id
+                  - email
+                  - state
+                  - approved_at
+                  - created_at
+                  - updated_at
+                  - object
+                x-inline-with-overrides: true
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_state
+                        const: invalid_state
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invitation_email_not_sent
+                        const: invitation_email_not_sent
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+      summary: Approve a waitlist entry
+      tags:
+        - user-management.waitlists
+      x-sends-email: true
+  /user_management/waitlist_entries/{id}/deny:
+    post:
+      description: >-
+        Deny a pending waitlist entry. A denial can be reversed by approving the
+        entry.
+      operationId: WaitlistEntriesController_deny
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the waitlist entry.
+          schema:
+            example: wl_user_01E4ZCR3C56J083X43JQXF3JK5
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique ID of the waitlist entry.
+                    example: wl_user_01E4ZCR3C56J083X43JQXF3JK5
+                  email:
+                    type: string
+                    description: The email address of the user on the waitlist.
+                    example: marcelina.davis@example.com
+                  state:
+                    type: string
+                    enum:
+                      - pending
+                      - approved
+                      - denied
+                    description: The state of the waitlist entry.
+                    example: denied
+                  approved_at:
+                    format: date-time
+                    type:
+                      - string
+                      - 'null'
+                    description: >-
+                      The timestamp when the entry was approved, or null if not
+                      yet approved.
+                    example: null
+                  additional_fields:
+                    type: object
+                    additionalProperties:
+                      type: string
+                    description: >-
+                      Additional fields submitted when the user joined the
+                      waitlist. Values are user-provided — treat them as
+                      untrusted input when rendering or exporting.
+                    example:
+                      company: Example Corp
+                  waitlist_id:
+                    type:
+                      - string
+                      - 'null'
+                    description: The unique ID of the waitlist the entry belongs to.
+                    example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
+                  created_at:
+                    format: date-time
+                    type: string
+                    description: An ISO 8601 timestamp.
+                    example: '2026-01-15T12:00:00.000Z'
+                  updated_at:
+                    format: date-time
+                    type: string
+                    description: An ISO 8601 timestamp.
+                    example: '2026-01-15T12:00:00.000Z'
+                  object:
+                    type: string
+                    description: Distinguishes the Waitlist Entry object.
+                    const: waitlist_entry
+                required:
+                  - id
+                  - email
+                  - state
+                  - approved_at
+                  - created_at
+                  - updated_at
+                  - object
+                x-inline-with-overrides: true
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_state
+                    const: invalid_state
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Deny a waitlist entry
+      tags:
+        - user-management.waitlists
+  /user_management/waitlists:
+    get:
+      description: Get a list of the waitlists in the environment.
+      operationId: WaitlistsController_list
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    description: Indicates this is a list response.
+                    const: list
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Waitlist'
+                    description: The list of records for the current page.
+                  list_metadata:
+                    type: object
+                    properties:
+                      before:
+                        type:
+                          - string
+                          - 'null'
+                        description: >-
+                          An object ID that defines your place in the list. When
+                          the ID is not present, you are at the start of the
+                          list.
+                        example: null
+                      after:
+                        type:
+                          - string
+                          - 'null'
+                        description: >-
+                          An object ID that defines your place in the list. When
+                          the ID is not present, you are at the end of the list.
+                        example: null
+                    required:
+                      - before
+                      - after
+                    description: >-
+                      Pagination cursors for navigating between pages of
+                      results.
+                required:
+                  - object
+                  - data
+                  - list_metadata
+                x-inline-with-overrides: true
+      summary: List waitlists
+      tags:
+        - user-management.waitlists
+  /user_management/waitlists/{id}:
+    get:
+      description: Get the details of an existing waitlist.
+      operationId: WaitlistsController_find
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: >-
+            The unique ID of the waitlist, or the literal `default` for the
+            environment's default waitlist.
+          schema:
+            type: string
+            example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Waitlist'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get a waitlist
+      tags:
+        - user-management.waitlists
+  /user_management/waitlists/{id}/entries:
+    get:
+      description: Get a list of entries on a waitlist matching the criteria specified.
+      operationId: WaitlistsController_listEntries
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: >-
+            The unique ID of the waitlist, or the literal `default` for the
+            environment's default waitlist.
+          schema:
+            type: string
+            example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records).
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+        - name: state
+          required: false
+          in: query
+          description: Filter waitlist entries by their state.
+          schema:
+            example: pending
+            enum:
+              - pending
+              - approved
+              - denied
+            type: string
+        - name: email
+          required: false
+          in: query
+          description: Filter waitlist entries by their exact email address.
+          schema:
+            example: marcelina.davis@example.com
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: wl_user_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: wl_user_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/WaitlistEntry'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_request_parameters
+                    const: invalid_request_parameters
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Validation failed.
+                required:
+                  - code
+                  - message
+      summary: List waitlist entries
+      tags:
+        - user-management.waitlists
+    post:
+      description: >-
+        Add an email address to the waitlist. Creating an entry is idempotent
+        per email address: a request for an email address already on the
+        waitlist returns the existing entry.
+      operationId: WaitlistsController_createEntry
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: >-
+            The unique ID of the waitlist, or the literal `default` for the
+            environment's default waitlist.
+          schema:
+            type: string
+            example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWaitlistEntryDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistEntry'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: user_already_exists
+                        const: user_already_exists
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_request_parameters
+                        const: invalid_request_parameters
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Validation failed.
+                    required:
+                      - code
+                      - message
+      summary: Create a waitlist entry
+      tags:
+        - user-management.waitlists
+      x-sends-email: true
   /vault/v1/keys/data-key:
     post:
       description: Generate an isolated encryption key for local encryption operations.
@@ -20364,6 +20988,8 @@ tags:
     description: Manage authorized applications for users.
   - name: user-management.users.feature-flags
     description: Manage user-scoped feature flags.
+  - name: user-management.waitlists
+    description: Manage waitlists and waitlist entries.
   - name: vault
     description: Vault data encryption endpoints.
   - name: webhooks
@@ -23075,6 +23701,37 @@ components:
           example: session_01H93ZY4F80QPBEZ1R5B2SHQG8
       required:
         - session_id
+    CreateWaitlistEntryDto:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The email address of the user joining the waitlist.
+          example: marcelina.davis@example.com
+        additional_fields:
+          type: object
+          description: >-
+            Object containing additional key/value pairs collected with the
+            waitlist entry. Values are user-provided — treat them as untrusted
+            input when rendering or exporting.
+          additionalProperties:
+            type: string
+            maxLength: 600
+          maxProperties: 50
+          example:
+            company: Example Corp
+        send_confirmation_email:
+          type: boolean
+          description: >-
+            Whether to send the waitlist confirmation email to the user.
+            Defaults to `false`. No email is sent when the waitlist confirmation
+            email is disabled in the environment, even if
+            `send_confirmation_email` is `true`.
+          default: false
+          example: false
+      required:
+        - email
     CreateWebhookEndpointDto:
       type: object
       properties:
@@ -38856,6 +39513,98 @@ components:
         - user_code
         - verification_uri
         - expires_in
+    Waitlist:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Waitlist object.
+          const: waitlist
+        id:
+          type: string
+          description: The unique ID of the Waitlist.
+          example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+    WaitlistEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique ID of the waitlist entry.
+          example: wl_user_01E4ZCR3C56J083X43JQXF3JK5
+        email:
+          type: string
+          description: The email address of the user on the waitlist.
+          example: marcelina.davis@example.com
+        state:
+          type: string
+          enum:
+            - pending
+            - approved
+            - denied
+          description: The state of the waitlist entry.
+          example: pending
+        approved_at:
+          format: date-time
+          type:
+            - string
+            - 'null'
+          description: >-
+            The timestamp when the entry was approved, or null if not yet
+            approved.
+          example: null
+        additional_fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            Additional fields submitted when the user joined the waitlist.
+            Values are user-provided — treat them as untrusted input when
+            rendering or exporting.
+          example:
+            company: Example Corp
+        waitlist_id:
+          type:
+            - string
+            - 'null'
+          description: The unique ID of the waitlist the entry belongs to.
+          example: waitlist_01E4ZCR3C56J083X43JQXF3JK5
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        object:
+          type: string
+          description: Distinguishes the Waitlist Entry object.
+          const: waitlist_entry
+      required:
+        - id
+        - email
+        - state
+        - approved_at
+        - created_at
+        - updated_at
+        - object
     WebhookEndpointJson:
       type: object
       properties:
