@@ -55,6 +55,21 @@ export const operationHints: Record<string, OperationHint> = {
     name: 'list_authorized_applications',
   },
 
+  // -- IT contacts (mounted on Organizations) -----------------------------------
+  // Drop the `organization` prefix the path would otherwise produce, and name
+  // the invite/revoke sub-resources after the action.
+  'GET /organizations/{organization_id}/it_contacts': { name: 'list_it_contacts' },
+  'POST /organizations/{organization_id}/it_contacts': { name: 'create_it_contact' },
+  'DELETE /organizations/{organization_id}/it_contacts/{contact_id}': {
+    name: 'delete_it_contact',
+  },
+  'POST /organizations/{organization_id}/it_contacts/{contact_id}/invite': {
+    name: 'invite_it_contact',
+  },
+  'POST /organizations/{organization_id}/it_contacts/{contact_id}/revoke': {
+    name: 'revoke_it_contact',
+  },
+
   // -- External ID lookups (not derivable from path) ----------------------------
   'GET /organizations/external_id/{external_id}': { name: 'get_organization_by_external_id' },
   'GET /user_management/users/external_id/{external_id}': { name: 'get_user_by_external_id' },
