@@ -62,12 +62,18 @@ jobs:
         run: |
           set -euo pipefail
           bump="${{ github.event.inputs.bump || 'minor' }}"
-          current="$(node -p "require('./package.json').version")"
+          # If a prior run published but lost the race to commit the bump back
+          # (see #99/#114), package.json trails the registry — bump from
+          # whichever is ahead so a stale manifest can't wedge publishing.
+          manifest="$(node -p "require('./package.json').version")"
+          published="$(npm view "$(node -p "require('./package.json').name")" version 2>/dev/null || echo 0.0.0)"
+          current="$(printf '%s\n%s\n' "$manifest" "$published" | sort -V | tail -n1)"
+          npm version "$current" --no-git-tag-version --allow-same-version
           npm version "$bump" --no-git-tag-version
           next="$(node -p "require('./package.json').version")"
           echo "current=$current" >> "$GITHUB_OUTPUT"
           echo "next=$next" >> "$GITHUB_OUTPUT"
-          echo "Bump: $bump | $current → $next"
+          echo "Bump: $bump | manifest=$manifest published=$published | $current → $next"
 
       - name: Build policy module
         run: npm run build:policy
@@ -95,6 +101,15 @@ jobs:
           git add package.json package-lock.json
           git diff --cached --quiet && exit 0
           git commit -m "chore: release v${{ steps.version.outputs.next }}"
+          # A merge landing on main mid-run rejects this push as
+          # non-fast-forward (see #99/#114); the bump commit only touches
+          # package files, so rebasing onto the new tip is safe.
+          for attempt in 1 2 3; do
+            if git push origin main; then
+              exit 0
+            fi
+            git pull --rebase origin main
+          done
           git push origin main
 
       - name: Tag release
