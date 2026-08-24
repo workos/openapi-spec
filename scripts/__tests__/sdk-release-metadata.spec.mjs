@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { factsFromCompat, factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
+import { buildIndexes, factsFromCompat, factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
 
 // factsFromDiff only reaches indexes.symbolScopes (scope resolution) for the
 // kinds under test; an empty index leaves scope unresolved, which is fine — we
@@ -194,3 +194,102 @@ for (const { symbol, scope } of compatSurfaceScopeCases) {
     assert.notEqual(facts[0].scope, 'sdk');
   });
 }
+
+// --- IR-backed compat scope resolution (PR #111 regression set) ---
+// The emitters synthesize per-operation parameter models the IR never names
+// (`SSO.token` + query params → `TokenQuery`), and generated model names like
+// `CreatePasswordResetToken` dodge every name rule. Both must resolve through
+// the IR instead of hard-failing --strict-scopes as the `sdk` fallback.
+
+const compatBreak = (symbol) => ({
+  changes: [{ severity: 'breaking', category: 'symbol_removed', symbol, message: `Symbol "${symbol}" was removed` }],
+});
+
+const IR_FIXTURE = {
+  models: [{ name: 'CreatePasswordResetToken', fields: [] }, { name: 'TokenBody', fields: [] }],
+  enums: [],
+  services: [
+    {
+      name: 'SSO',
+      operations: [
+        {
+          // Query params but no IR-named body: the emitters synthesize
+          // `TokenQuery`/`TokenBody`/... from the operation name.
+          name: 'token',
+          queryParams: [{ name: 'code', type: { kind: 'primitive', name: 'string' } }],
+        },
+      ],
+    },
+    {
+      name: 'UserManagementUsers',
+      operations: [{ name: 'createPasswordResetToken', response: { kind: 'model', name: 'CreatePasswordResetToken' } }],
+    },
+    {
+      name: 'Pipes',
+      operations: [{ name: 'vendCredentials', requestBody: { kind: 'model', name: 'TokenBody' } }],
+    },
+  ],
+};
+
+test('factsFromCompat resolves a synthesized param model (TokenQuery) to its operation service via IR', () => {
+  const indexes = buildIndexes([IR_FIXTURE, null]);
+  const facts = factsFromCompat(compatBreak('TokenQuery'), [], indexes);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'sso');
+  assert.equal(facts[0].scope_source, 'compat_ir');
+});
+
+test('factsFromCompat resolves a generated model with no name rule (CreatePasswordResetToken) via IR', () => {
+  const indexes = buildIndexes([IR_FIXTURE, null]);
+  const facts = factsFromCompat(compatBreak('CreatePasswordResetToken'), [], indexes);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'user_management');
+  assert.equal(facts[0].scope_source, 'compat_ir');
+});
+
+// A real IR model must win over a synthesized twin: `TokenBody` is a pipes
+// request body, and SSO's `token` operation synthesizing `TokenBody` must not
+// make it ambiguous.
+test('factsFromCompat prefers real IR ownership over a synthesized name collision', () => {
+  const indexes = buildIndexes([IR_FIXTURE, null]);
+  const facts = factsFromCompat(compatBreak('TokenBody'), [], indexes);
+  assert.equal(facts[0].scope, 'pipes');
+  assert.equal(facts[0].scope_source, 'compat_ir');
+  assert.deepEqual(facts[0].scope_candidates, ['pipes']);
+});
+
+// `getProfileAndToken` is oagen's internal rename of `SSO.token`; its derived
+// param types have no IR counterpart, so the name rule must catch them.
+test('factsFromCompat resolves GetProfileAndTokenParams to sso via the ProfileAndToken name rule', () => {
+  const facts = factsFromCompat(compatBreak('GetProfileAndTokenParams.code'), [], EMPTY_INDEXES);
+  assert.equal(facts[0].scope, 'sso');
+});
+
+// Unresolved symbols are exempt from the per-scope dedup so --strict-scopes
+// names every unmapped symbol in one run (no whack-a-mole), while the same
+// root reported by several languages still collapses to one fact.
+test('factsFromCompat keeps one fact per unresolved root instead of one per scope', () => {
+  const report = {
+    changes: [
+      { severity: 'breaking', category: 'symbol_removed', symbol: 'MysteryOne', message: 'Symbol "MysteryOne" was removed' },
+      { severity: 'breaking', category: 'symbol_removed', symbol: 'MysteryOne', message: 'Symbol "MysteryOne" was removed' },
+      { severity: 'breaking', category: 'symbol_removed', symbol: 'MysteryTwo', message: 'Symbol "MysteryTwo" was removed' },
+    ],
+  };
+  const facts = factsFromCompat(report, [], EMPTY_INDEXES);
+  const sdkFacts = facts.filter((fact) => fact.scope === 'sdk');
+  assert.equal(sdkFacts.length, 2);
+  assert.deepEqual(sdkFacts.map((fact) => fact.symbols[0]).sort(), ['MysteryOne', 'MysteryTwo']);
+});
+
+// Resolved scopes keep the existing one-breaking-fact-per-scope dedup.
+test('factsFromCompat still dedups resolved scopes to one breaking fact', () => {
+  const report = {
+    changes: [
+      { severity: 'breaking', category: 'parameter_type_narrowed', symbol: 'SSO.getProfileAndToken', message: 'x' },
+      { severity: 'breaking', category: 'symbol_removed', symbol: 'SSOTokenResponse', message: 'y' },
+    ],
+  };
+  const facts = factsFromCompat(report, [], EMPTY_INDEXES);
+  assert.equal(facts.filter((fact) => fact.scope === 'sso').length, 1);
+});

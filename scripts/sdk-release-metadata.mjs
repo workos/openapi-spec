@@ -365,6 +365,14 @@ function normalize(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function pascalCase(value) {
+  return String(value)
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join('');
+}
+
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -429,6 +437,10 @@ function scopeFromName(name) {
   // Otherwise `Connection` is classified as Connect even when IR ownership
   // unambiguously points at the SSO service.
   if (/^(Connection|SSO|Sso)/.test(name)) return 'sso';
+  // `getProfileAndToken` is oagen's legacy method name for `SSO.token`; the
+  // rename lives inside the generator, so param types derived from it
+  // (`GetProfileAndTokenParams`) have no IR counterpart to resolve against.
+  if (/ProfileAndToken/.test(name)) return 'sso';
   if (/^(Application|Connect|UserObject$|ApplicationCredentials|ExternalAuth|RedirectUriInput)/.test(name)) return 'connect';
   if (/^(Group|CreateGroup|UpdateGroup)/.test(name)) return 'groups';
   if (/OrganizationMembership/.test(name)) return 'organization_membership';
@@ -544,6 +556,19 @@ export function buildIndexes(specs) {
     symbolScopes.set(key, set);
   };
 
+  // The emitters synthesize per-operation parameter models the IR never names
+  // (`SSO.token` + query params → a generated `TokenQuery` class), so a compat
+  // report can break on a symbol no IR model matches. Kept separate from
+  // symbolScopes so a real IR model (e.g. `TokenBody`) is never made ambiguous
+  // by a synthesized twin; only compat-fact resolution consults this map.
+  const syntheticSymbolScopes = new Map();
+  const addSyntheticScope = (name, scope) => {
+    if (!name || !scope) return;
+    const set = syntheticSymbolScopes.get(name) ?? new Set();
+    set.add(scope);
+    syntheticSymbolScopes.set(name, set);
+  };
+
   const collectTypeRefs = (type, out) => {
     if (!type || typeof type !== 'object') return;
     if (type.kind === 'model') out.models.add(type.name);
@@ -592,12 +617,23 @@ export function buildIndexes(specs) {
         for (const modelName of direct.models) collectModelClosure(modelName, all);
         for (const modelName of all.models) addScope('model', modelName, scope);
         for (const enumName of all.enums) addScope('enum', enumName, scope);
+
+        const hasParams =
+          (operation.queryParams?.length ?? 0) > 0 ||
+          (operation.pathParams?.length ?? 0) > 0 ||
+          Boolean(operation.requestBody);
+        if (hasParams) {
+          const base = pascalCase(operation.name);
+          for (const suffix of ['Query', 'Body', 'Params', 'Options']) {
+            addSyntheticScope(`${base}${suffix}`, scope);
+          }
+        }
       }
     }
   }
 
   const typeNames = new Set([...modelByName.keys(), ...enumByName.keys()]);
-  return { enumWireValues, symbolScopes, operationByKey, responseTypeByKey, requestTypeByKey, serviceNames, typeNames };
+  return { enumWireValues, symbolScopes, syntheticSymbolScopes, operationByKey, responseTypeByKey, requestTypeByKey, serviceNames, typeNames };
 }
 
 function resolveServiceScope(serviceName) {
@@ -1045,9 +1081,37 @@ function compatChangeIsBreaking(change, indexes) {
   return true;
 }
 
+// Resolve a compat-report symbol root to a changelog scope. Precedence: an
+// explicit service override/rule, then a root that IS a known IR service whose
+// snake_case is a registered scope (`AdminPortal` → `admin_portal`), then name
+// rules, then IR ownership — first real models/enums, then the synthesized
+// per-operation parameter names buildIndexes derives (`TokenQuery` from
+// `SSO.token`). Only symbols invisible to all of those fall back to `sdk`.
+function resolveCompatScope(root, indexes) {
+  const serviceScope = resolveServiceScope(root);
+  if (serviceScope.scope !== toSnakeCase(root)) {
+    return { scope: serviceScope.scope, source: serviceScope.source, candidates: [serviceScope.scope] };
+  }
+  if (indexes?.serviceNames?.has(root) && docsUrlForScope(serviceScope.scope)) {
+    return { scope: serviceScope.scope, source: 'service_name', candidates: [serviceScope.scope] };
+  }
+  const nameScope = scopeFromName(root);
+  if (nameScope !== 'sdk') return { scope: nameScope, source: 'name', candidates: [nameScope] };
+  if (root === 'Client') return { scope: 'client', source: 'client', candidates: ['client'] };
+  const irRefs = [
+    ...(indexes?.symbolScopes?.get(`model:${root}`) ?? []),
+    ...(indexes?.symbolScopes?.get(`enum:${root}`) ?? []),
+  ];
+  const irCandidates = sortStable(unique(irRefs.length > 0 ? irRefs : [...(indexes?.syntheticSymbolScopes?.get(root) ?? [])]));
+  if (irCandidates.length === 1) return { scope: irCandidates[0], source: 'ir', candidates: irCandidates };
+  if (irCandidates.length > 1) return { scope: irCandidates[0], source: 'ir_ambiguous', candidates: irCandidates };
+  return { scope: 'sdk', source: 'unresolved', candidates: [] };
+}
+
 export function factsFromCompat(compatReport, existingFacts, indexes) {
   const facts = [];
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
+  const unresolvedRoots = new Set();
   const renames = renamesFromCompat(compatReport);
 
   // Only one breaking fact survives per scope (the dedup below), so prefer the
@@ -1062,25 +1126,24 @@ export function factsFromCompat(compatReport, existingFacts, indexes) {
     // Strip the Python async-client prefix (`AsyncPipes` → `Pipes`) so async
     // surface symbols resolve to the same scope as their sync counterparts.
     const root = String(change.symbol ?? '').split('.')[0].replace(/^Async(?=[A-Z])/, '');
-    const serviceScope = resolveServiceScope(root);
-    const nameScope = scopeFromName(root);
-    const scope = serviceScope.scope !== toSnakeCase(root) ? serviceScope.scope : nameScope;
-    const targetScope = scope === 'sdk' && root === 'Client' ? 'client' : scope;
-    const source =
-      targetScope === 'client'
-        ? 'compat_client'
-        : serviceScope.scope !== toSnakeCase(root)
-          ? `compat_${serviceScope.source}`
-          : nameScope !== 'sdk'
-            ? 'compat_name'
-            : 'compat_unresolved';
-    if (existingBreakingScopes.has(targetScope)) continue;
+    const resolution = resolveCompatScope(root, indexes);
+    const targetScope = resolution.scope;
+    // Unresolved symbols are exempt from the per-scope dedup: strict-scopes
+    // validation must name every one of them in a single run, not reveal them
+    // one CI round-trip at a time as each earlier symbol gets mapped. They
+    // dedup per root instead — several languages report the same removal.
+    if (targetScope === 'sdk') {
+      if (unresolvedRoots.has(root)) continue;
+      unresolvedRoots.add(root);
+    } else if (existingBreakingScopes.has(targetScope)) {
+      continue;
+    }
     const renamed = renames.get(String(change.symbol ?? ''));
     addFact(facts, {
       severity: 'breaking',
       scope: targetScope,
-      scope_source: source,
-      scope_candidates: [targetScope],
+      scope_source: `compat_${resolution.source}`,
+      scope_candidates: resolution.candidates.length > 0 ? resolution.candidates : [targetScope],
       kind: renamed ? 'sdk-surface-renamed' : 'sdk-surface-breaking',
       symbols: renamed ? [renamed.from, renamed.to] : [change.symbol],
       detail: renamed
@@ -1231,7 +1294,8 @@ function scopeValidationIssues(entries) {
   return entries.flatMap((entry) => {
     const issues = [];
     if (entry.scope === 'sdk') {
-      issues.push(`entry "${entry.summary}" resolved to fallback scope "sdk"`);
+      const symbols = (entry.symbols ?? []).length > 0 ? ` (unmapped symbols: ${entry.symbols.join(', ')})` : '';
+      issues.push(`entry "${entry.summary}" resolved to fallback scope "sdk"${symbols}`);
     }
     if (!entry.docs_url) {
       issues.push(`entry "${entry.summary}" has no docs_url for scope "${entry.scope}"`);
@@ -1250,7 +1314,7 @@ function scopeValidationWarnings(entries) {
           .join(', ')}`,
       ];
     }
-    if (entry.scope_sources?.includes('ir_ambiguous')) {
+    if (entry.scope_sources?.some((source) => source.endsWith('ir_ambiguous'))) {
       return [`entry "${entry.summary}" has ambiguous IR scope candidates: ${candidates.join(', ')}`];
     }
     return [];

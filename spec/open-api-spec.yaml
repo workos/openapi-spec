@@ -7707,7 +7707,6 @@ paths:
       summary: Upsert an API key for a connected account
       tags:
         - pipes
-      x-feature-flag: pipes-api-keys
   /data-integrations/{slug}/authorize:
     post:
       description: >-
@@ -8038,7 +8037,6 @@ paths:
       summary: Vend credentials for a connected account
       tags:
         - pipes
-      x-feature-flag: pipes-api-keys
   /data-integrations/{slug}/token:
     post:
       description: >-
