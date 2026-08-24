@@ -11622,6 +11622,107 @@ paths:
       summary: Revoke an IT contact's invitation
       tags:
         - organizations.it-contacts
+  /platform/teams:
+    post:
+      description: >-
+        Creates a team along with its default project, a staging environment,
+        and a production environment. An admin invitation is sent to
+        `admin_email`, onboarding is marked complete with AuthKit enabled, and
+        the calling platform is authorized to act inside the team.
+      operationId: TeamsController_createTeam
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeamDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: user_already_exists
+                    const: user_already_exists
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Create a team
+      tags:
+        - platform.teams
+  /platform/teams/{team_id}:
+    get:
+      description: >-
+        Returns a team, and doubles as a health check on the platform's access
+        to it. Read `production_state` before attempting to create a production
+        environment.
+      operationId: TeamsController_getTeam
+      parameters:
+        - name: team_id
+          required: true
+          in: path
+          description: The ID of the team.
+          schema:
+            type: string
+            example: team_01JX9AN6E02HAG2Q2CKGC1XT5W
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: team_not_found
+                    const: team_not_found
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Get a team
+      tags:
+        - platform.teams
   /portal/generate_link:
     post:
       description: Generate a Portal Link scoped to an Organization.
@@ -20229,6 +20330,8 @@ tags:
     description: Data integration endpoints.
   - name: pipes.provider
     description: Manage organization-scoped provider configurations.
+  - name: platform.teams
+    description: Manage teams for platforms.
   - name: radar
     description: Radar fraud detection.
   - name: sso
@@ -22127,6 +22230,23 @@ components:
           example: https://example.com/callback
       required:
         - uri
+    CreateTeamDto:
+      type: object
+      properties:
+        admin_email:
+          type: string
+          format: email
+          description: >-
+            The email address of the person who will administer the team. An
+            invitation is sent to this address.
+          example: alice@example.com
+        name:
+          type: string
+          description: Name of the team.
+          example: Example Team
+      required:
+        - admin_email
+        - name
     EnrollUserlandUserAuthenticationFactorDto:
       type: object
       properties:
@@ -37750,6 +37870,61 @@ components:
         - id
         - uri
         - default
+        - created_at
+        - updated_at
+    Team:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the team object.
+          const: team
+        id:
+          type: string
+          description: Unique identifier of the team.
+          example: team_01JX9AN6E02HAG2Q2CKGC1XT5W
+        name:
+          type: string
+          description: The name of the team.
+          example: Example Team
+        production_state:
+          type: string
+          enum:
+            - Active
+            - Inactive
+            - Suspended
+            - Deleting
+          description: >-
+            Whether the team can host production environments. `Active` means
+            billing is set up. `Inactive` means a team admin must add a payment
+            method in the WorkOS Dashboard. `Suspended` and `Deleting` mean the
+            team can't be provisioned into.
+          example: Active
+        production_enabled_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            The timestamp when production was enabled for the team, or `null` if
+            it never has been.
+          example: '2024-01-01T00:00:00.000Z'
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the team was created.
+          example: '2024-01-01T00:00:00.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: The timestamp when the team was last updated.
+          example: '2024-01-01T00:00:00.000Z'
+      required:
+        - object
+        - id
+        - name
+        - production_state
+        - production_enabled_at
         - created_at
         - updated_at
     UserlandUserAuthenticationFactorList:
