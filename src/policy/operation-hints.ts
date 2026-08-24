@@ -55,7 +55,7 @@ export const operationHints: Record<string, OperationHint> = {
     name: 'list_authorized_applications',
   },
 
-  // -- IT contacts (mounted on ItContacts) --------------------------------------
+  // -- IT contacts (mounted on Organizations) -----------------------------------
   // Drop the `organization` prefix the path would otherwise produce, and name
   // the invite/revoke sub-resources after the action.
   'GET /organizations/{organization_id}/it_contacts': { name: 'list_it_contacts' },

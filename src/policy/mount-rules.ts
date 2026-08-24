@@ -54,8 +54,8 @@ export const mountRules: Record<string, string> = {
   // Org-scoped authorized applications -> Organizations
   OrganizationsAuthorizedApplications: 'Organizations',
 
-  // Org-scoped IT contacts -> ItContacts (own service, like Groups)
-  OrganizationsItContacts: 'ItContacts',
+  // Org-scoped IT contacts -> Organizations
+  OrganizationsItContacts: 'Organizations',
 
   // User Management sub-services -> UserManagement, except the
   // OrganizationMembership family (longer wildcard prefix wins) and the three
