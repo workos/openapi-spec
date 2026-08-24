@@ -62,9 +62,6 @@ jobs:
         run: |
           set -euo pipefail
           bump="${{ github.event.inputs.bump || 'minor' }}"
-          # If a prior run published but lost the race to commit the bump back
-          # (see #99/#114), package.json trails the registry — bump from
-          # whichever is ahead so a stale manifest can't wedge publishing.
           manifest="$(node -p "require('./package.json').version")"
           set +e
           view_out="$(npm view "$(node -p "require('./package.json').name")" version 2>&1)"
@@ -82,13 +79,25 @@ jobs:
             echo "::error::npm registry lookup failed; refusing to derive a version base"
             exit 1
           fi
-          current="$(printf '%s\n%s\n' "$manifest" "$published" | sort -V | tail -n1)"
-          npm version "$current" --no-git-tag-version --allow-same-version
-          npm version "$bump" --no-git-tag-version
-          next="$(node -p "require('./package.json').version")"
-          echo "current=$current" >> "$GITHUB_OUTPUT"
+          newer="$(printf '%s\n%s\n' "$manifest" "$published" | sort -V | tail -n1)"
+          if [ "$manifest" = "$newer" ] && [ "$manifest" != "$published" ]; then
+            # Manifest ahead of the registry: a prior run committed this bump
+            # but died before publishing. Finish that release instead of
+            # bumping past it — the requested bump type is deliberately
+            # ignored; it was already applied when this version landed.
+            next="$manifest"
+          else
+            # In sync, or the registry is ahead because a prior run published
+            # but lost the race to commit the bump back (see #99/#114): bump
+            # from the published version so a stale manifest can't wedge
+            # publishing.
+            npm version "$published" --no-git-tag-version --allow-same-version
+            npm version "$bump" --no-git-tag-version
+            next="$(node -p "require('./package.json').version")"
+          fi
+          echo "current=$published" >> "$GITHUB_OUTPUT"
           echo "next=$next" >> "$GITHUB_OUTPUT"
-          echo "Bump: $bump | manifest=$manifest published=$published | $current → $next"
+          echo "Bump: $bump | manifest=$manifest published=$published → $next"
 
       - name: Commit and push version bump
         run: |
