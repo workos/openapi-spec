@@ -90,6 +90,31 @@ jobs:
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "Bump: $bump | manifest=$manifest published=$published | $current → $next"
 
+      - name: Commit and push version bump
+        run: |
+          set -euo pipefail
+          git config user.name "workos-sdk-automation[bot]"
+          git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: release v${{ steps.version.outputs.next }}"
+          # The bump lands on main before npm publish so a lost race fails
+          # while nothing has been published yet. A merge landing mid-run
+          # rejects the push as non-fast-forward (see #99/#114); the bump
+          # commit only touches package files, so rebasing onto the new tip
+          # is safe, and the build below runs from the rebased tree — the
+          # published artifact always matches the tagged commit. If publish
+          # later fails, re-running the workflow self-repairs: the rebase
+          # dedups the already-landed bump and publishes the version main
+          # already records.
+          for attempt in 1 2 3; do
+            if git push origin main; then
+              exit 0
+            fi
+            git pull --rebase origin main
+          done
+          git push origin main
+
       - name: Build policy module
         run: npm run build:policy
 
@@ -108,33 +133,13 @@ jobs:
       - name: Publish to npm
         run: npm publish --access public --provenance
 
-      - name: Commit version bump
-        run: |
-          set -euo pipefail
-          git config user.name "workos-sdk-automation[bot]"
-          git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git diff --cached --quiet && exit 0
-          git commit -m "chore: release v${{ steps.version.outputs.next }}"
-          # A merge landing on main mid-run rejects this push as
-          # non-fast-forward (see #99/#114); the bump commit only touches
-          # package files, so rebasing onto the new tip is safe.
-          for attempt in 1 2 3; do
-            if git push origin main; then
-              exit 0
-            fi
-            git pull --rebase origin main
-          done
-          git push origin main
-
       - name: Tag release
         run: |
           set -euo pipefail
           tag="v${{ steps.version.outputs.next }}"
-          # Tag the commit the artifact was built from, not post-rebase HEAD —
-          # a merge landing mid-run would otherwise put newer spec content
-          # under the tag than what npm serves for this version.
-          git tag -a "$tag" -m "Release $tag" "$GITHUB_SHA"
+          # HEAD is the pushed bump commit: tag, manifest, and npm artifact
+          # agree even when the rebase folded in a mid-run merge.
+          git tag -a "$tag" -m "Release $tag"
           git push origin "$tag"
 
       - name: Create GitHub Release
