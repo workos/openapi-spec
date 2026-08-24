@@ -48,6 +48,11 @@ export const mountRules: Record<string, string> = {
   OrganizationsFeatureFlags: 'FeatureFlags',
   UserManagementUsersFeatureFlags: 'FeatureFlags',
 
+  // The `/flag_target_types` endpoints carry the `feature-flags.target-types`
+  // tag; keep them as their own resource under the shorter FlagTargetTypes
+  // name to match the standalone FlagTargets resource (`/flag_targets`).
+  FeatureFlagsTargetTypes: 'FlagTargetTypes',
+
   // Org API keys -> ApiKeys
   OrganizationsApiKeys: 'ApiKeys',
 
