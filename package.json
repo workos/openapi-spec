@@ -1,6 +1,6 @@
 {
   "name": "@workos/openapi-spec",
-  "version": "0.66.0",
+  "version": "0.67.0",
   "type": "module",
   "description": "WorkOS OpenAPI specification, TypeScript types, and SDK resolution policy",
   "license": "MIT",
