@@ -7084,7 +7084,6 @@ paths:
               - ClassLinkSAML
               - CleverOIDC
               - CyberArkSAML
-              - DiscordOAuth
               - DuoSAML
               - EntraIdOIDC
               - GenericOIDC
@@ -7094,8 +7093,6 @@ paths:
               - GoogleOAuth
               - GoogleOIDC
               - GoogleSAML
-              - GrokOAuth
-              - XOAuth
               - IntuitOAuth
               - JumpCloudSAML
               - KeycloakSAML
@@ -18334,16 +18331,15 @@ paths:
                       description: The type of the identity.
                       const: OAuth
                     provider:
+                      description: The type of OAuth provider for the identity.
+                      example: MicrosoftOAuth
                       type: string
                       enum:
                         - AppleOAuth
                         - BitbucketOAuth
-                        - DiscordOAuth
                         - GithubOAuth
                         - GitLabOAuth
                         - GoogleOAuth
-                        - GrokOAuth
-                        - XOAuth
                         - IntuitOAuth
                         - LinkedInOAuth
                         - MicrosoftOAuth
@@ -18352,8 +18348,6 @@ paths:
                         - VercelMarketplaceOAuth
                         - VercelOAuth
                         - XeroOAuth
-                      description: The type of OAuth provider for the identity.
-                      example: MicrosoftOAuth
                   required:
                     - idp_id
                     - type
@@ -26196,6 +26190,11 @@ components:
             resides.
           example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
         connection_type:
+          description: >-
+            The type of the SSO Connection used to authenticate the user. The
+            Connection type may be used to dynamically generate authorization
+            URLs.
+          example: OktaSAML
           type: string
           enum:
             - Pending
@@ -26211,7 +26210,6 @@ components:
             - CleverOIDC
             - CloudflareSAML
             - CyberArkSAML
-            - DiscordOAuth
             - DuoSAML
             - EntraIdOIDC
             - GenericOIDC
@@ -26221,8 +26219,6 @@ components:
             - GoogleOAuth
             - GoogleOIDC
             - GoogleSAML
-            - GrokOAuth
-            - XOAuth
             - IntuitOAuth
             - JumpCloudSAML
             - KeycloakSAML
@@ -26251,11 +26247,6 @@ components:
             - VercelOAuth
             - VMwareSAML
             - XeroOAuth
-          description: >-
-            The type of the SSO Connection used to authenticate the user. The
-            Connection type may be used to dynamically generate authorization
-            URLs.
-          example: OktaSAML
         name:
           type: string
           description: >-
@@ -30015,6 +30006,8 @@ components:
                       description: The name of the connection.
                       example: Acme SSO
                     connection_type:
+                      description: The type of the connection.
+                      example: OktaSAML
                       type: string
                       enum:
                         - ADFSSAML
@@ -30029,7 +30022,6 @@ components:
                         - CleverOIDC
                         - CloudflareSAML
                         - CyberArkSAML
-                        - DiscordOAuth
                         - DuoSAML
                         - EntraIdOIDC
                         - GenericOIDC
@@ -30039,8 +30031,6 @@ components:
                         - GoogleOAuth
                         - GoogleOIDC
                         - GoogleSAML
-                        - GrokOAuth
-                        - XOAuth
                         - IntuitOAuth
                         - JumpCloudSAML
                         - KeycloakSAML
@@ -30069,8 +30059,6 @@ components:
                         - VercelOAuth
                         - VMwareSAML
                         - XeroOAuth
-                      description: The type of the connection.
-                      example: OktaSAML
                     organization_id:
                       type: string
                       description: The ID of the organization the connection belongs to.
@@ -30182,6 +30170,8 @@ components:
                       description: The name of the connection.
                       example: Acme SSO
                     connection_type:
+                      description: The type of the connection.
+                      example: OktaSAML
                       type: string
                       enum:
                         - ADFSSAML
@@ -30196,7 +30186,6 @@ components:
                         - CleverOIDC
                         - CloudflareSAML
                         - CyberArkSAML
-                        - DiscordOAuth
                         - DuoSAML
                         - EntraIdOIDC
                         - GenericOIDC
@@ -30206,8 +30195,6 @@ components:
                         - GoogleOAuth
                         - GoogleOIDC
                         - GoogleSAML
-                        - GrokOAuth
-                        - XOAuth
                         - IntuitOAuth
                         - JumpCloudSAML
                         - KeycloakSAML
@@ -30236,8 +30223,6 @@ components:
                         - VercelOAuth
                         - VMwareSAML
                         - XeroOAuth
-                      description: The type of the connection.
-                      example: OktaSAML
                     organization_id:
                       type: string
                       description: The ID of the organization the connection belongs to.
@@ -30349,6 +30334,8 @@ components:
                       description: The name of the connection.
                       example: Acme SSO
                     connection_type:
+                      description: The type of the connection.
+                      example: OktaSAML
                       type: string
                       enum:
                         - ADFSSAML
@@ -30363,7 +30350,6 @@ components:
                         - CleverOIDC
                         - CloudflareSAML
                         - CyberArkSAML
-                        - DiscordOAuth
                         - DuoSAML
                         - EntraIdOIDC
                         - GenericOIDC
@@ -30373,8 +30359,6 @@ components:
                         - GoogleOAuth
                         - GoogleOIDC
                         - GoogleSAML
-                        - GrokOAuth
-                        - XOAuth
                         - IntuitOAuth
                         - JumpCloudSAML
                         - KeycloakSAML
@@ -30403,8 +30387,6 @@ components:
                         - VercelOAuth
                         - VMwareSAML
                         - XeroOAuth
-                      description: The type of the connection.
-                      example: OktaSAML
                     organization_id:
                       type: string
                       description: The ID of the organization the connection belongs to.
@@ -39397,6 +39379,8 @@ components:
             access token.
           example: yAjhKk123NLIjdrBdGZPf8pLIDvK
         authentication_method:
+          description: The authentication method used to initiate the session.
+          example: SSO
           type: string
           enum:
             - SSO
@@ -39405,13 +39389,10 @@ components:
             - AppleOAuth
             - BitbucketOAuth
             - CrossAppAuth
-            - DiscordOAuth
             - ExternalAuth
             - GitHubOAuth
             - GitLabOAuth
             - GoogleOAuth
-            - GrokOAuth
-            - XOAuth
             - IntuitOAuth
             - LinkedInOAuth
             - MicrosoftOAuth
@@ -39423,8 +39404,6 @@ components:
             - MagicAuth
             - Impersonation
             - MigratedSession
-          description: The authentication method used to initiate the session.
-          example: SSO
         impersonator:
           type: object
           properties:
@@ -39757,6 +39736,8 @@ components:
           description: The ID of the SSO connection used for authentication.
           example: conn_01E4ZCR3C56J083X43JQXF3JK5
         connection_type:
+          description: The type of SSO connection.
+          example: OktaSAML
           type: string
           enum:
             - Pending
@@ -39772,7 +39753,6 @@ components:
             - CleverOIDC
             - CloudflareSAML
             - CyberArkSAML
-            - DiscordOAuth
             - DuoSAML
             - EntraIdOIDC
             - GenericOIDC
@@ -39782,8 +39762,6 @@ components:
             - GoogleOAuth
             - GoogleOIDC
             - GoogleSAML
-            - GrokOAuth
-            - XOAuth
             - IntuitOAuth
             - JumpCloudSAML
             - KeycloakSAML
@@ -39812,8 +39790,6 @@ components:
             - VercelOAuth
             - VMwareSAML
             - XeroOAuth
-          description: The type of SSO connection.
-          example: OktaSAML
         idp_id:
           type: string
           description: The user's unique identifier from the identity provider.
