@@ -29040,6 +29040,10 @@ components:
                         - code
                         - message
                       description: Details about the authentication error.
+                    provider:
+                      type: string
+                      description: The OAuth provider used for authentication.
+                      example: GoogleOAuth
                   required:
                     - type
                     - status
@@ -29106,6 +29110,10 @@ components:
                       type: string
                       description: The email address of the user.
                       example: user@example.com
+                    provider:
+                      type: string
+                      description: The OAuth provider used for authentication.
+                      example: GoogleOAuth
                   required:
                     - type
                     - status
