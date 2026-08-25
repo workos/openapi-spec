@@ -174,6 +174,13 @@ const compatSurfaceScopeCases = [
   { symbol: 'Agents.create_validate', scope: 'agents' },
   { symbol: 'ClientApi.create_token', scope: 'client' },
   { symbol: 'CreateApplicationSecret.from_dict', scope: 'connect' },
+  // PR #118 regression set: event-payload-only waitlist types and the
+  // synthetic authentication-method enum literal have no IR service to
+  // resolve through, so the name rules must carry them.
+  { symbol: 'WaitlistUserState', scope: 'user_management' },
+  { symbol: 'WaitlistUserStateLiteral', scope: 'user_management' },
+  { symbol: 'AuthenticateResponseAuthenticationMethodLiteral.DiscordOAuth', scope: 'user_management' },
+  { symbol: 'AuthenticationMethod', scope: 'user_management' },
 ];
 
 for (const { symbol, scope } of compatSurfaceScopeCases) {
