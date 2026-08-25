@@ -451,6 +451,13 @@ function scopeFromName(name) {
     return 'multi_factor_auth';
   }
   if (/^(FeatureFlag|Flag)/.test(name)) return 'feature_flags';
+  // Waitlist types are event-payload-only (`waitlist_user.*` events), so no IR
+  // service owns them; the AuthKit waitlist lives under user management.
+  // `^Authenticate` covers `AuthenticateResponse*` and its synthetic enum
+  // literals (`AuthenticateResponseAuthenticationMethodLiteral.DiscordOAuth`);
+  // unanchored `AuthenticationMethod` catches emitters that name the bare enum.
+  // Radar authenticate surfaces already resolved to `radar` above.
+  if (/^(Waitlist|Authenticate)|AuthenticationMethod/.test(name)) return 'user_management';
   if (/^(Invitation|MagicAuth|PasswordReset|RevokeSession|Session|User|CreateUser|UpdateUser|EmailChange)/.test(name)) {
     return 'user_management';
   }
