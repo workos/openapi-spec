@@ -62,12 +62,67 @@ jobs:
         run: |
           set -euo pipefail
           bump="${{ github.event.inputs.bump || 'minor' }}"
-          current="$(node -p "require('./package.json').version")"
-          npm version "$bump" --no-git-tag-version
-          next="$(node -p "require('./package.json').version")"
-          echo "current=$current" >> "$GITHUB_OUTPUT"
+          manifest="$(node -p "require('./package.json').version")"
+          set +e
+          view_out="$(npm view "$(node -p "require('./package.json').name")" version 2>&1)"
+          view_rc=$?
+          set -e
+          if [ "$view_rc" -eq 0 ]; then
+            published="$view_out"
+          elif grep -q E404 <<< "$view_out"; then
+            # Never published: the manifest is the only source of truth.
+            published="0.0.0"
+          else
+            # A transient registry error must not silently fall back to a
+            # possibly-stale manifest base; fail here and let a re-run heal.
+            echo "$view_out"
+            echo "::error::npm registry lookup failed; refusing to derive a version base"
+            exit 1
+          fi
+          newer="$(printf '%s\n%s\n' "$manifest" "$published" | sort -V | tail -n1)"
+          if [ "$manifest" = "$newer" ] && [ "$manifest" != "$published" ]; then
+            # Manifest ahead of the registry: a prior run committed this bump
+            # but died before publishing. Finish that release instead of
+            # bumping past it — the requested bump type is deliberately
+            # ignored; it was already applied when this version landed.
+            next="$manifest"
+          else
+            # In sync, or the registry is ahead because a prior run published
+            # but lost the race to commit the bump back (see #99/#114): bump
+            # from the published version so a stale manifest can't wedge
+            # publishing.
+            npm version "$published" --no-git-tag-version --allow-same-version
+            npm version "$bump" --no-git-tag-version
+            next="$(node -p "require('./package.json').version")"
+          fi
+          echo "current=$published" >> "$GITHUB_OUTPUT"
           echo "next=$next" >> "$GITHUB_OUTPUT"
-          echo "Bump: $bump | $current → $next"
+          echo "Bump: $bump | manifest=$manifest published=$published → $next"
+
+      - name: Commit and push version bump
+        run: |
+          set -euo pipefail
+          git config user.name "workos-sdk-automation[bot]"
+          git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: release v${{ steps.version.outputs.next }}"
+          # The bump lands on main before npm publish so a lost race fails
+          # while nothing has been published yet. A merge landing mid-run
+          # rejects the push as non-fast-forward (see #99/#114); the bump
+          # commit only touches package files, so rebasing onto the new tip
+          # is safe, and the build below runs from the rebased tree — the
+          # published artifact always matches the tagged commit. If publish
+          # later fails, re-running the workflow self-repairs: the rebase
+          # dedups the already-landed bump and publishes the version main
+          # already records.
+          for attempt in 1 2 3; do
+            if git push origin main; then
+              exit 0
+            fi
+            git pull --rebase origin main
+          done
+          git push origin main
 
       - name: Build policy module
         run: npm run build:policy
@@ -87,20 +142,12 @@ jobs:
       - name: Publish to npm
         run: npm publish --access public --provenance
 
-      - name: Commit version bump
-        run: |
-          set -euo pipefail
-          git config user.name "workos-sdk-automation[bot]"
-          git config user.email "255426317+workos-sdk-automation[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git diff --cached --quiet && exit 0
-          git commit -m "chore: release v${{ steps.version.outputs.next }}"
-          git push origin main
-
       - name: Tag release
         run: |
           set -euo pipefail
           tag="v${{ steps.version.outputs.next }}"
+          # HEAD is the pushed bump commit: tag, manifest, and npm artifact
+          # agree even when the rebase folded in a mid-run merge.
           git tag -a "$tag" -m "Release $tag"
           git push origin "$tag"
 
