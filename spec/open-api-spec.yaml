@@ -10309,7 +10309,6 @@ paths:
       summary: List providers for an organization
       tags:
         - pipes.provider
-      x-feature-flag: pipes-org-overrides
   /organizations/{organizationId}/data_integration_configurations/{slug}:
     put:
       description: >-
@@ -10403,7 +10402,6 @@ paths:
       summary: Configure a provider for an organization
       tags:
         - pipes.provider
-      x-feature-flag: pipes-org-overrides
   /organizations/{organizationId}/feature-flags:
     get:
       description: Get a list of all enabled feature flags for an organization.
