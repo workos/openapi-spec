@@ -169,3 +169,46 @@ jobs:
             --title "$TAG" \
             --notes-file "$notes_file" \
             spec/open-api-spec.yaml
+
+      # Downstream notification. Deliberately last and non-fatal: by this point
+      # the version is published, tagged, and announced, so nothing here is
+      # allowed to fail a release that already happened. The cost is that a
+      # missed notification is quiet — hence the warnings below, and the
+      # workflow_dispatch hatch on the consumer's side.
+      #
+      # Needs its own token: create-github-app-token scopes the job's existing
+      # one to this repo.
+      - name: Generate token for sdk-automation-bot
+        id: bot-token
+        continue-on-error: true
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ vars.SDK_BOT_APP_ID }}
+          private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
+          owner: workos
+          repositories: sdk-automation-bot
+          permission-contents: write
+
+      - name: Notify sdk-automation-bot
+        # The bot bundles our `services` roster and alias map at build time, so
+        # it keeps shipping a stale copy until something moves its lockfile — a
+        # dropped alias there surfaces a raw tag as a stageable row whose
+        # generation then fails. It listens for this event and bumps itself; we
+        # only announce, and stay ignorant of what it does about it.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.bot-token.outputs.token }}
+          VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          set -uo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::no token for sdk-automation-bot (is the app installed there with contents:write?); skipped notify for v${VERSION}"
+            exit 1
+          fi
+          if ! gh api "repos/workos/sdk-automation-bot/dispatches" \
+                 -f "event_type=openapi-spec-released" \
+                 -f "client_payload[version]=${VERSION}"; then
+            echo "::warning::could not notify sdk-automation-bot of v${VERSION}; run its 'Bump openapi-spec' workflow manually to catch up"
+            exit 1
+          fi
+          echo "Notified sdk-automation-bot of v${VERSION}."
