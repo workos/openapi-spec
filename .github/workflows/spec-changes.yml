@@ -12,20 +12,6 @@ on:
     branches: [main]
     paths:
       - 'spec/**'
-      # The producer resolves every changed symbol to its post-mount service via
-      # `mountRules` (build-spec-changes.mjs), so editing the rules re-partitions
-      # already-published endpoints — a service rename or a move between services
-      # changes the SDK surface without touching spec/**, and such a merge would
-      # not even start a run here.
-      #
-      # This is the prerequisite, not the whole fix: `changedServices` is derived
-      # from an old-spec-vs-new-spec `oagen diff`, which is empty when only the
-      # rules moved, so the run still ends at the "No service changes" check
-      # below. Actually surfacing a re-partition needs a partition diff — old
-      # rules vs new rules over the same spec — which this job does not compute.
-      #
-      # Only this file: the producer reads `mountRules` and nothing else out of
-      # dist/policy.mjs, so naming/transforms/operation-hints do not apply.
       - 'src/policy/mount-rules.ts'
   # Manual re-push: re-run the producer for the current spec@main against its
   # parent (diffs HEAD~1 → HEAD), e.g. to recover a run that failed before
