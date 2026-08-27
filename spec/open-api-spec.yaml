@@ -35068,6 +35068,190 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: resource_export.completed
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: resource_export.created
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: resource_export.downloaded
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: resource_export.failed
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: role.created
                 data:
                   type: object
