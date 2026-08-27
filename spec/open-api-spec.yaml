@@ -9340,6 +9340,464 @@ paths:
       summary: Remove a feature flag target
       tags:
         - feature-flags.targets
+  /flag_target_types:
+    post:
+      description: >-
+        Register a custom Flag Target Type, making its slug usable as the
+        `target_type` of a Flag Target anywhere in the project.
+      operationId: FlagTargetTypesController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFlagTargetTypeDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagTargetType'
+        '400':
+          description: >-
+            The slug is malformed, names a built-in target type, or is already
+            registered.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_flag_target_type_slug
+                        const: invalid_flag_target_type_slug
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: reserved_flag_target_type_slug
+                        const: reserved_flag_target_type_slug
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: entity_already_exists_exception
+                        const: entity_already_exists_exception
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '422':
+          description: The request body failed validation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_request_parameters
+                    const: invalid_request_parameters
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Validation failed.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          description: The validation error code.
+                          example: unknown_event_type
+                        message:
+                          type: string
+                          description: >-
+                            A human-readable description of the validation
+                            error.
+                          example: Invalid enum value.
+                      required:
+                        - code
+                        - message
+                    description: The list of validation errors.
+                required:
+                  - code
+                  - message
+                  - errors
+      summary: Create a flag target type
+      tags:
+        - feature-flags.target-types
+    get:
+      description: >-
+        Get a list of the custom Flag Target Types registered for the current
+        environment's project. The built-in `user` and `organization` target
+        types are not included.
+      operationId: FlagTargetTypesController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list.
+          schema:
+            example: obj_1234567890
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list.
+          schema:
+            example: obj_1234567890
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: Order the results by the creation time.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagTargetTypeList'
+      summary: List flag target types
+      tags:
+        - feature-flags.target-types
+  /flag_target_types/{id}:
+    get:
+      description: Get the details of an existing Flag Target Type.
+      operationId: FlagTargetTypesController_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Unique identifier of the Flag Target Type.
+          schema:
+            type: string
+            example: flag_target_type_01EHZNVPK3SFK441A1RGBFSHRT
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagTargetType'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get a flag target type
+      tags:
+        - feature-flags.target-types
+  /flag_targets:
+    post:
+      description: >-
+        Enable a Feature Flag for a target in the current environment. The
+        `target_type` is given explicitly: a custom target type has to be
+        registered with `POST /flag_target_types` first, and its `target_id` is
+        an identifier from your own domain model, which carries no prefix to
+        infer a type from.
+      operationId: FlagTargetsResourceController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFlagTargetDto'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagTarget'
+        '400':
+          description: The `target_id` is invalid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_flag_target_id
+                    const: invalid_flag_target_id
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '404':
+          description: >-
+            The Feature Flag does not exist, or a built-in target type names an
+            Organization or User that does not exist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: >-
+            The body failed validation, or the custom target type is not
+            registered for this project.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: unregistered_flag_target_type
+                        const: unregistered_flag_target_type
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_request_parameters
+                        const: invalid_request_parameters
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Validation failed.
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              description: The validation error code.
+                              example: unknown_event_type
+                            message:
+                              type: string
+                              description: >-
+                                A human-readable description of the validation
+                                error.
+                              example: Invalid enum value.
+                          required:
+                            - code
+                            - message
+                        description: The list of validation errors.
+                    required:
+                      - code
+                      - message
+                      - errors
+      summary: Create a flag target
+      tags:
+        - feature-flags.targets
+    get:
+      description: >-
+        Get a list of the Flag Targets in the current environment, optionally
+        filtered by Feature Flag slug, target type, or targeted entity.
+      operationId: FlagTargetsResourceController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list.
+          schema:
+            example: obj_1234567890
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list.
+          schema:
+            example: obj_1234567890
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: Order the results by the creation time.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+        - name: flag_slug
+          required: false
+          in: query
+          description: Filter Flag Targets by the slug of the Feature Flag they belong to.
+          schema:
+            example: new-checkout
+            type: string
+        - name: target_type
+          required: false
+          in: query
+          description: >-
+            Filter Flag Targets by the type of the targeted entity, to find
+            every Feature Flag targeting entities of that type.
+          schema:
+            example: organization
+            type: string
+        - name: target_id
+          required: false
+          in: query
+          description: >-
+            Filter Flag Targets by the ID of the targeted entity, to find every
+            Feature Flag targeting it.
+          schema:
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagTargetList'
+      summary: List flag targets
+      tags:
+        - feature-flags.targets
+  /flag_targets/{id}:
+    delete:
+      description: Disable a Feature Flag for a target by deleting the Flag Target.
+      operationId: FlagTargetsResourceController_delete
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Unique identifier of the Flag Target.
+          schema:
+            type: string
+            example: flag_target_01EHZNVPK3SFK441A1RGBFSHRT
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Delete a flag target
+      tags:
+        - feature-flags.targets
+    get:
+      description: Get the details of an existing Flag Target.
+      operationId: FlagTargetsResourceController_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Unique identifier of the Flag Target.
+          schema:
+            type: string
+            example: flag_target_01EHZNVPK3SFK441A1RGBFSHRT
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagTarget'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get a flag target
+      tags:
+        - feature-flags.targets
   /organization_domains:
     post:
       description: Creates a new Organization Domain.
@@ -20920,6 +21378,8 @@ tags:
     description: Query events and event streams.
   - name: feature-flags
     description: Manage feature flags.
+  - name: feature-flags.target-types
+    description: Manage the custom target types a feature flag target may use.
   - name: feature-flags.targets
     description: Manage feature flag targets.
   - name: groups
@@ -22169,6 +22629,42 @@ components:
           example: om_01HXYZ123456789ABCDEFGHIJ
       required:
         - organization_membership_id
+    CreateFlagTargetDto:
+      type: object
+      properties:
+        flag_slug:
+          type: string
+          description: The slug of the Feature Flag to target.
+          example: new-checkout
+        target_type:
+          type: string
+          description: >-
+            The type of the target: `organization`, `user`, or the slug of a
+            Flag Target Type registered for the project.
+          example: organization
+        target_id:
+          type: string
+          description: >-
+            The ID of the entity to target. For the built-in target types this
+            is a WorkOS Organization or User ID; for a custom target type it is
+            an identifier from your own domain model.
+          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+      required:
+        - flag_slug
+        - target_type
+        - target_id
+    CreateFlagTargetTypeDto:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: >-
+            A unique key used as the `target_type` of a Flag Target, scoped to
+            the project. May contain lowercase letters, numbers, underscores and
+            hyphens.
+          example: workspace
+      required:
+        - slug
     CreateGroupDto:
       type: object
       properties:
@@ -27213,6 +27709,74 @@ components:
         - custom_attributes
         - created_at
         - updated_at
+    FlagTarget:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Flag Target object.
+          const: flag_target
+        id:
+          type: string
+          description: Unique identifier of the Flag Target.
+          example: flag_target_01EHZNVPK3SFK441A1RGBFSHRT
+        flag_id:
+          type: string
+          description: The ID of the Feature Flag the target belongs to.
+          example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+        flag_slug:
+          type: string
+          description: >-
+            The slug of the Feature Flag the target belongs to, which is how the
+            Feature Flag endpoints address it.
+          example: new-checkout
+        environment_id:
+          type: string
+          description: The ID of the environment the Flag Target belongs to.
+          example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+        target_type:
+          type: string
+          description: >-
+            The type of the target: `organization`, `user`, or a custom target
+            type slug.
+          example: organization
+        target_id:
+          type: string
+          description: The ID of the targeted entity.
+          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        value_type:
+          type: string
+          description: >-
+            The type of `value`. Only `boolean` is supported today; additional
+            types are reserved for future multivariate Feature Flags.
+          example: boolean
+          const: boolean
+        value:
+          type: boolean
+          description: The value the Feature Flag evaluates to for this target.
+          example: true
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - flag_id
+        - flag_slug
+        - environment_id
+        - target_type
+        - target_id
+        - value_type
+        - value
+        - created_at
+        - updated_at
     PipesConnectedAccount:
       type: object
       properties:
@@ -27410,7 +27974,7 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_25
+          example: &ref_26
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
@@ -31475,7 +32039,7 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
-                  const: flag.created
+                  const: feature_flags.flag.created
                 data:
                   type: object
                   properties:
@@ -31539,6 +32103,520 @@ components:
                         filtering.
                       example: &ref_21
                         - reports
+                    enabled:
+                      type: boolean
+                      description: >-
+                        Specifies whether the Feature Flag is active for the
+                        current environment.
+                      example: true
+                    default_value:
+                      type: boolean
+                      description: >-
+                        The value returned for users and organizations who don't
+                        match any configured targeting rules.
+                      example: false
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - environment_id
+                    - slug
+                    - name
+                    - description
+                    - owner
+                    - tags
+                    - enabled
+                    - default_value
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag.deleted
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      const: feature_flag
+                    id:
+                      type: string
+                      description: Unique identifier of the Feature Flag.
+                      example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+                    environment_id:
+                      type: string
+                      description: The ID of the environment the Feature Flag belongs to.
+                      example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    slug:
+                      type: string
+                      description: A unique key to reference the Feature Flag.
+                      example: advanced-analytics
+                    name:
+                      type: string
+                      description: A descriptive name for the Feature Flag.
+                      example: Advanced Analytics
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: A description for the Feature Flag.
+                      example: Enable advanced analytics dashboard feature
+                    owner:
+                      description: The owner of the Feature Flag.
+                      oneOf:
+                        - type: object
+                          properties:
+                            email:
+                              type: string
+                              description: The email address of the flag owner.
+                              example: jane@example.com
+                            first_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The first name of the flag owner.
+                              example: Jane
+                            last_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The last name of the flag owner.
+                              example: Doe
+                          required:
+                            - email
+                            - first_name
+                            - last_name
+                        - type: 'null'
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Labels assigned to the Feature Flag for categorizing and
+                        filtering.
+                      example: *ref_21
+                    enabled:
+                      type: boolean
+                      description: >-
+                        Specifies whether the Feature Flag is active for the
+                        current environment.
+                      example: true
+                    default_value:
+                      type: boolean
+                      description: >-
+                        The value returned for users and organizations who don't
+                        match any configured targeting rules.
+                      example: false
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - environment_id
+                    - slug
+                    - name
+                    - description
+                    - owner
+                    - tags
+                    - enabled
+                    - default_value
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag.updated
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      const: feature_flag
+                    id:
+                      type: string
+                      description: Unique identifier of the Feature Flag.
+                      example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+                    environment_id:
+                      type: string
+                      description: The ID of the environment the Feature Flag belongs to.
+                      example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    slug:
+                      type: string
+                      description: A unique key to reference the Feature Flag.
+                      example: advanced-analytics
+                    name:
+                      type: string
+                      description: A descriptive name for the Feature Flag.
+                      example: Advanced Analytics
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: A description for the Feature Flag.
+                      example: Enable advanced analytics dashboard feature
+                    owner:
+                      description: The owner of the Feature Flag.
+                      oneOf:
+                        - type: object
+                          properties:
+                            email:
+                              type: string
+                              description: The email address of the flag owner.
+                              example: jane@example.com
+                            first_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The first name of the flag owner.
+                              example: Jane
+                            last_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The last name of the flag owner.
+                              example: Doe
+                          required:
+                            - email
+                            - first_name
+                            - last_name
+                        - type: 'null'
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Labels assigned to the Feature Flag for categorizing and
+                        filtering.
+                      example: *ref_21
+                    enabled:
+                      type: boolean
+                      description: >-
+                        Specifies whether the Feature Flag is active for the
+                        current environment.
+                      example: true
+                    default_value:
+                      type: boolean
+                      description: >-
+                        The value returned for users and organizations who don't
+                        match any configured targeting rules.
+                      example: false
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - environment_id
+                    - slug
+                    - name
+                    - description
+                    - owner
+                    - tags
+                    - enabled
+                    - default_value
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                    previous_attributes:
+                      type: object
+                      properties:
+                        data:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              description: The previous name of the flag.
+                              example: My Feature Flag
+                            description:
+                              type:
+                                - string
+                                - 'null'
+                              description: The previous description of the flag.
+                              example: Enables the new feature.
+                            tags:
+                              type: array
+                              items:
+                                type: string
+                              description: The previous tags of the flag.
+                              example: &ref_22
+                                - beta
+                                - release
+                            enabled:
+                              type: boolean
+                              description: Whether the flag was previously enabled.
+                              example: true
+                            default_value:
+                              type: boolean
+                              description: The previous default value of the flag.
+                              example: false
+                          description: The previous data attributes of the flag.
+                      description: Attributes that changed from their previous values.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: flag.created
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      const: feature_flag
+                    id:
+                      type: string
+                      description: Unique identifier of the Feature Flag.
+                      example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+                    environment_id:
+                      type: string
+                      description: The ID of the environment the Feature Flag belongs to.
+                      example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    slug:
+                      type: string
+                      description: A unique key to reference the Feature Flag.
+                      example: advanced-analytics
+                    name:
+                      type: string
+                      description: A descriptive name for the Feature Flag.
+                      example: Advanced Analytics
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: A description for the Feature Flag.
+                      example: Enable advanced analytics dashboard feature
+                    owner:
+                      description: The owner of the Feature Flag.
+                      oneOf:
+                        - type: object
+                          properties:
+                            email:
+                              type: string
+                              description: The email address of the flag owner.
+                              example: jane@example.com
+                            first_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The first name of the flag owner.
+                              example: Jane
+                            last_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The last name of the flag owner.
+                              example: Doe
+                          required:
+                            - email
+                            - first_name
+                            - last_name
+                        - type: 'null'
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Labels assigned to the Feature Flag for categorizing and
+                        filtering.
+                      example: *ref_21
                     enabled:
                       type: boolean
                       description: >-
@@ -32076,6 +33154,136 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: feature_flags.flag_target.created
+                data:
+                  $ref: '#/components/schemas/FlagTarget'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag_target.deleted
+                data:
+                  $ref: '#/components/schemas/FlagTarget'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: flag.updated
                 data:
                   type: object
@@ -32234,9 +33442,7 @@ components:
                               items:
                                 type: string
                               description: The previous tags of the flag.
-                              example:
-                                - beta
-                                - release
+                              example: *ref_22
                             enabled:
                               type: boolean
                               description: Whether the flag was previously enabled.
@@ -33126,7 +34332,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_22
+                      example: &ref_23
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -33276,7 +34482,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_22
+                      example: *ref_23
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -34103,7 +35309,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_23
+                      example: &ref_24
                         - users:read
                         - users:write
                     created_at:
@@ -34187,7 +35393,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_23
+                      example: *ref_24
                     created_at:
                       format: date-time
                       type: string
@@ -34269,7 +35475,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_23
+                      example: *ref_24
                     created_at:
                       format: date-time
                       type: string
@@ -34406,7 +35612,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_22
+                      example: *ref_23
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -35089,7 +36295,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_24
+                      example: &ref_25
                         - users:read
                         - users:write
                     created_at:
@@ -35155,7 +36361,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_24
+                      example: *ref_25
                     created_at:
                       format: date-time
                       type: string
@@ -35219,7 +36425,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_24
+                      example: *ref_25
                     created_at:
                       format: date-time
                       type: string
@@ -36359,7 +37565,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_25
+      example: *ref_26
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -36394,9 +37600,120 @@ components:
       example:
         object: list
         data:
-          - *ref_25
+          - *ref_26
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
+    FlagTargetList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlagTarget'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: flag_target_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: flag_target_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
+    FlagTargetType:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Flag Target Type object.
+          const: flag_target_type
+        id:
+          type: string
+          description: Unique identifier of the Flag Target Type.
+          example: flag_target_type_01EHZNVPK3SFK441A1RGBFSHRT
+        slug:
+          type: string
+          description: >-
+            A unique key used as the `target_type` of a Flag Target, scoped to
+            the project.
+          example: workspace
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - slug
+        - created_at
+        - updated_at
+    FlagTargetTypeList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlagTargetType'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: flag_target_type_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: flag_target_type_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     JwtTemplate:
       type: object
       properties:
