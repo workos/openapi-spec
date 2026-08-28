@@ -336,5 +336,45 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
     }
   }
 
+  // -- PaginationOrder: keep the established `desc` client-side default -------
+  // Upstream (workos/workos#70547) dropped `default: desc` from the shared
+  // `PaginationOrder` component and now documents the *server* default as
+  // `normal`. Every published SDK has always sent `order=desc` when the caller
+  // omits it, and `normal` is not merely a different sort direction — it
+  // reverses cursor semantics (`before`/`after` swap meaning). Adopting the
+  // removal would silently change list ordering *and* pagination direction for
+  // existing callers, so pin the client-side default until the SDKs can take
+  // that break deliberately.
+  //
+  // The default has to live on the component: every `order` parameter `$ref`s
+  // it, and that is where oagen reads it from into `param.default` (go's
+  // pagination defaults map, python's signature default, rust's
+  // `Default::default()`, php's typed enum default, ruby's kwarg) and into
+  // `enumDef.default` (dotnet promotes the matching member to ordinal 0).
+  const paginationOrder = schemas['PaginationOrder'];
+  if (paginationOrder && paginationOrder['default'] == null) {
+    paginationOrder['default'] = 'desc';
+  }
+
+  // The same upstream change also appended a per-endpoint "Defaults to `…`."
+  // sentence to every `order` parameter description (`normal` on most,
+  // `desc` on a handful). That documents the *server* default, which callers
+  // never see now that the SDKs send `order=desc` explicitly — and the go,
+  // python, php and rust emitters append their own "Defaults to …" line from
+  // the materialized default, so keeping it yields two default sentences in
+  // one doc comment (contradictory ones wherever upstream says `normal`).
+  // Strip the spec's sentence and let the emitter-rendered default stand, as
+  // it did before this change.
+  for (const pathItem of Object.values(paths)) {
+    for (const op of Object.values(pathItem)) {
+      const params = (op as { parameters?: Array<{ name?: string; description?: string }> }).parameters;
+      if (!Array.isArray(params)) continue;
+      for (const param of params) {
+        if (param.name !== 'order' || typeof param.description !== 'string') continue;
+        param.description = param.description.replace(/\s*Defaults to `[^`]+`\.\s*$/, '');
+      }
+    }
+  }
+
   return spec;
 }
