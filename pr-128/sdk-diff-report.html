@@ -149125,7 +149125,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    val json = &quot;{\&quot;max_age_seconds\&quot;: 0, \&quot;access_token_ttl_seconds\&quot;: 0, \&quot;refresh_token_ttl_seconds\&quot;: 0}&quot;</span>
+            <span class="d2h-code-line-ctn">    val json = &quot;{\&quot;max_age_seconds\&quot;: 0.0, \&quot;access_token_ttl_seconds\&quot;: 0.0, \&quot;refresh_token_ttl_seconds\&quot;: 0.0}&quot;</span>
         </div>
     </td>
 </tr><tr>
@@ -149445,7 +149445,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    val json = &quot;{\&quot;max_age_seconds\&quot;: 0, \&quot;access_token_ttl_seconds\&quot;: 0, \&quot;refresh_token_ttl_seconds\&quot;: 0}&quot;</span>
+            <span class="d2h-code-line-ctn">    val json = &quot;{\&quot;max_age_seconds\&quot;: 0.0, \&quot;access_token_ttl_seconds\&quot;: 0.0, \&quot;refresh_token_ttl_seconds\&quot;: 0.0}&quot;</span>
         </div>
     </td>
 </tr><tr>
@@ -153787,6 +153787,81 @@
                     <tr>
     <td class="d2h-code-side-linenumber d2h-info"></td>
     <td class="d2h-info">
+        <div class="d2h-code-side-line">@@ -204,7 +204,7 @@ class UserManagementTest : TestBase() {</div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      204
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">      &quot;POST&quot;,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      205
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">      &quot;&#x2F;user_management&#x2F;authorize&#x2F;device&quot;,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      206
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">      200,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-del d2h-change">
+      207
+    </td>
+    <td class="d2h-del d2h-change">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">-</span>
+            <span class="d2h-code-line-ctn">      &quot;{\&quot;device_code\&quot;: \&quot;sample\&quot;, \&quot;user_code\&quot;: \&quot;sample\&quot;, \&quot;verification_uri\&quot;: \&quot;sample\&quot;, \&quot;expires_in\&quot;: 0}&quot;</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      208
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    )</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      209
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    val result = api().createDevice(&quot;sample-arg&quot;)</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      210
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    assertNotNull(result)</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-info"></td>
+    <td class="d2h-info">
         <div class="d2h-code-side-line">@@ -827,6 +827,97 @@ class UserManagementTest : TestBase() {</div>
     </td>
 </tr><tr>
@@ -154769,6 +154844,81 @@
                 <table class="d2h-diff-table">
                     <tbody class="d2h-diff-tbody">
                     <tr>
+    <td class="d2h-code-side-linenumber d2h-info"></td>
+    <td class="d2h-info">
+        <div class="d2h-code-side-line">&nbsp;</div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      204
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">      &quot;POST&quot;,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      205
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">      &quot;&#x2F;user_management&#x2F;authorize&#x2F;device&quot;,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      206
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">      200,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-ins d2h-change">
+      207
+    </td>
+    <td class="d2h-ins d2h-change">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">      &quot;{\&quot;device_code\&quot;: \&quot;sample\&quot;, \&quot;user_code\&quot;: \&quot;sample\&quot;, \&quot;verification_uri\&quot;: \&quot;sample\&quot;, \&quot;expires_in\&quot;: 0<ins>.0</ins>}&quot;</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      208
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    )</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      209
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    val result = api().createDevice(&quot;sample-arg&quot;)</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      210
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    assertNotNull(result)</span>
+        </div>
+    </td>
+</tr><tr>
     <td class="d2h-code-side-linenumber d2h-info"></td>
     <td class="d2h-info">
         <div class="d2h-code-side-line">&nbsp;</div>
