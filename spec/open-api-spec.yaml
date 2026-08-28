@@ -7860,7 +7860,7 @@ paths:
                     installation, keyed by the provider's config field
                     descriptors.
                   example:
-                    mydomain: acme
+                    salesforce_host: acme.my.salesforce.com
               required:
                 - user_id
                 - client_id
@@ -22467,14 +22467,19 @@ components:
           format: uri
           description: >-
             The provider's OAuth authorization endpoint. Required for OAuth
-            providers; omit for `api_key` providers.
+            providers; omit for `api_key` providers. Must be a static URL:
+            `${config.…}` placeholders are resolved against a provider's
+            declared config fields, which custom providers cannot declare.
           example: https://provider.example.com/oauth/authorize
         token_url:
           type: string
           format: uri
           description: >-
-            The provider's OAuth token endpoint. Required for OAuth providers;
-            omit for `api_key` providers.
+            The provider's OAuth token endpoint. Required for OAuth and
+            `client_credentials` providers; omit for `api_key` providers. Must
+            be a static URL: `${config.…}` placeholders are resolved against a
+            provider's declared config fields, which custom providers cannot
+            declare.
           example: https://provider.example.com/oauth/token
         refresh_token_url:
           type:
@@ -22483,7 +22488,7 @@ components:
           format: uri
           description: >-
             The endpoint used to refresh tokens, if different from the token
-            endpoint.
+            endpoint. Must be a static URL, like the other endpoints.
           example: https://provider.example.com/oauth/token
         pkce_enabled:
           type: boolean
@@ -22623,12 +22628,18 @@ components:
         authorization_url:
           type: string
           format: uri
-          description: The provider's OAuth authorization endpoint.
+          description: >-
+            The provider's OAuth authorization endpoint. Must be a static URL:
+            `${config.…}` placeholders are resolved against a provider's
+            declared config fields, which custom providers cannot declare.
           example: https://provider.example.com/oauth/authorize
         token_url:
           type: string
           format: uri
-          description: The provider's OAuth token endpoint.
+          description: >-
+            The provider's OAuth token endpoint. Must be a static URL:
+            `${config.…}` placeholders are resolved against a provider's
+            declared config fields, which custom providers cannot declare.
           example: https://provider.example.com/oauth/token
         refresh_token_url:
           type:
@@ -22637,7 +22648,7 @@ components:
           format: uri
           description: >-
             The endpoint used to refresh tokens, if different from the token
-            endpoint.
+            endpoint. Must be a static URL, like the other endpoints.
           example: https://provider.example.com/oauth/token
         pkce_enabled:
           type: boolean
@@ -23737,6 +23748,9 @@ components:
           items:
             type: string
             enum: &ref_17
+              - agent.blueprint.created
+              - agent.blueprint.deleted
+              - agent.blueprint.updated
               - agent.registration.created
               - agent.registration.claim.attempt.created
               - agent.registration.claim.completed
@@ -27181,7 +27195,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_20
+          example: &ref_23
             department: Engineering
             job_title: Software Engineer
         role:
@@ -27410,7 +27424,7 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_25
+          example: &ref_28
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
@@ -27567,6 +27581,308 @@ components:
                   type: string
                   description: An ISO 8601 timestamp.
                   example: '2026-01-15T12:00:00.000Z'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.blueprint.created
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the agent blueprint object.
+                      const: agent_blueprint
+                    id:
+                      type: string
+                      description: Unique identifier of the agent blueprint.
+                      example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    name:
+                      type: string
+                      description: Human-readable name of the agent blueprint.
+                      example: Prospecting Agent
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: Human-readable description of the agent blueprint.
+                      example: Finds and qualifies sales prospects.
+                    permissions:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Permission slugs forming the ceiling on what sessions
+                        minted from this blueprint may do.
+                      example: &ref_19
+                        - crm:read
+                        - email:send
+                    invocable_by:
+                      type: object
+                      properties:
+                        role_slugs:
+                          type: array
+                          items:
+                            type: string
+                          description: >-
+                            Role slugs whose members may mint user-delegated
+                            sessions from this blueprint.
+                          example: &ref_20
+                            - manager
+                        organization_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: >-
+                            Organizations in which autonomous sessions may be
+                            minted from this blueprint.
+                          example: &ref_21
+                            - org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                      required:
+                        - role_slugs
+                        - organization_ids
+                      description: Who may mint sessions from this blueprint.
+                    session_settings:
+                      type: object
+                      properties:
+                        max_age_seconds:
+                          type: number
+                          description: >-
+                            Maximum lifetime of a session in seconds; refreshes
+                            never extend a session past this.
+                          example: 3600
+                        access_token_ttl_seconds:
+                          type: number
+                          description: Lifetime of each minted access token in seconds.
+                          example: 300
+                        refresh_token_ttl_seconds:
+                          type: number
+                          description: Lifetime of each rotated refresh token in seconds.
+                          example: 3600
+                      required:
+                        - max_age_seconds
+                        - access_token_ttl_seconds
+                        - refresh_token_ttl_seconds
+                      description: >-
+                        Token and session lifetimes for sessions minted from
+                        this blueprint.
+                    created_at:
+                      type: string
+                      description: The timestamp when the agent blueprint was created.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the agent blueprint was last updated.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - name
+                    - description
+                    - permissions
+                    - invocable_by
+                    - session_settings
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.blueprint.deleted
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the agent blueprint object.
+                      const: agent_blueprint
+                    id:
+                      type: string
+                      description: Unique identifier of the agent blueprint.
+                      example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    name:
+                      type: string
+                      description: Human-readable name of the agent blueprint.
+                      example: Prospecting Agent
+                    created_at:
+                      type: string
+                      description: The timestamp when the agent blueprint was created.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the agent blueprint was last updated.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - name
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: agent.blueprint.updated
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the agent blueprint object.
+                      const: agent_blueprint
+                    id:
+                      type: string
+                      description: Unique identifier of the agent blueprint.
+                      example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    name:
+                      type: string
+                      description: Human-readable name of the agent blueprint.
+                      example: Prospecting Agent
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: Human-readable description of the agent blueprint.
+                      example: Finds and qualifies sales prospects.
+                    permissions:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Permission slugs forming the ceiling on what sessions
+                        minted from this blueprint may do.
+                      example: *ref_19
+                    invocable_by:
+                      type: object
+                      properties:
+                        role_slugs:
+                          type: array
+                          items:
+                            type: string
+                          description: >-
+                            Role slugs whose members may mint user-delegated
+                            sessions from this blueprint.
+                          example: *ref_20
+                        organization_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: >-
+                            Organizations in which autonomous sessions may be
+                            minted from this blueprint.
+                          example: *ref_21
+                      required:
+                        - role_slugs
+                        - organization_ids
+                      description: Who may mint sessions from this blueprint.
+                    session_settings:
+                      type: object
+                      properties:
+                        max_age_seconds:
+                          type: number
+                          description: >-
+                            Maximum lifetime of a session in seconds; refreshes
+                            never extend a session past this.
+                          example: 3600
+                        access_token_ttl_seconds:
+                          type: number
+                          description: Lifetime of each minted access token in seconds.
+                          example: 300
+                        refresh_token_ttl_seconds:
+                          type: number
+                          description: Lifetime of each rotated refresh token in seconds.
+                          example: 3600
+                      required:
+                        - max_age_seconds
+                        - access_token_ttl_seconds
+                        - refresh_token_ttl_seconds
+                      description: >-
+                        Token and session lifetimes for sessions minted from
+                        this blueprint.
+                    created_at:
+                      type: string
+                      description: The timestamp when the agent blueprint was created.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the agent blueprint was last updated.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - name
+                    - description
+                    - permissions
+                    - invocable_by
+                    - session_settings
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
                 object:
                   type: string
                   description: Distinguishes the Event object.
@@ -28230,7 +28546,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_19
+                      example: &ref_22
                         - users:read
                         - users:write
                     created_at:
@@ -28356,7 +28672,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_19
+                      example: *ref_22
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -28480,7 +28796,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_19
+                      example: *ref_22
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -31347,7 +31663,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_20
+                      example: *ref_23
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -31537,7 +31853,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_21
+                      example: &ref_24
                         - reports
                     enabled:
                       type: boolean
@@ -31698,7 +32014,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_21
+                      example: *ref_24
                     enabled:
                       type: boolean
                       description: >-
@@ -31858,7 +32174,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_21
+                      example: *ref_24
                     enabled:
                       type: boolean
                       description: >-
@@ -32138,7 +32454,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_21
+                      example: *ref_24
                     enabled:
                       type: boolean
                       description: >-
@@ -33126,7 +33442,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_22
+                      example: &ref_25
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -33276,7 +33592,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_22
+                      example: *ref_25
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -34103,7 +34419,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_23
+                      example: &ref_26
                         - users:read
                         - users:write
                     created_at:
@@ -34187,7 +34503,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_23
+                      example: *ref_26
                     created_at:
                       format: date-time
                       type: string
@@ -34269,7 +34585,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_23
+                      example: *ref_26
                     created_at:
                       format: date-time
                       type: string
@@ -34406,7 +34722,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_22
+                      example: *ref_25
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -35068,6 +35384,190 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: resource_export.completed
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: resource_export.created
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: resource_export.downloaded
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: resource_export.failed
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The ID of the resource export.
+                      example: resource_export_01HWZBQZY2M3AMQW166Q22K88F
+                    resource_type:
+                      type: string
+                      enum:
+                        - users
+                        - organizations
+                        - events
+                        - sessions
+                      description: The type of resource being exported.
+                      example: users
+                  required:
+                    - id
+                    - resource_type
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: role.created
                 data:
                   type: object
@@ -35089,7 +35589,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_24
+                      example: &ref_27
                         - users:read
                         - users:write
                     created_at:
@@ -35155,7 +35655,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_24
+                      example: *ref_27
                     created_at:
                       format: date-time
                       type: string
@@ -35219,7 +35719,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_24
+                      example: *ref_27
                     created_at:
                       format: date-time
                       type: string
@@ -36359,7 +36859,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_25
+      example: *ref_28
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -36394,7 +36894,7 @@ components:
       example:
         object: list
         data:
-          - *ref_25
+          - *ref_28
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -37388,7 +37888,9 @@ components:
           type: string
           description: >-
             The OAuth redirect URI to register with the provider when
-            configuring the custom application.
+            configuring the custom application. Empty for `api_key` and
+            `client_credentials` integrations, which run no authorization
+            redirect.
           example: >-
             https://api.workos.com/data-integrations/github/dik_01EHZNVPK3SFK441A1RGBFSHRT/callback
         auth_methods:
@@ -37407,8 +37909,8 @@ components:
         credentials:
           description: >-
             The integration-level OAuth app credentials. `null` for `api_key`
-            integrations, which hold no OAuth credentials (keys are installed
-            per-tenant).
+            and `client_credentials` integrations, which hold no
+            integration-level credentials (secrets are installed per-tenant).
           oneOf:
             - type: object
               properties:
@@ -37903,7 +38405,11 @@ components:
                     type: string
                   description: >-
                     If the integration has requested scopes that aren't present
-                    on the access token, they're listed here.
+                    on the access token, they're listed here. The scopes granted
+                    to a client-credentials token are governed by the connected
+                    organization's client application, so the integration's
+                    configured scopes are requests or defaults rather than
+                    guarantees.
                   example: []
                 metadata:
                   type: object
