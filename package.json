@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
-    "@workos/oagen": "^0.29.3",
+    "@workos/oagen": "^0.29.4",
     "@workos/oagen-emitters": "^0.24.7",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",

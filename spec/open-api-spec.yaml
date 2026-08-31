@@ -1,5 +1,980 @@
 openapi: 3.1.1
 paths:
+  /agents/blueprints:
+    post:
+      description: >-
+        Creates an agent blueprint: the template describing what an agent may do
+        (its permission ceiling), who may invoke it, and the lifetimes of its
+        sessions.
+      operationId: AgentBlueprintsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Human-readable name of the agent blueprint.
+                  example: Prospecting Agent
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                  description: Human-readable description of the agent blueprint.
+                  example: Finds and qualifies sales prospects.
+                permissions:
+                  default: []
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  maxItems: 1000
+                  description: >-
+                    Permission slugs forming the ceiling on what sessions minted
+                    from this blueprint may do. Each slug must exist in the
+                    environment.
+                  example:
+                    - crm:read
+                    - email:send
+                invocable_by:
+                  default: {}
+                  type: object
+                  properties:
+                    role_slugs:
+                      default: []
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      maxItems: 100
+                      description: >-
+                        Role slugs whose members may mint user-delegated
+                        sessions from this blueprint. An empty list allows any
+                        member.
+                      example:
+                        - manager
+                    organization_ids:
+                      default: []
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      maxItems: 1000
+                      description: >-
+                        Organizations in which sessions may be minted from this
+                        blueprint, enforced on user-delegated, autonomous, and
+                        agent-delegated mints. An empty list allows any
+                        organization in the environment.
+                      example:
+                        - org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                  description: Who may mint sessions from this blueprint.
+                session_settings:
+                  type: object
+                  properties:
+                    max_age_seconds:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 31536000
+                      description: >-
+                        Maximum lifetime of a session in seconds; refreshes
+                        never extend a session past this. At most 31,536,000
+                        (365 days).
+                      example: 3600
+                    access_token_ttl_seconds:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 3600
+                      description: >-
+                        Lifetime of each minted access token in seconds. At most
+                        3,600 (1 hour).
+                      example: 300
+                    refresh_token_ttl_seconds:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 5184000
+                      description: >-
+                        Lifetime of each rotated refresh token in seconds. At
+                        most 5,184,000 (60 days).
+                      example: 3600
+                  required:
+                    - max_age_seconds
+                    - access_token_ttl_seconds
+                    - refresh_token_ttl_seconds
+                  description: >-
+                    Token and session lifetimes for sessions minted from this
+                    blueprint.
+              required:
+                - name
+                - session_settings
+              description: Configuration for the new agent blueprint.
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentBlueprint'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_request
+                    const: invalid_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: name_already_in_use
+                    const: name_already_in_use
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: permission_not_found
+                        const: permission_not_found
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: role_not_found
+                        const: role_not_found
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: organization_not_found
+                        const: organization_not_found
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+      summary: Create an agent blueprint
+      tags:
+        - agents.blueprints
+      x-feature-flag: agent-blueprints-public-api
+    get:
+      description: Lists the agent blueprints in the current environment.
+      operationId: AgentBlueprintsController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to `normal`.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: agent_blueprint_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: agent_blueprint_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/AgentBlueprint'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List agent blueprints
+      tags:
+        - agents.blueprints
+      x-feature-flag: agent-blueprints-public-api
+  /agents/blueprints/{agent_blueprint_id}:
+    get:
+      description: Retrieves an agent blueprint by ID.
+      operationId: AgentBlueprintsController_get
+      parameters:
+        - name: agent_blueprint_id
+          required: true
+          in: path
+          description: The unique ID of the agent blueprint.
+          schema:
+            type: string
+            example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentBlueprint'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get an agent blueprint
+      tags:
+        - agents.blueprints
+      x-feature-flag: agent-blueprints-public-api
+    patch:
+      description: >-
+        Updates an agent blueprint. Omitted fields are left unchanged; provided
+        lists replace the existing configuration.
+      operationId: AgentBlueprintsController_update
+      parameters:
+        - name: agent_blueprint_id
+          required: true
+          in: path
+          description: The unique ID of the agent blueprint.
+          schema:
+            type: string
+            example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Human-readable name of the agent blueprint.
+                  example: Prospecting Agent
+                description:
+                  type:
+                    - string
+                    - 'null'
+                  minLength: 1
+                  maxLength: 1000
+                  description: >-
+                    Human-readable description of the agent blueprint. Pass
+                    `null` to clear it.
+                  example: Finds and qualifies sales prospects.
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  maxItems: 1000
+                  description: >-
+                    Permission slugs forming the ceiling on what sessions minted
+                    from this blueprint may do. Each slug must exist in the
+                    environment.
+                  example:
+                    - crm:read
+                    - email:send
+                invocable_by:
+                  type: object
+                  properties:
+                    role_slugs:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      maxItems: 100
+                      description: >-
+                        Role slugs whose members may mint user-delegated
+                        sessions from this blueprint. An empty list allows any
+                        member.
+                      example:
+                        - manager
+                    organization_ids:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                      maxItems: 1000
+                      description: >-
+                        Organizations in which sessions may be minted from this
+                        blueprint, enforced on user-delegated, autonomous, and
+                        agent-delegated mints. An empty list allows any
+                        organization in the environment.
+                      example:
+                        - org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                  description: >-
+                    Who may mint sessions from this blueprint. Omitted lists are
+                    left unchanged.
+                session_settings:
+                  type: object
+                  properties:
+                    max_age_seconds:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 31536000
+                      description: >-
+                        Maximum lifetime of a session in seconds; refreshes
+                        never extend a session past this. At most 31,536,000
+                        (365 days).
+                      example: 3600
+                    access_token_ttl_seconds:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 3600
+                      description: >-
+                        Lifetime of each minted access token in seconds. At most
+                        3,600 (1 hour).
+                      example: 300
+                    refresh_token_ttl_seconds:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 5184000
+                      description: >-
+                        Lifetime of each rotated refresh token in seconds. At
+                        most 5,184,000 (60 days).
+                      example: 3600
+                  description: >-
+                    Token and session lifetimes for sessions minted from this
+                    blueprint. Omitted fields are left unchanged.
+              description: >-
+                Fields to update on the agent blueprint. Omitted fields are left
+                unchanged; provided lists replace the existing configuration.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentBlueprint'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_request
+                    const: invalid_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: name_already_in_use
+                    const: name_already_in_use
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: permission_not_found
+                        const: permission_not_found
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: role_not_found
+                        const: role_not_found
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: organization_not_found
+                        const: organization_not_found
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+      summary: Update an agent blueprint
+      tags:
+        - agents.blueprints
+      x-feature-flag: agent-blueprints-public-api
+    delete:
+      description: >-
+        Deletes an agent blueprint along with its configuration, instances, and
+        sessions.
+      operationId: AgentBlueprintsController_delete
+      parameters:
+        - name: agent_blueprint_id
+          required: true
+          in: path
+          description: The unique ID of the agent blueprint.
+          schema:
+            type: string
+            example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '204':
+          description: Agent blueprint deleted.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Delete an agent blueprint
+      tags:
+        - agents.blueprints
+      x-feature-flag: agent-blueprints-public-api
+  /agents/blueprints/{agent_blueprint_id}/tokens:
+    post:
+      description: >-
+        Mint an agent access token (and backing session) from an agent
+        blueprint. The session can be user-delegated (exchanging a user access
+        token), autonomous (the agent acting as itself in an organization),
+        agent-delegated (the agent exchanging its own access token for a new
+        session on the same instance), or a refresh of a previously issued
+        refresh token.
+      operationId: AgentBlueprintsTokenController_mintToken
+      parameters:
+        - name: agent_blueprint_id
+          required: true
+          in: path
+          description: The unique ID of the agent blueprint.
+          schema:
+            type: string
+            example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              discriminator:
+                propertyName: type
+              oneOf:
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      description: >-
+                        How the session is minted: `user_delegated`,
+                        `autonomous`, `agent_delegated`, or `refresh`.
+                      const: user_delegated
+                    user_access_token:
+                      type: string
+                      minLength: 1
+                      description: >-
+                        The access token of the user delegating to the agent.
+                        The token identifies the user and organization;
+                        effective permissions are resolved server-side.
+                      example: eyJhbGciOiJSUzI1NiIsImtpZCI6...
+                    intent:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      description: >-
+                        Optional caller-supplied context, echoed as an object
+                        with a `text` field in the `intent` claim of the minted
+                        access token.
+                      example: renew-contract-123
+                  required:
+                    - type
+                    - user_access_token
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      description: >-
+                        How the session is minted: `user_delegated`,
+                        `autonomous`, `agent_delegated`, or `refresh`.
+                      const: autonomous
+                    organization_id:
+                      type: string
+                      minLength: 1
+                      description: >-
+                        The organization the agent acts within when operating as
+                        itself.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    intent:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      description: >-
+                        Optional caller-supplied context, echoed as an object
+                        with a `text` field in the `intent` claim of the minted
+                        access token.
+                      example: renew-contract-123
+                  required:
+                    - type
+                    - organization_id
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      description: >-
+                        How the session is minted: `user_delegated`,
+                        `autonomous`, `agent_delegated`, or `refresh`.
+                      const: agent_delegated
+                    agent_access_token:
+                      type: string
+                      minLength: 1
+                      description: >-
+                        The agent's own access token to exchange for a new
+                        session on the same instance. The token must have been
+                        minted from this blueprint; permissions are re-derived
+                        from current authority.
+                      example: eyJhbGciOiJSUzI1NiIsImtpZCI6...
+                    intent:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      description: >-
+                        Optional caller-supplied context, echoed as an object
+                        with a `text` field in the `intent` claim of the minted
+                        access token.
+                      example: renew-contract-123
+                  required:
+                    - type
+                    - agent_access_token
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      description: >-
+                        How the session is minted: `user_delegated`,
+                        `autonomous`, `agent_delegated`, or `refresh`.
+                      const: refresh
+                    refresh_token:
+                      type: string
+                      minLength: 1
+                      description: >-
+                        The refresh token issued with a previous agent access
+                        token. Refresh tokens are single-use: each refresh
+                        rotates it.
+                      example: njGkA8Wyht0GBEGGA0Zh1Q3wZzL2...
+                    intent:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      description: >-
+                        Optional caller-supplied context, echoed as an object
+                        with a `text` field in the `intent` claim of the minted
+                        access token.
+                      example: renew-contract-123
+                  required:
+                    - type
+                    - refresh_token
+              description: >-
+                How to mint the agent session, discriminated by `type`. `intent`
+                is optional on every variant.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentToken'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_request
+                        const: invalid_request
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_user_access_token
+                        const: invalid_user_access_token
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_agent_access_token
+                        const: invalid_agent_access_token
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_refresh_token
+                        const: invalid_refresh_token
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: session_revoked
+                        const: session_revoked
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: session_expired
+                        const: session_expired
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: user_session_ended
+                        const: user_session_ended
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: max_age_exceeded
+                        const: max_age_exceeded
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: session_settings_not_found
+                        const: session_settings_not_found
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: chain_depth_exceeded
+                        const: chain_depth_exceeded
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: user_not_member_of_organization
+                        const: user_not_member_of_organization
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: organization_not_invocable
+                        const: organization_not_invocable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: role_not_invocable
+                        const: role_not_invocable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Mint an agent token
+      tags:
+        - agents.blueprints.tokens
+      x-feature-flag: agent-blueprints-public-api
   /agents/claims/attempts:
     patch:
       description: >-
@@ -286,7 +1261,7 @@ paths:
                       - message
       summary: Link a claim attempt to an external user
       tags:
-        - agents
+        - agents.registrations
       x-feature-flag: agent-auth-public-api
   /agents/credentials/validate:
     post:
@@ -379,8 +1354,208 @@ paths:
                   - message
       summary: Validate an agent credential
       tags:
-        - agents
+        - agents.registrations
       x-feature-flag: agent-auth-public-api
+  /agents/instances:
+    get:
+      description: >-
+        Lists the agent instances in the current environment. Instances are
+        created implicitly when tokens are minted.
+      operationId: AgentInstancesController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to `normal`.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+        - name: organization_id
+          required: false
+          in: query
+          description: Only return instances acting within this organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: agent_blueprint_id
+          required: false
+          in: query
+          description: Only return instances minted from this blueprint.
+          schema:
+            type: string
+            example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: agent_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: agent_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/AgentInstance'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List agent instances
+      tags:
+        - agents.instances
+      x-feature-flag: agent-blueprints-public-api
+  /agents/instances/{agent_instance_id}:
+    get:
+      description: Retrieves an agent instance by ID.
+      operationId: AgentInstancesController_get
+      parameters:
+        - name: agent_instance_id
+          required: true
+          in: path
+          description: The unique ID of the agent instance.
+          schema:
+            type: string
+            example: agent_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentInstance'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get an agent instance
+      tags:
+        - agents.instances
+      x-feature-flag: agent-blueprints-public-api
+    delete:
+      description: >-
+        Deletes an agent instance along with its sessions, invalidating their
+        refresh tokens.
+      operationId: AgentInstancesController_delete
+      parameters:
+        - name: agent_instance_id
+          required: true
+          in: path
+          description: The unique ID of the agent instance.
+          schema:
+            type: string
+            example: agent_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '204':
+          description: Agent instance deleted.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Delete an agent instance
+      tags:
+        - agents.instances
+      x-feature-flag: agent-blueprints-public-api
   /agents/registrations/{id}:
     get:
       description: >-
@@ -418,8 +1593,247 @@ paths:
                   - message
       summary: Get an agent registration
       tags:
-        - agents
+        - agents.registrations
       x-feature-flag: agent-auth-public-api
+  /agents/sessions:
+    get:
+      description: >-
+        Lists the agent instance sessions in the current environment. Sessions
+        are created when tokens are minted.
+      operationId: AgentInstanceSessionsController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to `normal`.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+        - name: agent_blueprint_id
+          required: false
+          in: query
+          description: Only return sessions of instances minted from this blueprint.
+          schema:
+            type: string
+            example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: agent_instance_id
+          required: false
+          in: query
+          description: Only return sessions belonging to this agent instance.
+          schema:
+            type: string
+            example: agent_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: agent_session_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: agent_session_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/AgentInstanceSession'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Validation failed.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          description: The validation error code.
+                          example: required
+                        field:
+                          type: string
+                          description: The field that failed validation.
+                          example: event.action
+                      required:
+                        - code
+                        - field
+                    description: The list of validation errors.
+                required:
+                  - message
+                  - errors
+      summary: List agent instance sessions
+      tags:
+        - agents.sessions
+      x-feature-flag: agent-blueprints-public-api
+  /agents/sessions/{agent_instance_session_id}:
+    get:
+      description: Retrieves an agent instance session by ID.
+      operationId: AgentInstanceSessionsController_get
+      parameters:
+        - name: agent_instance_session_id
+          required: true
+          in: path
+          description: The unique ID of the agent instance session.
+          schema:
+            type: string
+            example: agent_session_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentInstanceSession'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get an agent instance session
+      tags:
+        - agents.sessions
+      x-feature-flag: agent-blueprints-public-api
+  /agents/sessions/{agent_instance_session_id}/revoke:
+    post:
+      description: >-
+        Revokes an agent instance session, invalidating its refresh token and
+        every access token minted under it. Revocation is idempotent: revoking
+        an already-revoked session keeps the original `revoked_at`, and revoking
+        an already-expired session returns the session with `status: expired`
+        and a null `revoked_at`.
+      operationId: AgentInstanceSessionsController_revoke
+      parameters:
+        - name: agent_instance_session_id
+          required: true
+          in: path
+          description: The unique ID of the agent instance session.
+          schema:
+            type: string
+            example: agent_session_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentInstanceSession'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Revoke an agent instance session
+      tags:
+        - agents.sessions
+      x-feature-flag: agent-blueprints-public-api
   /api_keys/validations:
     post:
       description: Validate an API key value and return the API key object if valid.
@@ -22346,8 +23760,16 @@ info:
 tags:
   - name: admin-portal
     description: Endpoints for the Admin Portal API.
-  - name: agents
-    description: Manage agents for environments.
+  - name: agents.blueprints
+    description: Manage agent blueprints.
+  - name: agents.blueprints.tokens
+    description: Mint and validate agent access tokens.
+  - name: agents.instances
+    description: Manage agent instances.
+  - name: agents.registrations
+    description: Register agents and validate agent credentials.
+  - name: agents.sessions
+    description: Manage agent instance sessions.
   - name: api_keys
     description: Manage API keys for environments.
   - name: application.client-secrets
@@ -22563,6 +23985,13 @@ components:
       required:
         - external_auth_id
         - user
+    PaginationOrder:
+      type: string
+      enum:
+        - normal
+        - desc
+        - asc
+      example: desc
     ValidateApiKeyDto:
       type: object
       properties:
@@ -22585,13 +24014,6 @@ components:
             expiration.
           example: '2030-01-01T00:00:00.000Z'
           format: date-time
-    PaginationOrder:
-      type: string
-      enum:
-        - normal
-        - desc
-        - asc
-      example: desc
     RedirectUriDto:
       type: object
       properties:
@@ -26544,6 +27966,268 @@ components:
         - status
         - user_code
         - organizations
+    AgentBlueprint:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the agent blueprint object.
+          const: agent_blueprint
+        id:
+          type: string
+          description: Unique identifier of the agent blueprint.
+          example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+        name:
+          type: string
+          description: Human-readable name of the agent blueprint.
+          example: Prospecting Agent
+        description:
+          type:
+            - string
+            - 'null'
+          description: Human-readable description of the agent blueprint.
+          example: Finds and qualifies sales prospects.
+        permissions:
+          type: array
+          items:
+            type: string
+          description: >-
+            Permission slugs forming the ceiling on what sessions minted from
+            this blueprint may do.
+          example:
+            - crm:read
+            - email:send
+        invocable_by:
+          type: object
+          properties:
+            role_slugs:
+              type: array
+              items:
+                type: string
+              description: >-
+                Role slugs whose members may mint user-delegated sessions from
+                this blueprint.
+              example:
+                - manager
+            organization_ids:
+              type: array
+              items:
+                type: string
+              description: >-
+                Organizations in which sessions may be minted from this
+                blueprint, enforced on user-delegated, autonomous, and
+                agent-delegated mints.
+              example:
+                - org_01EHWNCE74X7JSDV0X3SZ3KJNY
+          required:
+            - role_slugs
+            - organization_ids
+          description: Who may mint sessions from this blueprint.
+        session_settings:
+          type: object
+          properties:
+            max_age_seconds:
+              type: integer
+              description: >-
+                Maximum lifetime of a session in seconds; refreshes never extend
+                a session past this.
+              example: 3600
+            access_token_ttl_seconds:
+              type: integer
+              description: Lifetime of each minted access token in seconds.
+              example: 300
+            refresh_token_ttl_seconds:
+              type: integer
+              description: Lifetime of each rotated refresh token in seconds.
+              example: 3600
+          required:
+            - max_age_seconds
+            - access_token_ttl_seconds
+            - refresh_token_ttl_seconds
+          description: Token and session lifetimes for sessions minted from this blueprint.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the agent blueprint was created.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the agent blueprint was last updated.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - name
+        - description
+        - permissions
+        - invocable_by
+        - session_settings
+        - created_at
+        - updated_at
+    AgentInstance:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the agent instance object.
+          const: agent_instance
+        id:
+          type: string
+          description: Unique identifier of the agent instance.
+          example: agent_01EHWNCE74X7JSDV0X3SZ3KJNY
+        agent_blueprint_id:
+          type: string
+          description: The blueprint this instance was minted from.
+          example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+        organization_id:
+          type: string
+          description: The organization the instance acts within.
+          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        organization_membership_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The organization membership of the delegating user; `null` for
+            autonomous instances.
+          example: om_01EHWNCE74X7JSDV0X3SZ3KJNY
+        type:
+          type: string
+          enum:
+            - delegated
+            - autonomous
+          description: >-
+            Whether the instance acts on behalf of a specific user (`delegated`)
+            or as itself (`autonomous`).
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the agent instance was created.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the agent instance was last updated.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - agent_blueprint_id
+        - organization_id
+        - organization_membership_id
+        - type
+        - created_at
+        - updated_at
+    AgentToken:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: The agent access token (a JWT) carrying the effective permissions.
+          example: eyJhbGciOiJSUzI1NiIsImtpZCI6...
+        token_type:
+          type: string
+          description: Always `Bearer`.
+          const: Bearer
+        expires_in:
+          type: integer
+          description: Number of seconds until the access token expires.
+          example: 300
+        refresh_token:
+          type: string
+          description: >-
+            Single-use refresh token for rotating the access token within the
+            session lifetime.
+          example: njGkA8Wyht0GBEGGA0Zh1Q3wZzL2...
+        agent_instance_id:
+          type: string
+          description: The agent instance the session belongs to.
+          example: agent_01EHWNCE74X7JSDV0X3SZ3KJNY
+        new_instance:
+          type: boolean
+          description: >-
+            Whether this mint created the agent instance: `true` only for the
+            mint that inserted the row, `false` when an existing instance was
+            reused (including when a concurrent mint inserted it first).
+          example: false
+        agent_instance_session_id:
+          type: string
+          description: The backing agent instance session.
+          example: agent_session_01EHWNCE74X7JSDV0X3SZ3KJNY
+        permissions:
+          type: array
+          items:
+            type: string
+          description: The effective permission slugs carried by the token.
+          example:
+            - crm:read
+      required:
+        - access_token
+        - token_type
+        - expires_in
+        - refresh_token
+        - agent_instance_id
+        - new_instance
+        - agent_instance_session_id
+        - permissions
+    AgentInstanceSession:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the agent instance session object.
+          const: agent_instance_session
+        id:
+          type: string
+          description: Unique identifier of the agent instance session.
+          example: agent_session_01EHWNCE74X7JSDV0X3SZ3KJNY
+        agent_instance_id:
+          type: string
+          description: The agent instance the session belongs to.
+          example: agent_01EHWNCE74X7JSDV0X3SZ3KJNY
+        status:
+          type: string
+          enum:
+            - active
+            - revoked
+            - expired
+          description: >-
+            Derived from `revoked_at` and `expires_at` at read time; a revoked
+            session stays `revoked` even after it expires.
+        expires_at:
+          type: string
+          format: date-time
+          description: Timestamp when the session expires.
+          example: '2026-01-15T13:00:00.000Z'
+        revoked_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Timestamp when the session was revoked; `null` if it has not been
+            revoked.
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the session was created.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the session was last updated.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - agent_instance_id
+        - status
+        - expires_at
+        - revoked_at
+        - created_at
+        - updated_at
     ApiKey:
       type: object
       properties:
@@ -37701,6 +39385,7 @@ components:
                         - organizations
                         - events
                         - sessions
+                        - auditLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -37747,6 +39432,7 @@ components:
                         - organizations
                         - events
                         - sessions
+                        - auditLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -37793,6 +39479,7 @@ components:
                         - organizations
                         - events
                         - sessions
+                        - auditLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -37839,6 +39526,7 @@ components:
                         - organizations
                         - events
                         - sessions
+                        - auditLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
