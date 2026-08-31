@@ -25,6 +25,12 @@ export const mountRules: Record<string, string> = {
   // every language. The endpoint is net-new, so there is no compat baseline.
   Client: 'ClientApi',
 
+  // Agent sub-services -> Agents
+  // The agent endpoints are tagged per sub-resource (`agents.blueprints`,
+  // `agents.instances`, `agents.registrations`, ...) so the API reference
+  // nests them. Fold them back onto Agents to keep `client.agents.*`.
+  'Agents*': 'Agents',
+
   // MFA sub-services -> MultiFactorAuth
   MultiFactorAuthChallenges: 'MultiFactorAuth',
 
