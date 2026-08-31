@@ -57,14 +57,14 @@
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
-    "@workos/oagen": "^0.29.2",
-    "@workos/oagen-emitters": "^0.24.6",
+    "@workos/oagen": "^0.29.3",
+    "@workos/oagen-emitters": "^0.24.7",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^5.4.1",
     "openapi-to-postmanv2": "^6.3.3",
     "tsdown": "^0.22.14",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }
 }
