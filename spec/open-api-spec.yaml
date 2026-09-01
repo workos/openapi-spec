@@ -74,6 +74,10 @@ paths:
                         - org_01EHWNCE74X7JSDV0X3SZ3KJNY
                   description: Who may mint sessions from this blueprint.
                 session_settings:
+                  default:
+                    max_age_seconds: 3600
+                    access_token_ttl_seconds: 300
+                    refresh_token_ttl_seconds: 3600
                   type: object
                   properties:
                     max_age_seconds:
@@ -110,7 +114,6 @@ paths:
                     blueprint.
               required:
                 - name
-                - session_settings
               description: Configuration for the new agent blueprint.
       responses:
         '201':
