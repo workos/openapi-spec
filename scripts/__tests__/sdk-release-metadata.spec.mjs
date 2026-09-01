@@ -354,6 +354,71 @@ for (const [oldType, newType] of narrowings) {
   });
 }
 
+// --- Defaulting reorders (workos-ios #26 regression set) ---
+// The spec made `session_settings` optional on the create-blueprint request.
+// Swift sorts defaulted parameters last, so `sessionSettings` slid to the end
+// and the other three shifted forward — four order-sensitive position changes,
+// all flagged breaking, from one required -> optional flip. iOS was the only SDK
+// of the nine in that batch to open a `feat(agents)!` PR.
+const sessionSettingsWidened = {
+  severity: 'breaking',
+  category: 'parameter_type_narrowed',
+  symbol: 'Agents.createBlueprint',
+  old: { parameter: 'sessionSettings', type: 'AgentBlueprintsCreateRequestSessionSetting' },
+  new: { parameter: 'sessionSettings', type: 'AgentBlueprintsCreateRequestSessionSetting?' },
+  message: 'Parameter type changed for "sessionSettings" on "Agents.createBlueprint"',
+};
+
+const positionChange = (parameter, from, to, category = 'parameter_position_changed_order_sensitive') => ({
+  severity: 'breaking',
+  category,
+  symbol: 'Agents.createBlueprint',
+  old: { parameter, position: String(from) },
+  new: { parameter, position: String(to) },
+  message: `Parameter "${parameter}" moved from position ${from} to ${to} on "Agents.createBlueprint"`,
+});
+
+const defaultingRotation = [
+  positionChange('sessionSettings', 1, 4),
+  positionChange('description', 2, 1),
+  positionChange('permissions', 3, 2),
+  positionChange('invocableBy', 4, 3),
+];
+
+test('factsFromCompat treats a required -> optional reorder as non-breaking', () => {
+  const report = { changes: [sessionSettingsWidened, ...defaultingRotation] };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 0);
+});
+
+test('factsFromCompat forgives the same rotation on a constructor', () => {
+  const report = {
+    changes: [
+      { ...sessionSettingsWidened, symbol: 'AgentBlueprintsCreateRequest.init' },
+      ...defaultingRotation.map((change) => ({
+        ...change,
+        symbol: 'AgentBlueprintsCreateRequest.init',
+        category: 'constructor_position_changed_order_sensitive',
+      })),
+    ],
+  };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 0);
+});
+
+// The controls: without a widening to explain it, a reorder is a real call-shape
+// change, and one unexplained move means the rotation model does not describe
+// this signature — every move on the symbol stays breaking.
+test('factsFromCompat keeps an unexplained reorder breaking', () => {
+  const report = { changes: [positionChange('description', 2, 1), positionChange('permissions', 1, 2)] };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+});
+
+test('factsFromCompat keeps a rotation breaking when one move does not fit', () => {
+  const report = {
+    changes: [sessionSettingsWidened, ...defaultingRotation, positionChange('name', 0, 2)],
+  };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+});
+
 // A parameter rename IS the call shape changing — the one genuine break in
 // batch fcf9458a, and the control that proves the widening check is not a
 // blanket suppression of the whole category.

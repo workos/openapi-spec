@@ -1111,6 +1111,66 @@ function parameterTypeWidened(change) {
   return [...oldMembers].every((member) => newMembers.has(member));
 }
 
+// A parameter that turns optional gains a default, and every emitter sorts
+// defaulted parameters after required ones — so a single widening reshuffles the
+// whole signature. The compat tool reports each displaced parameter as its own
+// order-sensitive position change, all flagged breaking, so one required →
+// optional flip in the spec arrives as several "argument arrangement changed"
+// entries. Under our policy that flip is widening, and so is the reshuffle it
+// forces. Recognize the exact rotation: each widened parameter moves back, and
+// every other parameter shifts forward by the number of widened parameters that
+// jumped over it. A move that arithmetic cannot explain is a real reorder, and
+// then every move on that symbol stays breaking — the signature changed for some
+// other reason too and the rotation model no longer describes it.
+const ORDER_SENSITIVE_POSITION_CATEGORIES = new Set([
+  'parameter_position_changed_order_sensitive',
+  'constructor_position_changed_order_sensitive',
+]);
+
+function paramName(change) {
+  return String(change?.old?.parameter ?? change?.new?.parameter ?? '');
+}
+
+// Collect the position changes explainable as defaulting fallout, keyed by
+// change identity so `compatChangeIsBreaking` can test membership.
+function defaultingReorders(changes) {
+  const bySymbol = new Map();
+  for (const change of changes) {
+    const symbol = String(change?.symbol ?? '');
+    const category = String(change?.category ?? '');
+    if (!symbol) continue;
+    const entry = bySymbol.get(symbol) ?? { widened: new Set(), moves: [] };
+    if (category === 'parameter_type_narrowed' && parameterTypeWidened(change)) {
+      entry.widened.add(paramName(change));
+    } else if (ORDER_SENSITIVE_POSITION_CATEGORIES.has(category)) {
+      entry.moves.push(change);
+    }
+    bySymbol.set(symbol, entry);
+  }
+
+  const forgiven = new Set();
+  for (const { widened, moves } of bySymbol.values()) {
+    if (moves.length === 0) continue;
+    const positions = moves.map((change) => ({
+      change,
+      name: paramName(change),
+      from: Number(change?.old?.position),
+      to: Number(change?.new?.position),
+    }));
+    if (positions.some(({ from, to }) => !Number.isInteger(from) || !Number.isInteger(to))) continue;
+    // Only widened parameters moving back can push anything forward.
+    const pushers = positions.filter(({ name, from, to }) => widened.has(name) && to > from);
+    if (pushers.length === 0) continue;
+    const explains = ({ name, from, to }) => {
+      if (widened.has(name)) return to > from;
+      const jumpedOver = pushers.filter((pusher) => pusher.from < from && pusher.to >= from).length;
+      return to === from - jumpedOver;
+    };
+    if (positions.every(explains)) for (const { change } of positions) forgiven.add(change);
+  }
+  return forgiven;
+}
+
 // A type the compat tool itself reports as renamed into a structural superset is
 // not a call-shape change: every field access and method call on the new type
 // still resolves, and Python/Ruby additionally emit `Old = New` aliases so the
@@ -1124,10 +1184,11 @@ const SUPERSET_RENAME_REMEDIATION = /appears to have been renamed to|Owned by re
 // `symbol_removed`/`symbol_renamed` carry no kind, so split owner from member and
 // consult the IR: a member of a model/enum is a property (field rename/removal —
 // not breaking); a whole type/service or a service/client member is call surface.
-function compatChangeIsBreaking(change, indexes) {
+function compatChangeIsBreaking(change, indexes, forgivenReorders) {
   const category = String(change.category ?? '');
   if (NON_BREAKING_COMPAT_CATEGORIES.has(category)) return false;
   if (category === 'parameter_type_narrowed' && parameterTypeWidened(change)) return false;
+  if (ORDER_SENSITIVE_POSITION_CATEGORIES.has(category) && forgivenReorders?.has(change)) return false;
   if (category === 'symbol_removed' || category === 'symbol_renamed') {
     if (SUPERSET_RENAME_REMEDIATION.test(String(change.remediation ?? ''))) return false;
     const symbol = String(change.symbol ?? '');
@@ -1179,13 +1240,14 @@ export function factsFromCompat(compatReport, existingFacts, indexes) {
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
   const unresolvedRoots = new Set();
   const renames = renamesFromCompat(compatReport);
+  const forgivenReorders = defaultingReorders(compatReport?.changes ?? []);
 
   // Only one breaking fact survives per scope (the dedup below), so prefer the
   // sync symbol over its `Async*` mirror when both changed — the sync surface
   // is the primary public API and reads better in the changelog.
   const isAsync = (change) => (/^Async(?=[A-Z])/.test(String(change.symbol ?? '')) ? 1 : 0);
   const breakingChanges = (compatReport?.changes ?? [])
-    .filter((change) => change.severity === 'breaking' && compatChangeIsBreaking(change, indexes))
+    .filter((change) => change.severity === 'breaking' && compatChangeIsBreaking(change, indexes, forgivenReorders))
     .sort((a, b) => isAsync(a) - isAsync(b));
 
   for (const change of breakingChanges) {
