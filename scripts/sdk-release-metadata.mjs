@@ -1073,6 +1073,53 @@ const NON_BREAKING_COMPAT_CATEGORIES = new Set([
   'default_value_changed',
 ]);
 
+// `parameter_type_narrowed` is direction-blind: the compat tool emits it for any
+// parameter type change, so a *widened* type arrives flagged breaking even though
+// every existing call still compiles (`code: str` → `str | None`, or a request
+// union gaining a variant). Split both sides into union members and compare —
+// old ⊆ new is a widening. Only a genuine narrowing changes how callers call.
+//
+// Nullability is spelled differently per emitter, so normalize the common forms
+// to a `null` member first: `T | None` (Python), `T?` (Kotlin/Swift/C#),
+// `?T` (PHP), `T | null`, `Optional[T]`. An unrecognized spelling simply fails to
+// match and the change stays breaking — this must never silently drop a real one.
+function unionMembers(type) {
+  const normalized = String(type ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^Optional\[(.+)\]$/, '$1 | None');
+  if (!normalized) return null;
+  const members = normalized
+    .split('|')
+    .map((member) => member.trim())
+    .filter(Boolean)
+    .map((member) => {
+      // `?T` / `T?` are the same statement as a `null` union member.
+      if (member.startsWith('?')) return [member.slice(1).trim(), 'null'];
+      if (member.endsWith('?')) return [member.slice(0, -1).trim(), 'null'];
+      return [member === 'None' ? 'null' : member];
+    })
+    .flat();
+  return members.length > 0 ? new Set(members) : null;
+}
+
+function parameterTypeWidened(change) {
+  const oldMembers = unionMembers(change?.old?.type);
+  const newMembers = unionMembers(change?.new?.type);
+  if (!oldMembers || !newMembers) return false;
+  // Every member callers could already pass must still be accepted.
+  return [...oldMembers].every((member) => newMembers.has(member));
+}
+
+// A type the compat tool itself reports as renamed into a structural superset is
+// not a call-shape change: every field access and method call on the new type
+// still resolves, and Python/Ruby additionally emit `Old = New` aliases so the
+// old name keeps working outright. The tool only states this in `remediation`
+// prose (machine-generated from a fixed template — there is no structured
+// `renamedTo` field yet), so match the template conservatively; anything else
+// stays breaking. Replace this with the structured field once oagen exposes one.
+const SUPERSET_RENAME_REMEDIATION = /appears to have been renamed to|Owned by renamed symbol/;
+
 // Decide whether a breaking-severity compat change is breaking under our policy.
 // `symbol_removed`/`symbol_renamed` carry no kind, so split owner from member and
 // consult the IR: a member of a model/enum is a property (field rename/removal —
@@ -1080,13 +1127,21 @@ const NON_BREAKING_COMPAT_CATEGORIES = new Set([
 function compatChangeIsBreaking(change, indexes) {
   const category = String(change.category ?? '');
   if (NON_BREAKING_COMPAT_CATEGORIES.has(category)) return false;
+  if (category === 'parameter_type_narrowed' && parameterTypeWidened(change)) return false;
   if (category === 'symbol_removed' || category === 'symbol_renamed') {
+    if (SUPERSET_RENAME_REMEDIATION.test(String(change.remediation ?? ''))) return false;
     const symbol = String(change.symbol ?? '');
     const dot = symbol.lastIndexOf('.');
     if (dot === -1) return true; // whole type/service removed or renamed
     const owner = symbol.slice(0, dot).replace(/^Async(?=[A-Z])/, '');
     if (indexes?.serviceNames?.has(owner) || owner === 'Client') return true;
     if (indexes?.typeNames?.has(owner)) return false;
+    // Emitters name inline enums `<Model><Field>Literal`; the IR only knows the
+    // undecorated enum, so without this the owner looks unknown and a dropped
+    // enum member (`…ConnectionTypeLiteral.DiscordOAuth`) falls through to the
+    // conservative branch as breaking — the same decoration problem the `Async`
+    // prefix strip above solves.
+    if (owner.endsWith('Literal') && indexes?.typeNames?.has(owner.slice(0, -'Literal'.length))) return false;
     return true; // unknown owner — preserve breaking rather than drop a real removal
   }
   return true;

@@ -304,3 +304,117 @@ test('factsFromCompat still dedups resolved scopes to one breaking fact', () => 
   const facts = factsFromCompat(report, [], EMPTY_INDEXES);
   assert.equal(facts.filter((fact) => fact.scope === 'sso').length, 1);
 });
+
+// --- Direction-aware compat severity (PR #139 regression set) ---
+// Policy: breaking means a change to how a function is called — its name,
+// parameter names, or argument arrangement. The compat tool's severity is
+// direction-blind, so a *widened* parameter type arrives flagged `breaking`
+// even though every existing call still compiles. Passing those through forced
+// spurious major bumps across all eight SDKs (batch fcf9458a: 3 of Python's 4
+// breaking entries were widenings or a surviving alias).
+
+const paramTypeChange = (oldType, newType) => ({
+  changes: [
+    {
+      severity: 'breaking',
+      category: 'parameter_type_narrowed',
+      symbol: 'SSO.get_profile_and_token',
+      old: { parameter: 'code', type: oldType },
+      new: { parameter: 'code', type: newType },
+      message: 'Parameter type changed for "code" on "SSO.get_profile_and_token"',
+    },
+  ],
+});
+
+const widenings = [
+  ['str', 'str | None'], // Python: required -> optional
+  ['List<String>', 'List<String>?'], // Kotlin/Swift/C# nullable suffix
+  ['string', '?string'], // PHP nullable prefix
+  ['A | B', 'A | B | C'], // request union gained a variant
+  ['Optional[str]', 'str | None'], // same type, different spelling
+];
+
+for (const [oldType, newType] of widenings) {
+  test(`factsFromCompat treats widened parameter "${oldType}" -> "${newType}" as non-breaking`, () => {
+    assert.equal(factsFromCompat(paramTypeChange(oldType, newType), [], EMPTY_INDEXES).length, 0);
+  });
+}
+
+// The mirror image must survive: dropping a member callers could already pass
+// is a genuine break, and so is swapping the type outright.
+const narrowings = [
+  ['str | None', 'str'],
+  ['A | B | C', 'A | B'],
+  ['UpdateAuditLogsRetention', 'UpdateOrganizationAuditLogsRetentionParamsBody'],
+];
+
+for (const [oldType, newType] of narrowings) {
+  test(`factsFromCompat keeps narrowed parameter "${oldType}" -> "${newType}" breaking`, () => {
+    assert.equal(factsFromCompat(paramTypeChange(oldType, newType), [], EMPTY_INDEXES).length, 1);
+  });
+}
+
+// A parameter rename IS the call shape changing — the one genuine break in
+// batch fcf9458a, and the control that proves the widening check is not a
+// blanket suppression of the whole category.
+test('factsFromCompat keeps a renamed parameter breaking', () => {
+  const report = {
+    changes: [
+      {
+        severity: 'breaking',
+        category: 'parameter_renamed',
+        symbol: 'AuditLogs.update_organization_audit_logs_retention',
+        old: { parameter: 'retention_period_in_days' },
+        new: { parameter: 'retention' },
+        message: 'Parameter "retention_period_in_days" renamed to "retention"',
+      },
+    ],
+  };
+  const facts = factsFromCompat(report, [], EMPTY_INDEXES);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'audit_logs');
+});
+
+// `ValidateApiKey` was deduplicated into a structurally identical type, and the
+// Python/Ruby emitters kept the old name working (`ValidateApiKey =
+// CreateSAMLIdpSigningCertificate`). The compat tool reports it as removed but
+// says otherwise in `remediation`; trust the remediation.
+test('factsFromCompat treats a superset-rename removal as non-breaking', () => {
+  const report = {
+    changes: [
+      {
+        severity: 'breaking',
+        category: 'symbol_removed',
+        symbol: 'ValidateApiKey',
+        message: 'Symbol "ValidateApiKey" was removed',
+        remediation:
+          'Type "ValidateApiKey" appears to have been renamed to "CreateSAMLIdpSigningCertificate" — the new type has every field of the old (a non-strict superset).',
+      },
+    ],
+  };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 0);
+});
+
+// Without that remediation the removal stands — the guard must not swallow a
+// type that really did disappear.
+test('factsFromCompat keeps a plain symbol removal breaking', () => {
+  assert.equal(factsFromCompat(compatBreak('ValidateApiKey'), [], EMPTY_INDEXES).length, 1);
+});
+
+// Emitters decorate inline enums as `<Model><Field>Literal`, which the IR never
+// names, so a dropped enum member looked like an unknown owner and fell through
+// to the conservative breaking branch. An enum member is not call shape.
+test('factsFromCompat resolves a decorated Literal enum owner and drops the member removal', () => {
+  const indexes = buildIndexes([{ models: [], enums: [{ name: 'ConnectionType', values: [] }], services: [] }, null]);
+  const report = {
+    changes: [
+      {
+        severity: 'breaking',
+        category: 'symbol_removed',
+        symbol: 'ConnectionTypeLiteral.DiscordOAuth',
+        message: 'Symbol "ConnectionTypeLiteral.DiscordOAuth" was removed',
+      },
+    ],
+  };
+  assert.equal(factsFromCompat(report, [], indexes).length, 0);
+});
