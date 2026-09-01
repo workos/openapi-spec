@@ -46,6 +46,17 @@ export const operationHints: Record<string, OperationHint> = {
   // -- Admin Portal -------------------------------------------------------------
   'POST /portal/generate_link': { name: 'generate_link' },
 
+  // -- Agents -- disambiguate co-mounted validate operations --------------------
+  // `Agents*` folds every agents sub-service onto one service, so both
+  // `.../tokens/validate` and `/agents/credentials/validate` derive
+  // `create_validate` and collide in assertUniqueResolvedMethods. Rename the
+  // blueprint-token one: `/agents/credentials/validate` already ships as
+  // `create_validate`, and renaming that would break every released SDK. Pairs
+  // with `create_blueprint_token` from `POST /agents/blueprints/{id}/tokens`.
+  'POST /agents/blueprints/{agent_blueprint_id}/tokens/validate': {
+    name: 'validate_blueprint_token',
+  },
+
   // -- Feature Flags -- disambiguate co-mounted list operations -----------------
   'GET /organizations/{organizationId}/feature-flags': { name: 'list_organization_feature_flags' },
   'GET /user_management/users/{userId}/feature-flags': { name: 'list_user_feature_flags' },
