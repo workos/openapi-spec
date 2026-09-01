@@ -975,6 +975,139 @@ paths:
       tags:
         - agents.blueprints.tokens
       x-feature-flag: agent-blueprints-public-api
+  /agents/blueprints/{agent_blueprint_id}/tokens/validate:
+    post:
+      description: >-
+        Validates an agent access token: verifies its signature against the
+        environment, that it was minted under this blueprint, and that the
+        backing session is live (not revoked or expired, and — for delegated
+        sessions — that the delegating user session has not ended). Returns the
+        token claims and session metadata when valid; invalid tokens are
+        reported as errors with stable codes.
+      operationId: AgentBlueprintsTokenController_validateToken
+      parameters:
+        - name: agent_blueprint_id
+          required: true
+          in: path
+          description: The unique ID of the agent blueprint.
+          schema:
+            type: string
+            example: agent_blueprint_01EHWNCE74X7JSDV0X3SZ3KJNY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_access_token:
+                  type: string
+                  minLength: 1
+                  description: The agent access token (a JWT) to validate.
+                  example: eyJhbGciOiJSUzI1NiIsImtpZCI6...
+              required:
+                - agent_access_token
+              description: The agent access token to validate.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTokenValidation'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_request
+                        const: invalid_request
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_agent_access_token
+                        const: invalid_agent_access_token
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: session_revoked
+                        const: session_revoked
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: session_expired
+                        const: session_expired
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: user_session_ended
+                        const: user_session_ended
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Validate an agent token
+      tags:
+        - agents.blueprints.tokens
+      x-feature-flag: agent-blueprints-public-api
   /agents/claims/attempts:
     patch:
       description: >-
@@ -28301,6 +28434,63 @@ components:
         - new_instance
         - agent_instance_session_id
         - permissions
+    AgentTokenValidation:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: >-
+            Always `true`: an invalid token is reported as an error with a
+            stable code, never as a `200`.
+          const: true
+        agent_instance_id:
+          type: string
+          description: The agent instance the token was minted for.
+          example: agent_01EHWNCE74X7JSDV0X3SZ3KJNY
+        agent_instance_session_id:
+          type: string
+          description: The agent instance session backing the token.
+          example: agent_session_01EHWNCE74X7JSDV0X3SZ3KJNY
+        organization_id:
+          type: string
+          description: The organization the agent acts within.
+          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        permissions:
+          type: array
+          items:
+            type: string
+          description: The effective permission slugs carried by the token.
+          example:
+            - crm:read
+        intent:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The caller-supplied context echoed into the token at mint time, or
+            `null` when none was given.
+          example: renew-contract-123
+        acting_user_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The delegating user carried in the `act.sub` claim of the token, or
+            `null` for autonomous sessions.
+          example: userland_user_01EHWNCE74X7JSDV0X3SZ3KJNY
+        session_expires_at:
+          type: string
+          description: When the backing agent instance session expires.
+          example: '2024-01-01T00:00:00.000Z'
+      required:
+        - valid
+        - agent_instance_id
+        - agent_instance_session_id
+        - organization_id
+        - permissions
+        - intent
+        - acting_user_id
+        - session_expires_at
     AgentInstanceSession:
       type: object
       properties:
