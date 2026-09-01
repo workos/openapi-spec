@@ -124,4 +124,15 @@ PY
   EXTRA_ARGS+=(--api-surface "$TMP_SURFACE")
 fi
 
-exec npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" --output "$OUTPUT" "${EXTRA_ARGS[@]}"
+# `${EXTRA_ARGS[@]+…}` guard: macOS runners still ship bash 3.2, where expanding
+# an empty array under `set -u` is a fatal "unbound variable" error. Only `ios`
+# reaches line 127 with EXTRA_ARGS still empty (`--services` and the node
+# `--api-surface` branch both populate it), which is why that job alone was
+# affected: it reported success while generating nothing, then ran CI against
+# the unmodified checkout.
+#
+# Not fixable at the trap: with any EXIT trap installed, bash 3.2 hands the
+# handler `$?` == 0 for this particular fatal, so even `cleanup() { local s=$?;
+# …; exit $s; }` still exits 0. Ordinary command failures are unaffected — they
+# propagate through the trap correctly. Avoiding the error is the only fix.
+exec npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" --output "$OUTPUT" "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
