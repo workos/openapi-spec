@@ -423,7 +423,10 @@ function scopeFromName(name) {
   // resolve to `radar`, matching the `scopeFromFile` `/radar/` rule.
   if (/Radar/.test(name)) return 'radar';
   if (/^(Vault|Object$|ObjectMetadata|ObjectSummary|ObjectVersion|ObjectWithoutValue)/.test(name)) return 'vault';
-  if (/^AuditLog/.test(name)) return 'audit_logs';
+  // Unanchored so organization-prefixed retention surfaces
+  // (`UpdateOrganizationAuditLogsRetentionParams`) resolve to `audit_logs`,
+  // matching the endpoint's `audit-logs` tag.
+  if (/^AuditLog|AuditLogsRetention/.test(name)) return 'audit_logs';
   // `/agents/*` standalone surface (`Agents.create_validate`, `.get_registration`,
   // `.update_attempts`) and agent-registration types.
   if (/^Agent/.test(name)) return 'agents';
