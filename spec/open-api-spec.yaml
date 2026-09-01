@@ -15404,7 +15404,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenBodyDto'
+              $ref: '#/components/schemas/TokenQueryDto'
       responses:
         '200':
           description: OK
@@ -27385,7 +27385,7 @@ components:
       required:
         - organization_id
         - user_id
-    TokenBodyDto:
+    TokenQueryDto:
       type: object
       properties:
         client_id:

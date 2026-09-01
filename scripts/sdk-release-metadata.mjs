@@ -423,7 +423,11 @@ function scopeFromName(name) {
   // resolve to `radar`, matching the `scopeFromFile` `/radar/` rule.
   if (/Radar/.test(name)) return 'radar';
   if (/^(Vault|Object$|ObjectMetadata|ObjectSummary|ObjectVersion|ObjectWithoutValue)/.test(name)) return 'vault';
-  if (/^AuditLog/.test(name)) return 'audit_logs';
+  // Unanchored so operation-derived param types keep the audit-logs scope:
+  // `UpdateOrganizationAuditLogsRetentionParams` is the synthetic `*Params`
+  // type for `PUT /organizations/{id}/audit_logs_retention`, so it has no IR
+  // counterpart to resolve against and only the name is left to go on.
+  if (/AuditLog/.test(name)) return 'audit_logs';
   // `/agents/*` standalone surface (`Agents.create_validate`, `.get_registration`,
   // `.update_attempts`) and agent-registration types.
   if (/^Agent/.test(name)) return 'agents';

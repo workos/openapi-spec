@@ -181,6 +181,10 @@ const compatSurfaceScopeCases = [
   { symbol: 'WaitlistUserStateLiteral', scope: 'user_management' },
   { symbol: 'AuthenticateResponseAuthenticationMethodLiteral.DiscordOAuth', scope: 'user_management' },
   { symbol: 'AuthenticationMethod', scope: 'user_management' },
+  // PR #137 regression: the synthetic `*Params` type for
+  // `PUT /organizations/{id}/audit_logs_retention` carries the audit-logs
+  // surface mid-name, so the `AuditLog` rule cannot be anchored.
+  { symbol: 'UpdateOrganizationAuditLogsRetentionParams.new', scope: 'audit_logs' },
 ];
 
 for (const { symbol, scope } of compatSurfaceScopeCases) {
