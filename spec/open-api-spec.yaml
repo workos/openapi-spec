@@ -10516,6 +10516,21 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '422':
           description: Unprocessable Entity
           content:
@@ -10657,6 +10672,21 @@ paths:
                   - message
         '404':
           description: Data integration not found for the given provider slug.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
           content:
             application/json:
               schema:
@@ -10898,6 +10928,21 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '422':
           description: >-
             The matched installation uses a different auth method than this
@@ -10991,6 +11036,21 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '422':
           description: >-
             The installation uses an auth method that is not yet supported by
@@ -11068,6 +11128,21 @@ paths:
           description: Unauthorized
         '404':
           description: Data integration not found for the given provider slug.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
           content:
             application/json:
               schema:
@@ -22107,6 +22182,21 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
       summary: Get a connected account
       tags:
         - user-management.data-providers
@@ -22149,6 +22239,21 @@ paths:
           description: The request is missing a valid API key.
         '404':
           description: The user, organization, or connected account was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
           content:
             application/json:
               schema:
@@ -22305,6 +22410,21 @@ paths:
           description: The request is missing a valid API key.
         '404':
           description: The user, organization, or connected account was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            Several connected accounts match this user for the provider; one
+            must be named.
           content:
             application/json:
               schema:
