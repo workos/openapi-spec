@@ -1398,7 +1398,6 @@ paths:
       summary: Link a claim attempt to an external user
       tags:
         - agents.registrations
-      x-feature-flag: agent-auth-public-api
   /agents/credentials/validate:
     post:
       description: >-
@@ -1491,7 +1490,6 @@ paths:
       summary: Validate an agent credential
       tags:
         - agents.registrations
-      x-feature-flag: agent-auth-public-api
   /agents/instances:
     get:
       description: >-
@@ -1730,7 +1728,6 @@ paths:
       summary: Get an agent registration
       tags:
         - agents.registrations
-      x-feature-flag: agent-auth-public-api
   /agents/sessions:
     get:
       description: >-
