@@ -10951,7 +10951,6 @@ paths:
       summary: Upsert client credentials for a connected account
       tags:
         - pipes
-      x-feature-flag: pipes-client-credentials
   /data-integrations/{slug}/credentials:
     post:
       description: >-
