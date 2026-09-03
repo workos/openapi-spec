@@ -43143,7 +43143,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example:
+                        example: &ref_34
                           - repo
                           - user:email
                       auth_method:
@@ -43193,7 +43193,7 @@ components:
                           `installation` scope, excluding any it declares as
                           secret. Only present when `auth_method` is
                           `client_credentials`.
-                        example:
+                        example: &ref_35
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -43256,6 +43256,151 @@ components:
                       - createdAt
                       - updatedAt
                   - type: 'null'
+              connected_accounts:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      description: Distinguishes the connected account object.
+                      const: connected_account
+                    id:
+                      type: string
+                      description: The unique identifier of the connected account.
+                      example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                    user_id:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The [User](/reference/authkit/user) identifier
+                        associated with this connection.
+                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                    organization_id:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The [Organization](/reference/organization) identifier
+                        associated with this connection, or `null` if not scoped
+                        to an organization.
+                      example: null
+                    scopes:
+                      type: array
+                      items:
+                        type: string
+                      description: The OAuth scopes granted for this connection.
+                      example: *ref_34
+                    auth_method:
+                      type: string
+                      enum:
+                        - oauth
+                        - api_key
+                        - client_credentials
+                      description: >-
+                        The authentication method used for this connection
+                        (`oauth`, `api_key`, or `client_credentials`). Defaults
+                        to `oauth` if absent.
+                      example: oauth
+                    api_key_last_4:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The last four characters of the API key, or `null` for
+                        OAuth connections.
+                      example: null
+                    client_id:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The client ID supplied for this connection. Only present
+                        when `auth_method` is `client_credentials`.
+                      example: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
+                    client_secret_last_4:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The last four characters of the client secret supplied
+                        for this connection, or `null` when it can't be read.
+                        Only present when `auth_method` is `client_credentials`.
+                      example: cdef
+                    config:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: >-
+                        The connection-level configuration values stored for
+                        this connection — the fields the provider declares at
+                        `installation` scope, excluding any it declares as
+                        secret. Only present when `auth_method` is
+                        `client_credentials`.
+                      example: *ref_35
+                    state:
+                      type: string
+                      enum:
+                        - connected
+                        - needs_reauthorization
+                        - disconnected
+                      description: >-
+                        The state of the connected account:
+
+                        - `connected`: The connection is active and tokens are
+                        valid.
+
+                        - `needs_reauthorization`: The user needs to reauthorize
+                        the connection, typically because required scopes have
+                        changed.
+
+                        - `disconnected`: The connection has been disconnected.
+                      example: connected
+                    created_at:
+                      type: string
+                      description: The timestamp when the connection was created.
+                      example: '2024-01-16T14:20:00.000Z'
+                    updated_at:
+                      type: string
+                      description: The timestamp when the connection was last updated.
+                      example: '2024-01-16T14:20:00.000Z'
+                    userlandUserId:
+                      type:
+                        - string
+                        - 'null'
+                      deprecated: true
+                      description: Use `user_id` instead.
+                    organizationId:
+                      type:
+                        - string
+                        - 'null'
+                      deprecated: true
+                      description: Use `organization_id` instead.
+                    createdAt:
+                      type: string
+                      deprecated: true
+                      description: Use `created_at` instead.
+                    updatedAt:
+                      type: string
+                      deprecated: true
+                      description: Use `updated_at` instead.
+                  required:
+                    - object
+                    - id
+                    - user_id
+                    - organization_id
+                    - scopes
+                    - state
+                    - created_at
+                    - updated_at
+                    - userlandUserId
+                    - organizationId
+                    - createdAt
+                    - updatedAt
+                description: >-
+                  The user's connected accounts for this provider in the
+                  requested ownership context.
             required:
               - object
               - id
@@ -43273,10 +43418,11 @@ components:
               - createdAt
               - updatedAt
               - connected_account
+              - connected_accounts
           description: >-
-            A list of [providers](/reference/pipes/provider), each including a
-            [`connected_account`](/reference/pipes/connected-account) field with
-            the user's connection status.
+            A list of [providers](/reference/pipes/provider), each including the
+            legacy `connected_account` field and the additive
+            `connected_accounts` collection.
       required:
         - object
         - data
