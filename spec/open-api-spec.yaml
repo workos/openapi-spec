@@ -10984,6 +10984,14 @@ paths:
                     Optional parameter to scope the connection to a specific
                     organization.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connected_account_id:
+                  type: string
+                  minLength: 1
+                  description: >-
+                    A [connected account](/reference/pipes/connected-account)
+                    identifier. Use this to select a specific connection when
+                    the user has several for this provider.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
               required:
                 - user_id
       responses:
@@ -11020,7 +11028,7 @@ paths:
         '401':
           description: Unauthorized
         '404':
-          description: Data integration not found for the given provider slug.
+          description: The data integration or selected connected account was not found.
           content:
             application/json:
               schema:
@@ -11098,6 +11106,14 @@ paths:
                     Optional parameter to scope the connection to a specific
                     organization.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connected_account_id:
+                  type: string
+                  minLength: 1
+                  description: >-
+                    A [connected account](/reference/pipes/connected-account)
+                    identifier. Use this to select a specific connection when
+                    the user has several for this provider.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
               required:
                 - user_id
       responses:
@@ -11123,7 +11139,7 @@ paths:
         '401':
           description: Unauthorized
         '404':
-          description: Data integration not found for the given provider slug.
+          description: The data integration or selected connected account was not found.
           content:
             application/json:
               schema:
@@ -22156,6 +22172,17 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: connected_account_id
+          required: false
+          in: query
+          description: >-
+            A [connected account](/reference/pipes/connected-account)
+            identifier. Use this to select a specific connection when the user
+            has several for this provider.
+          schema:
+            minLength: 1
+            example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
       responses:
         '200':
           description: The connected account was retrieved successfully.
@@ -22163,6 +22190,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConnectedAccount'
+        '400':
+          description: The connected account selector is malformed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '401':
           description: The request is missing a valid API key.
         '404':
@@ -22228,9 +22268,32 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: connected_account_id
+          required: false
+          in: query
+          description: >-
+            A [connected account](/reference/pipes/connected-account)
+            identifier. Use this to select the connection to delete.
+          schema:
+            minLength: 1
+            example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
       responses:
         '204':
           description: The connected account was deleted successfully.
+        '400':
+          description: The connected account selector is malformed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '401':
           description: The request is missing a valid API key.
         '404':
@@ -22389,6 +22452,16 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: connected_account_id
+          required: false
+          in: query
+          description: >-
+            A [connected account](/reference/pipes/connected-account)
+            identifier. Use this to select the connection to update.
+          schema:
+            minLength: 1
+            example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
       requestBody:
         required: true
         content:
@@ -22402,6 +22475,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConnectedAccount'
+        '400':
+          description: The connected account selector is malformed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '401':
           description: The request is missing a valid API key.
         '404':
