@@ -1171,6 +1171,65 @@ function defaultingReorders(changes) {
   return forgiven;
 }
 
+// The same fan-out from the other direction: inserting a defaulted parameter
+// ahead of existing ones (`parameter_added_non_terminal_optional`, itself only
+// soft-risk) shifts every later parameter back one slot, and the compat tool
+// reports each shift as its own order-sensitive position change flagged
+// breaking. A caller may omit any defaulted argument and the existing arguments
+// keep their relative order, so every existing call still compiles — under our
+// policy the insertion is widening and so are the shifts it forces (workos-ios
+// #28: `requestOptions` moved from position 3 to 4 on five Pipes methods).
+//
+// Recognize the exact displacement: each moved parameter's new position must be
+// its old position plus the number of inserted parameters now ahead of it. That
+// arithmetic needs the insertion's `new.position`; a report without one cannot
+// be placed and nothing on that symbol is forgiven. Merely counting insertions
+// is unsound — a parameter hopping over an unmoved neighbour while an insertion
+// pads the distance looks identical to a pure shift, because the report never
+// lists the unmoved parameter (the exhaustive test in
+// sdk-release-metadata.spec.mjs pins this). A move the arithmetic cannot explain
+// is a real reorder, and then every move on that symbol stays breaking. An
+// insertion and a required → optional flip on the same symbol in one regen are
+// judged by each model alone; such a mixed signature stays breaking.
+const NON_TERMINAL_INSERTION_CATEGORIES = new Set(['parameter_added_non_terminal_optional']);
+
+function positionOf(value) {
+  if (value === null || value === undefined || value === '') return NaN;
+  return Number(value);
+}
+
+function insertionShifts(changes) {
+  const bySymbol = new Map();
+  for (const change of changes) {
+    const symbol = String(change?.symbol ?? '');
+    const category = String(change?.category ?? '');
+    if (!symbol) continue;
+    const entry = bySymbol.get(symbol) ?? { inserted: [], unplaced: false, moves: [] };
+    if (NON_TERMINAL_INSERTION_CATEGORIES.has(category)) {
+      const position = positionOf(change?.new?.position);
+      if (Number.isInteger(position)) entry.inserted.push(position);
+      else entry.unplaced = true;
+    } else if (ORDER_SENSITIVE_POSITION_CATEGORIES.has(category)) {
+      entry.moves.push(change);
+    }
+    bySymbol.set(symbol, entry);
+  }
+
+  const forgiven = new Set();
+  for (const { inserted, unplaced, moves } of bySymbol.values()) {
+    if (unplaced || inserted.length === 0 || moves.length === 0) continue;
+    const positions = moves.map((change) => ({
+      change,
+      from: positionOf(change?.old?.position),
+      to: positionOf(change?.new?.position),
+    }));
+    if (positions.some(({ from, to }) => !Number.isInteger(from) || !Number.isInteger(to))) continue;
+    const explains = ({ from, to }) => to === from + inserted.filter((position) => position < to).length;
+    if (positions.every(explains)) for (const { change } of positions) forgiven.add(change);
+  }
+  return forgiven;
+}
+
 // A type the compat tool itself reports as renamed into a structural superset is
 // not a call-shape change: every field access and method call on the new type
 // still resolves, and Python/Ruby additionally emit `Old = New` aliases so the
@@ -1240,7 +1299,8 @@ export function factsFromCompat(compatReport, existingFacts, indexes) {
   const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
   const unresolvedRoots = new Set();
   const renames = renamesFromCompat(compatReport);
-  const forgivenReorders = defaultingReorders(compatReport?.changes ?? []);
+  const changes = compatReport?.changes ?? [];
+  const forgivenReorders = new Set([...defaultingReorders(changes), ...insertionShifts(changes)]);
 
   // Only one breaking fact survives per scope (the dedup below), so prefer the
   // sync symbol over its `Async*` mirror when both changed — the sync surface
