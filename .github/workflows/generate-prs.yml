@@ -54,9 +54,13 @@ jobs:
 
       - name: Load SDK matrix
         id: set-matrix
+        # The input is free-form text, so it reaches the script through env —
+        # never by ${{ }} interpolation into `run`, which would let a dispatcher
+        # execute shell syntax on the runner before validation.
+        env:
+          LANGUAGES_INPUT: ${{ inputs.languages }}
         run: |
-          LANGS="${{ inputs.languages }}"
-          LANGS="${LANGS// /}"
+          LANGS="${LANGUAGES_INPUT// /}"
           if [ -z "$LANGS" ] || [ "$LANGS" = "all" ]; then
             MATRIX=$(jq -c . .github/sdk-matrix.json)
           else
