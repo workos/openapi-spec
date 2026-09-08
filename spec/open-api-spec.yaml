@@ -10617,6 +10617,14 @@ paths:
                     Optional parameter to scope the connection to a specific
                     organization.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connected_account_id:
+                  type: string
+                  pattern: ^data_installation_.+$
+                  description: >-
+                    A [connected account](/reference/pipes/connected-account)
+                    identifier. Use this to rotate a specific existing
+                    connection.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 secret:
                   type: string
                   minLength: 1
@@ -10672,7 +10680,7 @@ paths:
                 required:
                   - message
         '404':
-          description: Data integration not found for the given provider slug.
+          description: The data integration or selected connected account was not found.
           content:
             application/json:
               schema:
@@ -10691,14 +10699,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The matched installation uses a different auth method than this
@@ -10847,6 +10848,14 @@ paths:
                     Optional parameter to scope the connection to a specific
                     organization.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connected_account_id:
+                  type: string
+                  pattern: ^data_installation_.+$
+                  description: >-
+                    A [connected account](/reference/pipes/connected-account)
+                    identifier. Use this to rotate a specific existing
+                    connection.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 client_id:
                   type: string
                   minLength: 1
@@ -10917,7 +10926,7 @@ paths:
                 required:
                   - message
         '404':
-          description: Data integration not found for the given provider slug.
+          description: The data integration or selected connected account was not found.
           content:
             application/json:
               schema:
@@ -10936,14 +10945,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The matched installation uses a different auth method than this
@@ -11082,14 +11084,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The installation uses an auth method that is not yet supported by
@@ -11224,14 +11219,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The matched installation uses a different auth method than this
@@ -22291,14 +22279,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
       summary: Get a connected account
       tags:
         - user-management.data-providers
@@ -22382,14 +22363,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
       summary: Delete a connected account
       tags:
         - user-management.data-providers
@@ -22576,14 +22550,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
       summary: Update a connected account
       tags:
         - user-management.data-providers
@@ -42847,6 +42814,25 @@ components:
           required:
             - active
             - error
+    AccountSelectionRequiredError:
+      type: object
+      properties:
+        code:
+          type: string
+          description: >-
+            Indicates that several connected accounts match and the request must
+            name one.
+          example: account_selection_required
+          const: account_selection_required
+        message:
+          type: string
+          description: A human-readable explanation of the ambiguity.
+          example: >-
+            Several connected accounts match this user for this provider. Name
+            one with a connected account id.
+      required:
+        - code
+        - message
     AuthMethodMismatchError:
       type: object
       properties:
