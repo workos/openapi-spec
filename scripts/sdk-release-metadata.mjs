@@ -1294,51 +1294,60 @@ function resolveCompatScope(root, indexes) {
   return { scope: 'sdk', source: 'unresolved', candidates: [] };
 }
 
-export function factsFromCompat(compatReport, existingFacts, indexes) {
+export function factsFromCompat(compatReport, _existingFacts, indexes) {
   const facts = [];
-  const existingBreakingScopes = new Set(existingFacts.filter((fact) => fact.severity === 'breaking').map((fact) => fact.scope));
-  const unresolvedRoots = new Set();
+  const seen = new Set();
   const renames = renamesFromCompat(compatReport);
   const changes = compatReport?.changes ?? [];
   const forgivenReorders = new Set([...defaultingReorders(changes), ...insertionShifts(changes)]);
 
-  // Only one breaking fact survives per scope (the dedup below), so prefer the
-  // sync symbol over its `Async*` mirror when both changed — the sync surface
-  // is the primary public API and reads better in the changelog.
+  // Every breaking compat change becomes its own fact. groupFacts merges a
+  // scope's facts under one entry with a bullet per change, so a wide batch
+  // still reads as one changelog heading while every affected symbol is named.
+  // The former one-fact-per-scope dedup kept whichever change happened to sort
+  // first and dropped the rest — in workos-ios #28 the survivor was a
+  // `requestOptions` shift that was not a source break, while the two methods
+  // whose arguments really were reordered never appeared in the PR at all. A
+  // breaking spec-diff fact for the scope used to suppress its compat facts the
+  // same way; the group now carries both (`_existingFacts` is kept for call
+  // compatibility only).
+  //
+  // Only mirrors of a change already recorded are skipped: Python's `Async*`
+  // client re-reports every sync change under a decorated symbol, and Kotlin's
+  // `*Suspend` variant pairs with its base method in renamesFromCompat. Sort
+  // the sync symbol first so it is the one that reads out.
   const isAsync = (change) => (/^Async(?=[A-Z])/.test(String(change.symbol ?? '')) ? 1 : 0);
-  const breakingChanges = (compatReport?.changes ?? [])
+  const breakingChanges = changes
     .filter((change) => change.severity === 'breaking' && compatChangeIsBreaking(change, indexes, forgivenReorders))
     .sort((a, b) => isAsync(a) - isAsync(b));
 
   for (const change of breakingChanges) {
+    const symbol = String(change.symbol ?? '');
     // Strip the Python async-client prefix (`AsyncPipes` → `Pipes`) so async
-    // surface symbols resolve to the same scope as their sync counterparts.
-    const root = String(change.symbol ?? '').split('.')[0].replace(/^Async(?=[A-Z])/, '');
+    // surface symbols resolve to the same scope as, and dedup against, their
+    // sync counterparts. The same prefix inside `old`/`new` (a removed symbol
+    // names itself there) is stripped from the identity key only.
+    const undecorated = symbol.replace(/^Async(?=[A-Z])/, '');
+    const renamed = renames.get(symbol);
+    const key = renamed
+      ? JSON.stringify(['rename', renamed.from, renamed.to])
+      : JSON.stringify([change.category ?? '', undecorated, change.old ?? null, change.new ?? null]).replace(/"Async(?=[A-Z])/g, '"');
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const root = undecorated.split('.')[0];
     const resolution = resolveCompatScope(root, indexes);
-    const targetScope = resolution.scope;
-    // Unresolved symbols are exempt from the per-scope dedup: strict-scopes
-    // validation must name every one of them in a single run, not reveal them
-    // one CI round-trip at a time as each earlier symbol gets mapped. They
-    // dedup per root instead — several languages report the same removal.
-    if (targetScope === 'sdk') {
-      if (unresolvedRoots.has(root)) continue;
-      unresolvedRoots.add(root);
-    } else if (existingBreakingScopes.has(targetScope)) {
-      continue;
-    }
-    const renamed = renames.get(String(change.symbol ?? ''));
     addFact(facts, {
       severity: 'breaking',
-      scope: targetScope,
+      scope: resolution.scope,
       scope_source: `compat_${resolution.source}`,
-      scope_candidates: resolution.candidates.length > 0 ? resolution.candidates : [targetScope],
+      scope_candidates: resolution.candidates.length > 0 ? resolution.candidates : [resolution.scope],
       kind: renamed ? 'sdk-surface-renamed' : 'sdk-surface-breaking',
       symbols: renamed ? [renamed.from, renamed.to] : [change.symbol],
       detail: renamed
         ? `SDK surface change: \`${renamed.from}\` was renamed to \`${renamed.to}\`.`
         : `SDK surface change: ${change.message ?? change.symbol}.`,
     });
-    existingBreakingScopes.add(targetScope);
   }
   return facts;
 }
