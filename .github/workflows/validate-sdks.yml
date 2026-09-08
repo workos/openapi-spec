@@ -201,8 +201,10 @@ jobs:
 
           npx oagen diff --old /tmp/previous-open-api-spec.yaml --new spec/open-api-spec.yaml \
             > /tmp/diff-report.json || DIFF_EXIT=$?
-          # exit 2 means breaking changes were detected — not a failure
-          if [ "${DIFF_EXIT:-0}" -ne 0 ] && [ "${DIFF_EXIT:-0}" -ne 2 ]; then
+          # `oagen diff` exit codes: 0 = no changes, 1 = non-breaking changes,
+          # 2 = breaking changes — all successful (same contract as
+          # spec-changes.yml). Only a code above 2 is a real failure.
+          if [ "${DIFF_EXIT:-0}" -gt 2 ]; then
             echo "::warning::oagen diff failed (exit ${DIFF_EXIT}); skipping changelog scope validation"
             echo "scopes-valid=true" >> "$GITHUB_OUTPUT"
             exit 0

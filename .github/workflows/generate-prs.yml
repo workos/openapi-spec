@@ -204,8 +204,12 @@ jobs:
           REPORT=$(npx oagen diff \
             --old /tmp/previous-open-api-spec.yaml \
             --new spec/open-api-spec.yaml) || DIFF_EXIT=$?
-          # Exit code 2 means breaking changes were detected — not a failure
-          if [ "${DIFF_EXIT:-0}" -ne 0 ] && [ "${DIFF_EXIT:-0}" -ne 2 ]; then
+          # `oagen diff` reports its result through the exit code: 0 = no
+          # changes, 1 = non-breaking changes, 2 = breaking changes. All three
+          # are successful diffs (same contract as spec-changes.yml); only a
+          # code above 2 is a real failure. The `.summary` check below is the
+          # authoritative validity gate.
+          if [ "${DIFF_EXIT:-0}" -gt 2 ]; then
             echo "::warning::oagen diff failed (exit code ${DIFF_EXIT})"
             exit 0
           fi
