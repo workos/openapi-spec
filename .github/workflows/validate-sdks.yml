@@ -74,6 +74,7 @@ jobs:
           cache-dependency-path: openapi-spec/package-lock.json
 
       - name: Configure Socket Firewall
+        if: runner.os == 'Linux'
         uses: workos/setup-socket-firewall@ca93dd8aa351f54f4729fe3377a9be23c631c25d # v1
         with:
           token: ${{ secrets.PUBLIC_SOCKET_FIREWALL_TOKEN }}
