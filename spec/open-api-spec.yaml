@@ -10252,9 +10252,13 @@ paths:
         create an API key integration; you may optionally supply an `api_key`
         block to install a first tenant in the same call. Set `auth_methods` to
         `["client_credentials"]` to create a client-credentials integration;
-        client credentials are installed per-tenant afterwards. For a built-in
-        provider, pass its slug as `provider`. For a custom provider, pass a new
-        slug plus a `custom_provider` definition.
+        client credentials are installed per-tenant afterwards. Set `ownership`
+        to `organization` to create the integration organizations connect to
+        instead of the default user-owned one; a provider may have one of each.
+        For a built-in provider, pass its slug as `provider`. For a custom
+        provider, pass a new slug plus a `custom_provider` definition, or the
+        slug of an existing custom provider (without `custom_provider`) to add
+        the other ownership.
       operationId: DataIntegrationsManagementController_createDataIntegration
       parameters: []
       requestBody:
@@ -10613,6 +10617,14 @@ paths:
                     Optional parameter to scope the connection to a specific
                     organization.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connected_account_id:
+                  type: string
+                  pattern: ^data_installation_.+$
+                  description: >-
+                    A [connected account](/reference/pipes/connected-account)
+                    identifier. Use this to rotate a specific existing
+                    connection.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 secret:
                   type: string
                   minLength: 1
@@ -10668,7 +10680,7 @@ paths:
                 required:
                   - message
         '404':
-          description: Data integration not found for the given provider slug.
+          description: The data integration or selected connected account was not found.
           content:
             application/json:
               schema:
@@ -10687,14 +10699,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The matched installation uses a different auth method than this
@@ -10843,6 +10848,14 @@ paths:
                     Optional parameter to scope the connection to a specific
                     organization.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connected_account_id:
+                  type: string
+                  pattern: ^data_installation_.+$
+                  description: >-
+                    A [connected account](/reference/pipes/connected-account)
+                    identifier. Use this to rotate a specific existing
+                    connection.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 client_id:
                   type: string
                   minLength: 1
@@ -10913,7 +10926,7 @@ paths:
                 required:
                   - message
         '404':
-          description: Data integration not found for the given provider slug.
+          description: The data integration or selected connected account was not found.
           content:
             application/json:
               schema:
@@ -10932,14 +10945,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The matched installation uses a different auth method than this
@@ -10975,14 +10981,19 @@ paths:
               properties:
                 user_id:
                   type: string
-                  description: A [User](/reference/authkit/user) identifier.
+                  description: >-
+                    A [User](/reference/authkit/user) identifier. When
+                    `connection_owner` is `organization`, this is the user the
+                    credentials are vended on behalf of; they must be an active
+                    member of the organization.
                   example: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id:
                   type: string
                   description: >-
                     An [Organization](/reference/organization) identifier.
                     Optional parameter to scope the connection to a specific
-                    organization.
+                    organization. Required when `connection_owner` is
+                    `organization`.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
                 connected_account_id:
                   type: string
@@ -10992,6 +11003,17 @@ paths:
                     identifier. Use this to select a specific connection when
                     the user has several for this provider.
                   example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Which connection to vend from. `user` (the default) vends
+                    the user's own connection and requires `user_id`.
+                    `organization` vends the organization's shared connection
+                    and requires `organization_id`.
+                  example: user
               required:
                 - user_id
       responses:
@@ -11027,6 +11049,21 @@ paths:
                   - message
         '401':
           description: Unauthorized
+        '403':
+          description: >-
+            The user is not an active member of the organization named for an
+            organization connection.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '404':
           description: The data integration or selected connected account was not found.
           content:
@@ -11047,14 +11084,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The installation uses an auth method that is not yet supported by
@@ -11097,14 +11127,19 @@ paths:
               properties:
                 user_id:
                   type: string
-                  description: A [User](/reference/authkit/user) identifier.
+                  description: >-
+                    A [User](/reference/authkit/user) identifier. When
+                    `connection_owner` is `organization`, this is the user the
+                    credentials are vended on behalf of; they must be an active
+                    member of the organization.
                   example: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id:
                   type: string
                   description: >-
                     An [Organization](/reference/organization) identifier.
                     Optional parameter to scope the connection to a specific
-                    organization.
+                    organization. Required when `connection_owner` is
+                    `organization`.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
                 connected_account_id:
                   type: string
@@ -11114,6 +11149,17 @@ paths:
                     identifier. Use this to select a specific connection when
                     the user has several for this provider.
                   example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Which connection to vend from. `user` (the default) vends
+                    the user's own connection and requires `user_id`.
+                    `organization` vends the organization's shared connection
+                    and requires `organization_id`.
+                  example: user
               required:
                 - user_id
       responses:
@@ -11138,6 +11184,21 @@ paths:
                   - message
         '401':
           description: Unauthorized
+        '403':
+          description: >-
+            The user is not an active member of the organization named for an
+            organization connection.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '404':
           description: The data integration or selected connected account was not found.
           content:
@@ -11158,14 +11219,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
         '422':
           description: >-
             The matched installation uses a different auth method than this
@@ -22225,14 +22279,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
       summary: Get a connected account
       tags:
         - user-management.data-providers
@@ -22316,14 +22363,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
       summary: Delete a connected account
       tags:
         - user-management.data-providers
@@ -22510,14 +22550,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
       summary: Update a connected account
       tags:
         - user-management.data-providers
@@ -26408,6 +26441,18 @@ components:
             be supplied. A custom provider slug cannot shadow an existing global
             provider slug.
           example: github
+        ownership:
+          type: string
+          enum:
+            - userland_user
+            - organization
+          description: >-
+            Who owns the Data Integration. `userland_user` (the default) creates
+            the integration users connect their own accounts to; `organization`
+            creates the root organizations connect to. Ownership is fixed at
+            creation, and one integration of each ownership may exist per
+            provider. Independent of `credentials.type`.
+          example: userland_user
         description:
           type:
             - string
@@ -42370,6 +42415,16 @@ components:
           type: string
           description: The integration type derived from the provider.
           example: github
+        ownership:
+          type: string
+          enum:
+            - userland_user
+            - organization
+          description: >-
+            Who owns the Data Integration: `userland_user` when users connect
+            their own accounts, `organization` when organizations connect. Fixed
+            at creation.
+          example: userland_user
         description:
           type:
             - string
@@ -42477,15 +42532,21 @@ components:
                   description: Unique identifier of the installation.
                   example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 user_id:
-                  type: string
-                  description: The User the API key was installed for.
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    The User the API key was installed for. Null on an
+                    `organization`-owned integration, whose installations belong
+                    to the organization.
                   example: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id:
                   type:
                     - string
                     - 'null'
                   description: >-
-                    The Organization the installation is scoped to, or null when
+                    The Organization the installation is scoped to (or owned by,
+                    on an `organization`-owned integration), or null when
                     unscoped.
                   example: null
                 api_key_last_4:
@@ -42611,6 +42672,7 @@ components:
         - id
         - slug
         - integration_type
+        - ownership
         - description
         - enabled
         - state
@@ -42752,6 +42814,25 @@ components:
           required:
             - active
             - error
+    AccountSelectionRequiredError:
+      type: object
+      properties:
+        code:
+          type: string
+          description: >-
+            Indicates that several connected accounts match and the request must
+            name one.
+          example: account_selection_required
+          const: account_selection_required
+        message:
+          type: string
+          description: A human-readable explanation of the ambiguity.
+          example: >-
+            Several connected accounts match this user for this provider. Name
+            one with a connected account id.
+      required:
+        - code
+        - message
     AuthMethodMismatchError:
       type: object
       properties:
