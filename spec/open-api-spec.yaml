@@ -26631,16 +26631,16 @@ components:
           type: string
           description: >-
             The URL to go to when an admin clicks on your logo in the Admin
-            Portal. If not specified, the return URL configured on the
-            [Redirects](https://dashboard.workos.com/redirects) page will be
+            Portal. If not specified, the return URL configured on the [Admin
+            Portal](https://dashboard.workos.com/admin-portal) page will be
             used.
           example: https://example.com/admin-portal/return
         success_url:
           type: string
           description: >-
             The URL to redirect the admin to when they finish setup. If not
-            specified, the success URL configured on the
-            [Redirects](https://dashboard.workos.com/redirects) page will be
+            specified, the success URL configured on the [Admin
+            Portal](https://dashboard.workos.com/admin-portal) page will be
             used.
           example: https://example.com/admin-portal/success
         organization:
