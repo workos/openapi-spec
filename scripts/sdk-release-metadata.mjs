@@ -1325,13 +1325,17 @@ export function factsFromCompat(compatReport, _existingFacts, indexes) {
     const symbol = String(change.symbol ?? '');
     // Strip the Python async-client prefix (`AsyncPipes` → `Pipes`) so async
     // surface symbols resolve to the same scope as, and dedup against, their
-    // sync counterparts. The same prefix inside `old`/`new` (a removed symbol
-    // names itself there) is stripped from the identity key only.
+    // sync counterparts. The mirror decorates the symbol wherever it appears —
+    // the change's own symbol, a removed symbol naming itself in `old`, both
+    // ends of a rename — so the identity key strips the prefix from every string.
     const undecorated = symbol.replace(/^Async(?=[A-Z])/, '');
     const renamed = renames.get(symbol);
-    const key = renamed
-      ? JSON.stringify(['rename', renamed.from, renamed.to])
-      : JSON.stringify([change.category ?? '', undecorated, change.old ?? null, change.new ?? null]).replace(/"Async(?=[A-Z])/g, '"');
+    const undecorate = (json) => json.replace(/"Async(?=[A-Z])/g, '"');
+    const key = undecorate(
+      renamed
+        ? JSON.stringify(['rename', renamed.from, renamed.to])
+        : JSON.stringify([change.category ?? '', undecorated, change.old ?? null, change.new ?? null]),
+    );
     if (seen.has(key)) continue;
     seen.add(key);
 

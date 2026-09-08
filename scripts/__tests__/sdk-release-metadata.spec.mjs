@@ -419,17 +419,18 @@ test('factsFromCompat forgives the same rotation on a constructor', () => {
 
 // The controls: without a widening to explain it, a reorder is a real call-shape
 // change, and one unexplained move means the rotation model does not describe
-// this signature — every move on the symbol stays breaking.
+// this signature — every move on the symbol stays breaking, so the fact count
+// must equal the move count (a partial drop would read as a pass otherwise).
 test('factsFromCompat keeps an unexplained reorder breaking', () => {
   const report = { changes: [positionChange('description', 2, 1), positionChange('permissions', 1, 2)] };
-  assert.ok(factsFromCompat(report, [], EMPTY_INDEXES).length > 0);
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 2);
 });
 
 test('factsFromCompat keeps a rotation breaking when one move does not fit', () => {
   const report = {
     changes: [sessionSettingsWidened, ...defaultingRotation, positionChange('name', 0, 2)],
   };
-  assert.ok(factsFromCompat(report, [], EMPTY_INDEXES).length > 0);
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 5);
 });
 
 // A parameter rename IS the call shape changing — the one genuine break in
@@ -575,7 +576,7 @@ test('factsFromCompat keeps a reorder breaking when an insertion pads a hop', ()
 test('factsFromCompat keeps a swap breaking even when an insertion accompanies it', () => {
   // [a, b, requestOptions] -> [x, b, a, requestOptions]
   const report = { changes: [insertion('x', 0), insertionMove('a', 0, 2), insertionMove('requestOptions', 2, 3)] };
-  assert.ok(factsFromCompat(report, [], EMPTY_INDEXES).length > 0);
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 2);
 });
 
 // Exhaustive check of the arithmetic against oagen's own report shape: for
@@ -697,6 +698,24 @@ test('factsFromCompat folds the Async mirror of a change into its sync counterpa
     facts.map((fact) => fact.symbols[0]).sort(),
     ['Pipes.getAccessToken', 'Pipes.legacy'],
   );
+});
+
+// A rename reported by both Python clients folds to the sync one: the Async*
+// prefix decorates both ends of the rename, not just the change's symbol.
+test('factsFromCompat folds the Async mirror of a rename into its sync counterpart', () => {
+  const removed = (symbol) => ({ severity: 'breaking', category: 'symbol_removed', symbol, message: `Symbol "${symbol}" was removed` });
+  const added = (symbol) => ({ severity: 'additive', category: 'symbol_added', symbol, message: `Symbol "${symbol}" was added` });
+  const report = {
+    changes: [
+      removed('AsyncPipes.getToken'),
+      added('AsyncPipes.getAccessToken'),
+      removed('Pipes.getToken'),
+      added('Pipes.getAccessToken'),
+    ],
+  };
+  const facts = factsFromCompat(report, [], EMPTY_INDEXES);
+  assert.equal(facts.length, 1);
+  assert.deepEqual(facts[0].symbols, ['Pipes.getToken', 'Pipes.getAccessToken']);
 });
 
 // Kotlin's *Suspend variant pairs with its base method as one rename.
