@@ -10588,8 +10588,9 @@ paths:
     put:
       description: >-
         Creates or updates an API-key-based installation for the specified
-        integration and user. If an installation already exists, the stored API
-        key is rotated to the new value.
+        integration, owned by the user or, when `connection_owner` is
+        `organization`, shared by the organization. If an installation already
+        exists, the stored API key is rotated to the new value.
       operationId: DataIntegrationsController_upsertApiKey
       parameters:
         - name: slug
@@ -10615,7 +10616,8 @@ paths:
                   description: >-
                     An [Organization](/reference/organization) identifier.
                     Optional parameter to scope the connection to a specific
-                    organization.
+                    organization. Required when `connection_owner` is
+                    `organization`.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
                 connected_account_id:
                   type: string
@@ -10625,6 +10627,19 @@ paths:
                     identifier. Use this to rotate a specific existing
                     connection.
                   example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Whose connection to create or rotate. `user` (the default)
+                    addresses the connection owned by `user_id`. `organization`
+                    addresses the connection shared by every member of
+                    `organization_id`; `user_id` then identifies the member
+                    performing the request and must be an active member of the
+                    organization.
+                  example: user
                 secret:
                   type: string
                   minLength: 1
@@ -10694,8 +10709,8 @@ paths:
                   - message
         '409':
           description: >-
-            Several connected accounts match this user for the provider; one
-            must be named.
+            Several connected accounts match the connection owner for the
+            provider; one must be named.
           content:
             application/json:
               schema:
@@ -10819,8 +10834,9 @@ paths:
     put:
       description: >-
         Creates or updates a client-credentials-based installation for the
-        specified integration and user. If an installation already exists, the
-        stored client credentials are rotated to the new values.
+        specified integration, owned by the user or, when `connection_owner` is
+        `organization`, shared by the organization. If an installation already
+        exists, the stored client credentials are rotated to the new values.
       operationId: DataIntegrationsController_upsertClientCredentials
       parameters:
         - name: slug
@@ -10846,7 +10862,8 @@ paths:
                   description: >-
                     An [Organization](/reference/organization) identifier.
                     Optional parameter to scope the connection to a specific
-                    organization.
+                    organization. Required when `connection_owner` is
+                    `organization`.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
                 connected_account_id:
                   type: string
@@ -10856,6 +10873,19 @@ paths:
                     identifier. Use this to rotate a specific existing
                     connection.
                   example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Whose connection to create or rotate. `user` (the default)
+                    addresses the connection owned by `user_id`. `organization`
+                    addresses the connection shared by every member of
+                    `organization_id`; `user_id` then identifies the member
+                    performing the request and must be an active member of the
+                    organization.
+                  example: user
                 client_id:
                   type: string
                   minLength: 1
@@ -10940,8 +10970,8 @@ paths:
                   - message
         '409':
           description: >-
-            Several connected accounts match this user for the provider; one
-            must be named.
+            Several connected accounts match the connection owner for the
+            provider; one must be named.
           content:
             application/json:
               schema:
