@@ -11,19 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       languages:
-        description: Languages to generate
-        type: choice
+        # Comma-separated matrix language keys from .github/sdk-matrix.json
+        # (e.g. "ios,go"). A free-form string rather than a choice so the SDK
+        # bot's language picker can dispatch any subset; "all" or empty = every
+        # language. Unknown keys fail load-matrix rather than silently running
+        # zero jobs.
+        description: 'Comma-separated languages to generate (all = every language)'
+        required: false
+        type: string
         default: all
-        options:
-          - all
-          - dotnet
-          - go
-          - ios
-          - kotlin
-          - php
-          - python
-          - ruby
-          - rust
       services:
         description: 'Comma-separated post-mount service names (empty = all)'
         required: false
@@ -58,13 +54,32 @@ jobs:
 
       - name: Load SDK matrix
         id: set-matrix
+        # The input is free-form text, so it reaches the script through env —
+        # never by ${{ }} interpolation into `run`, which would let a dispatcher
+        # execute shell syntax on the runner before validation.
+        env:
+          LANGUAGES_INPUT: ${{ inputs.languages }}
         run: |
-          LANG="${{ inputs.languages }}"
-          if [ -z "$LANG" ] || [ "$LANG" = "all" ]; then
-            echo "matrix=$(jq -c . .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
+          LANGS="${LANGUAGES_INPUT// /}"
+          if [ -z "$LANGS" ] || [ "$LANGS" = "all" ]; then
+            MATRIX=$(jq -c . .github/sdk-matrix.json)
           else
-            echo "matrix=$(jq -c --arg lang "$LANG" '[.[] | select(.language == $lang)]' .github/sdk-matrix.json)" >> "$GITHUB_OUTPUT"
+            # An unknown key (typo, or a language not yet in the matrix) is an
+            # error, not an empty matrix: zero generate_pr jobs would leave the
+            # SDK bot's batch waiting forever for PRs that are never coming.
+            UNKNOWN=$(jq -r --arg langs "$LANGS" \
+              '[.[].language] as $known | $langs | split(",") | map(select(. as $l | $known | index($l) | not)) | join(",")' \
+              .github/sdk-matrix.json)
+            if [ -n "$UNKNOWN" ]; then
+              echo "::error::Unknown language(s) in languages='$LANGS': $UNKNOWN (known: $(jq -r '[.[].language] | join(",")' .github/sdk-matrix.json))"
+              exit 1
+            fi
+            MATRIX=$(jq -c --arg langs "$LANGS" \
+              '($langs | split(",")) as $want | [.[] | select(.language as $l | $want | index($l))]' \
+              .github/sdk-matrix.json)
           fi
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "Generating: $(echo "$MATRIX" | jq -r '[.[].language] | join(", ")')"
 
   generate_pr:
     name: generate_pr (${{ matrix.language }})
