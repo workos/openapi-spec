@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildIndexes, factsFromCompat, factsFromDiff, renderChangelogMarkdown, scopesForServices } from '../sdk-release-metadata.mjs';
+import {
+  buildIndexes,
+  entriesFromGroups,
+  factsFromCompat,
+  factsFromDiff,
+  groupFacts,
+  renderChangelogMarkdown,
+  scopesForServices,
+} from '../sdk-release-metadata.mjs';
 
 // factsFromDiff only reaches indexes.symbolScopes (scope resolution) for the
 // kinds under test; an empty index leaves scope unresolved, which is fine — we
@@ -293,8 +301,9 @@ test('factsFromCompat keeps one fact per unresolved root instead of one per scop
   assert.deepEqual(sdkFacts.map((fact) => fact.symbols[0]).sort(), ['MysteryOne', 'MysteryTwo']);
 });
 
-// Resolved scopes keep the existing one-breaking-fact-per-scope dedup.
-test('factsFromCompat still dedups resolved scopes to one breaking fact', () => {
+// Resolved scopes keep every distinct breaking change; grouping merges them
+// under one entry per scope with a bullet each.
+test('factsFromCompat keeps every distinct breaking change and groups them under one scope entry', () => {
   const report = {
     changes: [
       { severity: 'breaking', category: 'parameter_type_narrowed', symbol: 'SSO.getProfileAndToken', message: 'x' },
@@ -302,7 +311,11 @@ test('factsFromCompat still dedups resolved scopes to one breaking fact', () => 
     ],
   };
   const facts = factsFromCompat(report, [], EMPTY_INDEXES);
-  assert.equal(facts.filter((fact) => fact.scope === 'sso').length, 1);
+  assert.equal(facts.filter((fact) => fact.scope === 'sso').length, 2);
+  const entries = entriesFromGroups(groupFacts(facts), []).filter((entry) => entry.scope === 'sso');
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].prefix, 'feat!');
+  assert.equal(entries[0].description.split('\n').length, 2);
 });
 
 // --- Direction-aware compat severity (PR #139 regression set) ---
@@ -406,17 +419,18 @@ test('factsFromCompat forgives the same rotation on a constructor', () => {
 
 // The controls: without a widening to explain it, a reorder is a real call-shape
 // change, and one unexplained move means the rotation model does not describe
-// this signature — every move on the symbol stays breaking.
+// this signature — every move on the symbol stays breaking, so the fact count
+// must equal the move count (a partial drop would read as a pass otherwise).
 test('factsFromCompat keeps an unexplained reorder breaking', () => {
   const report = { changes: [positionChange('description', 2, 1), positionChange('permissions', 1, 2)] };
-  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 2);
 });
 
 test('factsFromCompat keeps a rotation breaking when one move does not fit', () => {
   const report = {
     changes: [sessionSettingsWidened, ...defaultingRotation, positionChange('name', 0, 2)],
   };
-  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 5);
 });
 
 // A parameter rename IS the call shape changing — the one genuine break in
@@ -562,7 +576,7 @@ test('factsFromCompat keeps a reorder breaking when an insertion pads a hop', ()
 test('factsFromCompat keeps a swap breaking even when an insertion accompanies it', () => {
   // [a, b, requestOptions] -> [x, b, a, requestOptions]
   const report = { changes: [insertion('x', 0), insertionMove('a', 0, 2), insertionMove('requestOptions', 2, 3)] };
-  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 2);
 });
 
 // Exhaustive check of the arithmetic against oagen's own report shape: for
@@ -602,4 +616,120 @@ test('factsFromCompat forgives insertion shifts exactly when existing parameter 
     }
   }
   assert.ok(forgiven > 0 && kept > 0, `forgiven=${forgiven} kept=${kept}`);
+});
+
+// --- One fact per breaking change (workos-ios #28 regression set) ---
+// The compat report for batch 8ad8e447 carried ten order-sensitive position
+// changes across seven Pipes methods. The one-fact-per-scope dedup kept the first
+// — a `requestOptions` shift that was not a source break — and the PR never
+// mentioned `updateDataIntegrationApiKey` or
+// `updateDataIntegrationClientCredentials`, the two methods whose arguments
+// really were reordered. The reviewer saw noise, stripped the `!`, and merged.
+const batchMove = (symbol, parameter, from, to) => ({
+  severity: 'breaking',
+  category: 'parameter_position_changed_order_sensitive',
+  symbol,
+  old: { parameter, position: String(from) },
+  new: { parameter, position: String(to) },
+  message: `Parameter "${parameter}" moved from position ${from} to ${to} on "${symbol}"`,
+});
+
+const batch8ad8e447 = [
+  batchMove('Pipes.createDataIntegrationCredential', 'requestOptions', 3, 4),
+  batchMove('Pipes.deleteUserConnectedAccount', 'requestOptions', 3, 4),
+  batchMove('Pipes.getAccessToken', 'requestOptions', 3, 4),
+  batchMove('Pipes.getUserConnectedAccount', 'requestOptions', 3, 4),
+  batchMove('Pipes.updateDataIntegrationApiKey', 'secret', 2, 3),
+  batchMove('Pipes.updateDataIntegrationApiKey', 'organizationId', 3, 2),
+  batchMove('Pipes.updateDataIntegrationClientCredentials', 'clientId', 2, 3),
+  batchMove('Pipes.updateDataIntegrationClientCredentials', 'clientSecret', 3, 4),
+  batchMove('Pipes.updateDataIntegrationClientCredentials', 'organizationId', 4, 2),
+  batchMove('Pipes.updateUserConnectedAccount', 'requestOptions', 8, 9),
+];
+
+test('factsFromCompat names every reordered method, not just the first', () => {
+  const facts = factsFromCompat({ changes: batch8ad8e447 }, [], EMPTY_INDEXES);
+  assert.equal(facts.length, 10);
+  const entries = entriesFromGroups(groupFacts(facts), []);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].scope, 'pipes');
+  assert.equal(entries[0].prefix, 'feat!');
+  assert.equal(entries[0].symbols.length, 7);
+  assert.match(entries[0].description, /"organizationId" moved from position 3 to 2 on "Pipes.updateDataIntegrationApiKey"/);
+  assert.match(entries[0].description, /"organizationId" moved from position 4 to 2 on "Pipes.updateDataIntegrationClientCredentials"/);
+  assert.equal(entries[0].description.split('\n').length, 10);
+});
+
+// A breaking spec-diff fact for the same scope used to suppress every compat
+// fact in it. Both now reach the group.
+test('factsFromCompat keeps compat breaks when the spec diff already broke the scope', () => {
+  const existing = [{ severity: 'breaking', scope: 'pipes', kind: 'operation-removed', symbols: [], detail: 'Removed x.' }];
+  const facts = factsFromCompat({ changes: [batch8ad8e447[4]] }, existing, EMPTY_INDEXES);
+  assert.equal(facts.length, 1);
+});
+
+// The mirrors that are still folded: Python's Async* client re-reports every
+// sync change under a decorated symbol, including inside old/new for removals.
+test('factsFromCompat folds the Async mirror of a change into its sync counterpart', () => {
+  const report = {
+    changes: [
+      batchMove('AsyncPipes.getAccessToken', 'requestOptions', 3, 4),
+      batchMove('Pipes.getAccessToken', 'requestOptions', 3, 4),
+      {
+        severity: 'breaking',
+        category: 'symbol_removed',
+        symbol: 'AsyncPipes.legacy',
+        old: { symbol: 'AsyncPipes.legacy' },
+        new: { symbol: '(removed)' },
+        message: 'Symbol "AsyncPipes.legacy" was removed',
+      },
+      {
+        severity: 'breaking',
+        category: 'symbol_removed',
+        symbol: 'Pipes.legacy',
+        old: { symbol: 'Pipes.legacy' },
+        new: { symbol: '(removed)' },
+        message: 'Symbol "Pipes.legacy" was removed',
+      },
+    ],
+  };
+  const facts = factsFromCompat(report, [], EMPTY_INDEXES);
+  assert.deepEqual(
+    facts.map((fact) => fact.symbols[0]).sort(),
+    ['Pipes.getAccessToken', 'Pipes.legacy'],
+  );
+});
+
+// A rename reported by both Python clients folds to the sync one: the Async*
+// prefix decorates both ends of the rename, not just the change's symbol.
+test('factsFromCompat folds the Async mirror of a rename into its sync counterpart', () => {
+  const removed = (symbol) => ({ severity: 'breaking', category: 'symbol_removed', symbol, message: `Symbol "${symbol}" was removed` });
+  const added = (symbol) => ({ severity: 'additive', category: 'symbol_added', symbol, message: `Symbol "${symbol}" was added` });
+  const report = {
+    changes: [
+      removed('AsyncPipes.getToken'),
+      added('AsyncPipes.getAccessToken'),
+      removed('Pipes.getToken'),
+      added('Pipes.getAccessToken'),
+    ],
+  };
+  const facts = factsFromCompat(report, [], EMPTY_INDEXES);
+  assert.equal(facts.length, 1);
+  assert.deepEqual(facts[0].symbols, ['Pipes.getToken', 'Pipes.getAccessToken']);
+});
+
+// Kotlin's *Suspend variant pairs with its base method as one rename.
+test('factsFromCompat records a rename once across its Suspend variant', () => {
+  const report = {
+    changes: [
+      { severity: 'breaking', category: 'symbol_removed', symbol: 'Pipes.getToken', message: 'Symbol "Pipes.getToken" was removed' },
+      { severity: 'breaking', category: 'symbol_removed', symbol: 'Pipes.getTokenSuspend', message: 'Symbol "Pipes.getTokenSuspend" was removed' },
+      { severity: 'additive', category: 'symbol_added', symbol: 'Pipes.getAccessToken', message: 'Symbol "Pipes.getAccessToken" was added' },
+      { severity: 'additive', category: 'symbol_added', symbol: 'Pipes.getAccessTokenSuspend', message: 'Symbol "Pipes.getAccessTokenSuspend" was added' },
+    ],
+  };
+  const facts = factsFromCompat(report, [], EMPTY_INDEXES);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].kind, 'sdk-surface-renamed');
+  assert.deepEqual(facts[0].symbols, ['Pipes.getToken', 'Pipes.getAccessToken']);
 });
