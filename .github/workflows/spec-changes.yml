@@ -44,6 +44,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
+      - name: Configure Socket Firewall
+        uses: workos/setup-socket-firewall@ca93dd8aa351f54f4729fe3377a9be23c631c25d # v1
+        with:
+          token: ${{ secrets.PUBLIC_SOCKET_FIREWALL_TOKEN }}
+
       - name: Install dependencies
         run: npm ci
 
