@@ -483,3 +483,123 @@ test('factsFromCompat resolves a decorated Literal enum owner and drops the memb
   };
   assert.equal(factsFromCompat(report, [], indexes).length, 0);
 });
+
+// --- Insertion shifts (workos-ios #28 regression set) ---
+// The spec added an optional `connected_account_id` to five Pipes operations.
+// Swift inserts the new defaulted parameter ahead of `requestOptions`, so
+// `requestOptions` slid from position 3 to 4 on each — five order-sensitive
+// position changes flagged breaking, although every existing call still
+// compiles (a defaulted argument may be omitted and the rest keep their order).
+// iOS was again the only SDK of eight to open a `feat(pipes)!` PR.
+const PIPES_METHOD = 'Pipes.createDataIntegrationCredential';
+
+const insertionMove = (parameter, from, to, symbol = PIPES_METHOD, category = 'parameter_position_changed_order_sensitive') => ({
+  severity: 'breaking',
+  category,
+  symbol,
+  old: { parameter, position: String(from) },
+  new: { parameter, position: String(to) },
+  message: `Parameter "${parameter}" moved from position ${from} to ${to} on "${symbol}"`,
+});
+
+const insertion = (parameter, position, symbol = PIPES_METHOD) => ({
+  severity: 'soft-risk',
+  category: 'parameter_added_non_terminal_optional',
+  symbol,
+  old: { parameter: '(absent)' },
+  new: position === undefined ? { parameter } : { parameter, position: String(position) },
+  message: `Optional parameter "${parameter}" added to "${symbol}"`,
+});
+
+const terminalInsertion = (parameter, position, symbol = PIPES_METHOD) => ({
+  ...insertion(parameter, position, symbol),
+  severity: 'additive',
+  category: 'parameter_added_optional_terminal',
+});
+
+test('factsFromCompat treats a shift caused by an inserted optional parameter as non-breaking', () => {
+  const report = { changes: [insertion('connectedAccountId', 3), insertionMove('requestOptions', 3, 4)] };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 0);
+});
+
+test('factsFromCompat forgives several insertions displacing several parameters', () => {
+  // [slug, userId, requestOptions] -> [slug, x, userId, y, requestOptions]
+  const report = {
+    changes: [insertion('x', 1), insertion('y', 3), insertionMove('userId', 1, 2), insertionMove('requestOptions', 2, 4)],
+  };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 0);
+});
+
+test('factsFromCompat forgives insertion shifts on a constructor', () => {
+  const symbol = 'DataIntegrationsVendCredentialsRequest.init';
+  const report = {
+    changes: [
+      insertion('connectedAccountId', 2, symbol),
+      insertionMove('requestOptions', 2, 3, symbol, 'constructor_position_changed_order_sensitive'),
+    ],
+  };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 0);
+});
+
+// The controls. An insertion reported without a position (oagen <= 0.30.0)
+// cannot be placed, so the shift stays breaking rather than being guessed at.
+test('factsFromCompat keeps a shift breaking when the insertion carries no position', () => {
+  const report = { changes: [insertion('connectedAccountId'), insertionMove('requestOptions', 3, 4)] };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+});
+
+// A parameter hopping over an unmoved neighbour while an insertion pads the
+// distance: [a, b] -> [x, b, a, y, z]. Counting insertions alone (two
+// non-terminal ones, `a` moved by two) would forgive it; the arithmetic sees
+// only one insertion ahead of `a`'s new slot and keeps the real reorder.
+test('factsFromCompat keeps a reorder breaking when an insertion pads a hop', () => {
+  const report = {
+    changes: [insertion('x', 0), insertion('y', 3), terminalInsertion('z', 4), insertionMove('a', 0, 2)],
+  };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+});
+
+test('factsFromCompat keeps a swap breaking even when an insertion accompanies it', () => {
+  // [a, b, requestOptions] -> [x, b, a, requestOptions]
+  const report = { changes: [insertion('x', 0), insertionMove('a', 0, 2), insertionMove('requestOptions', 2, 3)] };
+  assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
+});
+
+// Exhaustive check of the arithmetic against oagen's own report shape: for
+// every arrangement of up to four existing and two inserted parameters, the
+// shifts are forgiven exactly when the existing parameters kept their relative
+// order. oagen marks an added parameter terminal only when it is the very last
+// one, so an insertion followed only by other insertions still reports as
+// non-terminal — which is why counting them could never be enough.
+test('factsFromCompat forgives insertion shifts exactly when existing parameter order is preserved', () => {
+  const permutations = (items) =>
+    items.length <= 1
+      ? [items]
+      : items.flatMap((item, i) => permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest]));
+  let forgiven = 0;
+  let kept = 0;
+  for (let existing = 1; existing <= 4; existing += 1) {
+    for (let added = 1; added <= 2; added += 1) {
+      const old = Array.from({ length: existing }, (_, i) => `p${i}`);
+      const fresh = Array.from({ length: added }, (_, i) => `q${i}`);
+      for (const arrangement of permutations([...old, ...fresh])) {
+        const changes = [];
+        for (const [position, name] of arrangement.entries()) {
+          if (fresh.includes(name)) {
+            const terminal = position === arrangement.length - 1;
+            changes.push(terminal ? terminalInsertion(name, position) : insertion(name, position));
+          } else if (old.indexOf(name) !== position) {
+            changes.push(insertionMove(name, old.indexOf(name), position));
+          }
+        }
+        if (!changes.some((change) => change.severity === 'breaking')) continue;
+        const orderPreserved = arrangement.filter((name) => old.includes(name)).every((name, i) => name === old[i]);
+        const breaking = factsFromCompat({ changes }, [], EMPTY_INDEXES).length;
+        assert.equal(breaking === 0, orderPreserved, `[${old}] -> [${arrangement}]`);
+        if (orderPreserved) forgiven += 1;
+        else kept += 1;
+      }
+    }
+  }
+  assert.ok(forgiven > 0 && kept > 0, `forgiven=${forgiven} kept=${kept}`);
+});
