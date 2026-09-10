@@ -193,6 +193,9 @@ const compatSurfaceScopeCases = [
   // `PUT /organizations/{id}/audit_logs_retention` carries the audit-logs
   // surface mid-name, so the `AuditLog` rule cannot be anchored.
   { symbol: 'UpdateOrganizationAuditLogsRetentionParams.new', scope: 'audit_logs' },
+  // PR #159 regression: resource-export enums are event-payload-only
+  // (`resource_export.*` events), so only the name rule can place them.
+  { symbol: 'ResourceExportCompletedDataResourceType', scope: 'events' },
 ];
 
 for (const { symbol, scope } of compatSurfaceScopeCases) {

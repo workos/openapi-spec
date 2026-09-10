@@ -39987,6 +39987,7 @@ components:
                         - events
                         - sessions
                         - auditLogEvents
+                        - connections
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -40034,6 +40035,7 @@ components:
                         - events
                         - sessions
                         - auditLogEvents
+                        - connections
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -40081,6 +40083,7 @@ components:
                         - events
                         - sessions
                         - auditLogEvents
+                        - connections
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -40128,6 +40131,7 @@ components:
                         - events
                         - sessions
                         - auditLogEvents
+                        - connections
                       description: The type of resource being exported.
                       example: users
                   required:

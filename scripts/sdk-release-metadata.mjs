@@ -467,7 +467,9 @@ function scopeFromName(name) {
   }
   if (/^(Role|Permission|Authorization)/.test(name)) return 'authorization';
   if (/^Widget/.test(name)) return 'widgets';
-  if (/^Event/.test(name)) return 'events';
+  // Resource-export types are event-payload-only (`resource_export.*` events),
+  // so no IR service owns them and only the name rule can place them.
+  if (/^(Event|ResourceExport)/.test(name)) return 'events';
   // Admin Portal service surface (`AdminPortal.generate_link`) and its
   // generate-link intent options (`GenerateLinkDto`). The service scope equals
   // `toSnakeCase('AdminPortal')` (`admin_portal`), so factsFromCompat falls back
