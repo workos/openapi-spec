@@ -1425,6 +1425,7 @@ paths:
                     credential:
                       type: string
                       minLength: 1
+                      format: password
                       description: >-
                         The credential value to validate: the API key value for
                         `api_key`, or the access token (JWT) for `access_token`.
@@ -1443,6 +1444,7 @@ paths:
                     credential:
                       type: string
                       minLength: 1
+                      format: password
                       description: >-
                         The credential value to validate: the API key value for
                         `api_key`, or the access token (JWT) for `access_token`.
@@ -2736,6 +2738,7 @@ paths:
               properties:
                 code:
                   type: string
+                  format: password
                   description: The one-time code to verify.
                   example: '123456'
               required:
@@ -15694,6 +15697,7 @@ paths:
             The authorization code received from the authorization callback.
             Required when `grant_type` is `authorization_code`.
           schema:
+            format: password
             example: authorization_code_value
             type: string
         - name: grant_type
@@ -15836,10 +15840,12 @@ paths:
                       const: authorization_code
                     code:
                       type: string
+                      format: password
                       description: The authorization code received from the redirect.
                       example: vBqZKaPpsnJlPfXiDqN7b6VTz
                     code_verifier:
                       type: string
+                      format: password
                       description: >-
                         The PKCE code verifier used to derive the code challenge
                         passed to the authorization URL.
@@ -15980,6 +15986,7 @@ paths:
                       const: urn:workos:oauth:grant-type:magic-auth:code
                     code:
                       type: string
+                      format: password
                       description: The one-time code for Magic Auth authentication.
                       example: '123456'
                     email:
@@ -16029,6 +16036,7 @@ paths:
                       const: urn:workos:oauth:grant-type:email-verification:code
                     code:
                       type: string
+                      format: password
                       description: The email verification code.
                       example: '123456'
                     pending_authentication_token:
@@ -16070,6 +16078,7 @@ paths:
                       const: urn:workos:oauth:grant-type:mfa-totp
                     code:
                       type: string
+                      format: password
                       description: The TOTP code from the authenticator app.
                       example: '123456'
                     pending_authentication_token:
@@ -16204,6 +16213,7 @@ paths:
                       const: urn:workos:oauth:grant-type:radar-email-challenge:code
                     code:
                       type: string
+                      format: password
                       description: The one-time code from the Radar email challenge.
                       example: '123456'
                     radar_challenge_id:
@@ -16250,6 +16260,7 @@ paths:
                       const: urn:workos:oauth:grant-type:radar-sms-challenge:code
                     code:
                       type: string
+                      format: password
                       description: The one-time code from the Radar SMS challenge.
                       example: '123456'
                     verification_id:
@@ -16303,6 +16314,7 @@ paths:
                       const: urn:ietf:params:oauth:grant-type:device_code
                     device_code:
                       type: string
+                      format: password
                       description: The device verification code.
                       example: Ao4fMrDS...
                     ip_address:
@@ -18053,6 +18065,7 @@ paths:
                     example: Z1uX3RbwcIl5fIGJJJCXXisdI
                   accept_invitation_url:
                     type: string
+                    format: password
                     description: The URL where the recipient can accept the invitation.
                     example: >-
                       https://your-app.com/invite?invitation_token=Z1uX3RbwcIl5fIGJJJCXXisdI
@@ -18340,6 +18353,7 @@ paths:
                     example: Z1uX3RbwcIl5fIGJJJCXXisdI
                   accept_invitation_url:
                     type: string
+                    format: password
                     description: The URL where the recipient can accept the invitation.
                     example: >-
                       https://your-app.com/invite?invitation_token=Z1uX3RbwcIl5fIGJJJCXXisdI
@@ -24476,6 +24490,7 @@ components:
           type: string
           description: The value for an API key.
           example: sk_example_1234567890abcdef
+          format: password
       required:
         - value
     ExpireApiKeyDto:
@@ -25565,6 +25580,7 @@ components:
             -----BEGIN PRIVATE KEY-----
             MIIE...
             -----END PRIVATE KEY-----
+          format: password
         cert:
           type: string
           description: The PEM-encoded X.509 certificate for the key.
@@ -27593,6 +27609,7 @@ components:
           type: string
           description: The one-time email verification code.
           example: '123456'
+          format: password
       required:
         - code
     CreatePasswordResetTokenDto:
@@ -27635,6 +27652,7 @@ components:
           type: string
           description: The one-time code used to confirm the email change.
           example: '123456'
+          format: password
       required:
         - code
     UserlandRevokeSessionDto:
@@ -27883,6 +27901,7 @@ components:
             The authorization code received from the authorization callback.
             Required when `grant_type` is `authorization_code`.
           example: authorization_code_value
+          format: password
         grant_type:
           type: string
           description: The grant type for the token request.
@@ -27994,6 +28013,7 @@ components:
           maxLength: 200
           type: string
         value:
+          format: password
           description: Plaintext data to encrypt and store.
           example: s3cr3t-v4lu3
           type: string
@@ -28086,6 +28106,7 @@ components:
           example: my-secret
           type: string
         value:
+          format: password
           description: Decrypted plaintext value.
           example: s3cr3t-v4lu3
           type: string
@@ -28252,6 +28273,7 @@ components:
     UpdateObjectRequest:
       properties:
         value:
+          format: password
           description: New plaintext value.
           example: upd4t3d-v4lu3
           type: string
@@ -28485,6 +28507,7 @@ components:
           description: Current status of the agent registration.
         user_code:
           type: string
+          format: password
           description: The user code the agent needs to complete the claim.
           example: BCDF-GHJK
         organizations:
@@ -29534,6 +29557,7 @@ components:
           example: '2026-01-15T12:00:00.000Z'
         code:
           type: string
+          format: password
           description: The one-time code for the challenge.
           example: '123456'
         authentication_factor_id:
@@ -29620,16 +29644,19 @@ components:
               example: user@example.com
             secret:
               type: string
+              format: password
               description: >-
                 TOTP secret that can be manually entered into some authenticator
                 apps in place of scanning a QR code.
               example: JBSWY3DPEHPK3PXP
             qr_code:
               type: string
+              format: password
               description: Base64 encoded image containing scannable QR code.
               example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
             uri:
               type: string
+              format: password
               description: The `otpauth` URI that is encoded by the provided `qr_code`.
               example: >-
                 otpauth://totp/WorkOS:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=WorkOS
@@ -41902,6 +41929,7 @@ components:
           example: '2026-01-15T12:00:00.000Z'
         value:
           type: string
+          format: password
           description: The full API Key value. Only returned once at creation time.
           example: sk_abcdefghijklmnop123456
       required:
@@ -42914,6 +42942,7 @@ components:
                   const: oauth
                 value:
                   type: string
+                  format: password
                   description: The OAuth access token.
                   example: gho_16C7e42F292c6912E7710c838347Ae178B4a
                 expires_at:
@@ -42977,6 +43006,7 @@ components:
                   const: api_key
                 value:
                   type: string
+                  format: password
                   description: The API key secret.
                   example: sk-1234567890abcdef
               required:
@@ -43013,6 +43043,7 @@ components:
                   const: client_credentials
                 value:
                   type: string
+                  format: password
                   description: The client-credentials access token.
                   example: 00D5g000000XXXX!AQEAQ...
                 expires_at:
@@ -43632,6 +43663,7 @@ components:
       properties:
         link:
           type: string
+          format: password
           description: An ephemeral link to initiate the Admin Portal.
           example: >-
             https://setup.workos.com?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -43678,6 +43710,7 @@ components:
           example: '2026-01-15T12:00:00.000Z'
         code:
           type: string
+          format: password
           description: The code used to verify the Radar Challenge.
           example: '123456'
       required:
@@ -44112,6 +44145,7 @@ components:
           example: '2026-01-15T12:00:00.000Z'
         code:
           type: string
+          format: password
           description: The code used to verify the Magic Auth code.
           example: '123456'
       required:
@@ -44215,6 +44249,7 @@ components:
           example: Z1uX3RbwcIl5fIGJJJCXXisdI
         accept_invitation_url:
           type: string
+          format: password
           description: The URL where the recipient can accept the invitation.
           example: >-
             https://your-app.com/invite?invitation_token=Z1uX3RbwcIl5fIGJJJCXXisdI
@@ -44596,6 +44631,7 @@ components:
           example: '2026-01-15T12:00:00.000Z'
         value:
           type: string
+          format: password
           description: The full API Key value. Only returned once at creation time.
           example: sk_abcdefghijklmnop123456
       required:
@@ -44685,6 +44721,7 @@ components:
           example: '2026-01-15T12:00:00.000Z'
         code:
           type: string
+          format: password
           description: The code used to verify the email.
           example: '123456'
       required:
@@ -44747,6 +44784,7 @@ components:
           example: Z1uX3RbwcIl5fIGJJJCXXisdI
         password_reset_url:
           type: string
+          format: password
           description: The URL where the user can reset their password.
           example: https://your-app.com/reset-password?token=Z1uX3RbwcIl5fIGJJJCXXisdI
       required:
@@ -44807,6 +44845,7 @@ components:
           example: org_01H945H0YD4F97JN9MATX7BYAG
         authkit_authorization_code:
           type: string
+          format: password
           description: >-
             An authorization code that can be exchanged for tokens by a
             different application.
@@ -44915,10 +44954,12 @@ components:
       properties:
         device_code:
           type: string
+          format: password
           description: The device verification code.
           example: CVE2wOfIFK4vhmiDBntpX9s8KT2f0qngpWYL0LGy9HxYgBRXUKIUkZB9BgIFho5h
         user_code:
           type: string
+          format: password
           description: The end-user verification code.
           example: BCDF-GHJK
         verification_uri:
@@ -44928,7 +44969,7 @@ components:
           example: https://authkit_domain/device
         verification_uri_complete:
           type: string
-          format: uri
+          format: password
           description: Verification URI that includes the user code.
           example: https://authkit_domain/device?user_code=BCDF-GHJK
         expires_in:
@@ -45376,6 +45417,7 @@ components:
       properties:
         logout_url:
           type: string
+          format: password
           description: >-
             The URL to redirect the user to in order to log out ([Logout
             Redirect](/reference/sso/logout) endpoint ready to use).
