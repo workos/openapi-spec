@@ -11047,6 +11047,15 @@ paths:
                     `organization` vends the organization's shared connection
                     and requires `organization_id`.
                   example: user
+                supports_multiple_connections:
+                  type: boolean
+                  description: >-
+                    Set to `true` to use the plural connection contract. If no
+                    `connected_account_id` is supplied and several connections
+                    match, the request returns `account_selection_required`.
+                    When omitted or `false`, only the compatibility connection
+                    is considered.
+                  example: true
               required:
                 - user_id
       responses:
@@ -11193,6 +11202,15 @@ paths:
                     `organization` vends the organization's shared connection
                     and requires `organization_id`.
                   example: user
+                supports_multiple_connections:
+                  type: boolean
+                  description: >-
+                    Set to `true` to use the plural connection contract. If no
+                    `connected_account_id` is supplied and several connections
+                    match, the request returns `account_selection_required`.
+                    When omitted or `false`, only the compatibility connection
+                    is considered.
+                  example: true
               required:
                 - user_id
       responses:
@@ -22270,6 +22288,15 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
         - name: connected_account_id
           required: false
           in: query
@@ -22359,6 +22386,15 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
         - name: connected_account_id
           required: false
           in: query
@@ -22536,6 +22572,15 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
         - name: connected_account_id
           required: false
           in: query
@@ -22626,6 +22671,15 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
       responses:
         '200':
           description: The list of data providers was retrieved successfully.
@@ -43339,9 +43393,10 @@ components:
                 description: Use updated_at instead.
               connected_account:
                 description: >-
-                  The user's [connected
+                  The user's compatibility [connected
                   account](/reference/pipes/connected-account) for this
-                  provider, or `null` if the user has not connected.
+                  provider, or `null` when the compatibility slot is empty. This
+                  legacy field never selects a standard connection.
                 oneOf:
                   - type: object
                     properties:
@@ -43632,7 +43687,9 @@ components:
                     - updatedAt
                 description: >-
                   The user's connected accounts for this provider in the
-                  requested ownership context.
+                  requested ownership context. This contains only the
+                  compatibility connection unless
+                  `supports_multiple_connections` is `true`.
             required:
               - object
               - id
