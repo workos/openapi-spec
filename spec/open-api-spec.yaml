@@ -44969,7 +44969,7 @@ components:
           example: https://authkit_domain/device
         verification_uri_complete:
           type: string
-          format: password
+          format: uri
           description: Verification URI that includes the user code.
           example: https://authkit_domain/device?user_code=BCDF-GHJK
         expires_in:
