@@ -10352,7 +10352,9 @@ paths:
       description: >-
         Lists the environment's data integrations configured with `custom` or
         `organization` credentials, including custom providers and API key
-        integrations.
+        integrations. Both user-owned and organization-owned roots are returned,
+        each as its own row with an `ownership`; filter with `ownership` to
+        return only one kind.
       operationId: DataIntegrationsManagementController_listDataIntegrations
       parameters:
         - name: before
@@ -10401,6 +10403,19 @@ paths:
             `after` fetches newer records). Defaults to `normal`.
           schema:
             $ref: '#/components/schemas/PaginationOrder'
+        - name: ownership
+          required: false
+          in: query
+          description: >-
+            Only return Data Integrations with this ownership: `user` for the
+            integrations users connect their own accounts to, or `organization`
+            for the roots organizations connect to. Omit to return both.
+          schema:
+            example: user
+            enum:
+              - user
+              - organization
+            type: string
       responses:
         '200':
           description: OK
@@ -10410,13 +10425,41 @@ paths:
                 $ref: '#/components/schemas/DataIntegrationList'
         '401':
           description: Unauthorized
+        '404':
+          description: >-
+            Organization-owned data integrations are not available for this
+            environment.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
       summary: List data integrations
       tags:
         - pipes
       x-feature-flag: pipes-management-api
   /data-integrations/{slug}:
     get:
-      description: Retrieves a data integration by its slug.
+      description: Retrieves the user-owned data integration by its slug.
       operationId: DataIntegrationsManagementController_getDataIntegration
       parameters:
         - name: slug
@@ -10454,9 +10497,9 @@ paths:
       x-feature-flag: pipes-management-api
     put:
       description: >-
-        Updates the description, enabled state, or custom credentials of a data
-        integration. For custom providers, `custom_provider` updates the OAuth
-        definition.
+        Updates the description, enabled state, or custom credentials of the
+        user-owned data integration. For custom providers, `custom_provider`
+        updates the OAuth definition.
       operationId: DataIntegrationsManagementController_updateDataIntegration
       parameters:
         - name: slug
@@ -10554,8 +10597,9 @@ paths:
       x-feature-flag: pipes-management-api
     delete:
       description: >-
-        Deletes a data integration and all of its connected installations. For a
-        custom provider, also deletes the custom provider definition.
+        Deletes the user-owned data integration and all of its connected
+        installations. For a custom provider, the provider definition is deleted
+        once no organization-owned root references it either.
       operationId: DataIntegrationsManagementController_deleteDataIntegration
       parameters:
         - name: slug
@@ -11145,6 +11189,263 @@ paths:
       summary: Vend credentials for a connected account
       tags:
         - pipes
+  /data-integrations/{slug}/organization:
+    get:
+      description: >-
+        Retrieves the organization-owned data integration for a provider by its
+        slug. The `/organization` suffix selects the environment-level
+        organization-owned root for the provider; it does not name a particular
+        organization.
+      operationId: DataIntegrationsManagementController_getOrganizationDataIntegration
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The slug identifier of the data integration.
+          schema:
+            example: github
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegration'
+              example:
+                object: data_integration
+                id: data_integration_01EHZNVPK3SFK441A1RGBFSHRT
+                slug: github
+                integration_type: github
+                ownership: organization
+                description: Production GitHub app
+                enabled: true
+                state: valid
+                scopes:
+                  - repo
+                  - read:org
+                redirect_uri: >-
+                  https://api.workos.com/data-integrations/github/dik_01EHZNVPK3SFK441A1RGBFSHRT/callback
+                auth_methods:
+                  - oauth
+                credentials:
+                  type: custom
+                  client_id: Iv1.abc123
+                  redacted_client_secret: '6789'
+                installation: null
+                config:
+                  account: myorg-myaccount
+                custom_provider:
+                  name: My OAuth App
+                  authorization_url: https://provider.example.com/oauth/authorize
+                  token_url: https://provider.example.com/oauth/token
+                  refresh_token_url: https://provider.example.com/oauth/token
+                  pkce_enabled: true
+                  request_scope_separator: ' '
+                  scopes_required: false
+                  client_secret_required: true
+                  additional_authorization_parameters:
+                    prompt: consent
+                  token_body_content_type: application/x-www-form-urlencoded
+                  authenticate_via: request_body
+                created_at: '2026-01-15T12:00:00.000Z'
+                updated_at: '2026-01-15T12:00:00.000Z'
+          description: OK
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Get an organization-owned data integration
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
+    put:
+      description: >-
+        Updates the description, enabled state, or custom credentials of the
+        organization-owned data integration for a provider. For custom
+        providers, `custom_provider` updates the OAuth definition, which is
+        shared with the user-owned root. The `/organization` suffix selects the
+        environment-level organization-owned root for the provider; it does not
+        name a particular organization.
+      operationId: DataIntegrationsManagementController_updateOrganizationDataIntegration
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The slug identifier of the data integration.
+          schema:
+            example: github
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDataIntegrationDto'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegration'
+              example:
+                object: data_integration
+                id: data_integration_01EHZNVPK3SFK441A1RGBFSHRT
+                slug: github
+                integration_type: github
+                ownership: organization
+                description: Production GitHub app
+                enabled: true
+                state: valid
+                scopes:
+                  - repo
+                  - read:org
+                redirect_uri: >-
+                  https://api.workos.com/data-integrations/github/dik_01EHZNVPK3SFK441A1RGBFSHRT/callback
+                auth_methods:
+                  - oauth
+                credentials:
+                  type: custom
+                  client_id: Iv1.abc123
+                  redacted_client_secret: '6789'
+                installation: null
+                config:
+                  account: myorg-myaccount
+                custom_provider:
+                  name: My OAuth App
+                  authorization_url: https://provider.example.com/oauth/authorize
+                  token_url: https://provider.example.com/oauth/token
+                  refresh_token_url: https://provider.example.com/oauth/token
+                  pkce_enabled: true
+                  request_scope_separator: ' '
+                  scopes_required: false
+                  client_secret_required: true
+                  additional_authorization_parameters:
+                    prompt: consent
+                  token_body_content_type: application/x-www-form-urlencoded
+                  authenticate_via: request_body
+                created_at: '2026-01-15T12:00:00.000Z'
+                updated_at: '2026-01-15T12:00:00.000Z'
+          description: OK
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Update an organization-owned data integration
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
+    delete:
+      description: >-
+        Deletes the organization-owned data integration for a provider and all
+        of its connected installations. For a custom provider, the provider
+        definition is deleted once no user-owned root references it either. The
+        `/organization` suffix selects the environment-level organization-owned
+        root for the provider; it does not name a particular organization.
+      operationId: DataIntegrationsManagementController_deleteOrganizationDataIntegration
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The slug identifier of the data integration.
+          schema:
+            example: github
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Delete an organization-owned data integration
+      tags:
+        - pipes
+      x-feature-flag: pipes-management-api
   /data-integrations/{slug}/token:
     post:
       description: >-
@@ -17136,6 +17437,235 @@ paths:
       summary: Authenticate
       tags:
         - user-management.authentication
+  /user_management/authkit_oauth_resources:
+    post:
+      description: >-
+        Adds an MCP resource indicator (RFC 8707) to an environment, leaving any
+        others in place.
+      operationId: AuthkitOauthResourcesController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuthkitOauthResourceDto'
+      responses:
+        '201':
+          description: MCP resource indicator created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthkitOauthResource'
+              example:
+                object: authkit_oauth_resource
+                id: authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT
+                uri: https://api.example.com
+                default: false
+                created_at: '2026-01-15T12:00:00.000Z'
+                updated_at: '2026-01-15T12:00:00.000Z'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+        '422':
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: >-
+                  AuthKit OAuth resource 'https://api.example.com' already
+                  exists.
+      summary: Create an MCP resource indicator
+      tags:
+        - user-management.authkit-oauth-resources
+    get:
+      description: Lists the MCP resource indicators configured for an environment.
+      operationId: AuthkitOauthResourcesController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to `normal`.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: MCP resource indicators listed successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: authkit_oauth_resource_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: authkit_oauth_resource_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/AuthkitOauthResource'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+      summary: List MCP resource indicators
+      tags:
+        - user-management.authkit-oauth-resources
+  /user_management/authkit_oauth_resources/{id}:
+    delete:
+      description: >-
+        Removes an MCP resource indicator from an environment. Any application
+        consents granted against it are removed too.
+      operationId: AuthkitOauthResourcesController_delete
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The ID of the MCP resource indicator to delete.
+          schema:
+            type: string
+            example: authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT
+      responses:
+        '204':
+          description: MCP resource indicator deleted successfully.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+        '404':
+          description: MCP resource indicator not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: >-
+                  AuthKit OAuth resource not found:
+                  'authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT'.
+      summary: Delete an MCP resource indicator
+      tags:
+        - user-management.authkit-oauth-resources
   /user_management/authorize:
     get:
       description: >-
@@ -24373,6 +24903,8 @@ tags:
     description: Single Sign-On endpoints.
   - name: user-management.authentication
     description: User authentication endpoints.
+  - name: user-management.authkit-oauth-resources
+    description: Manage MCP resource indicators (RFC 8707).
   - name: user-management.cors-origins
     description: Manage CORS origins for user management.
   - name: user-management.data-providers
@@ -26544,15 +27076,15 @@ components:
         ownership:
           type: string
           enum:
-            - userland_user
+            - user
             - organization
           description: >-
-            Who owns the Data Integration. `userland_user` (the default) creates
-            the integration users connect their own accounts to; `organization`
+            Who owns the Data Integration. `user` (the default) creates the
+            integration users connect their own accounts to; `organization`
             creates the root organizations connect to. Ownership is fixed at
             creation, and one integration of each ownership may exist per
             provider. Independent of `credentials.type`.
-          example: userland_user
+          example: user
         description:
           type:
             - string
@@ -26855,6 +27387,26 @@ components:
         - user_id
         - pending_authentication_token
         - phone_number
+    CreateAuthkitOauthResourceDto:
+      type: object
+      properties:
+        uri:
+          type: string
+          description: >-
+            The resource URI. May be a wildcard pattern with a single `*` in the
+            leftmost hostname label, where enabled for the environment.
+          example: https://api.example.com
+        default:
+          type: boolean
+          description: >-
+            Whether the resource being created becomes the environment default,
+            clearing any previous default. Applies at creation only — this API
+            has no update endpoint yet, so changing the default on an existing
+            resource is done from the dashboard. A wildcard pattern cannot be
+            the default.
+          example: false
+      required:
+        - uri
     CreateRedirectUriDto:
       type: object
       properties:
@@ -42534,13 +43086,13 @@ components:
         ownership:
           type: string
           enum:
-            - userland_user
+            - user
             - organization
           description: >-
-            Who owns the Data Integration: `userland_user` when users connect
-            their own accounts, `organization` when organizations connect. Fixed
-            at creation.
-          example: userland_user
+            Who owns the Data Integration: `user` when users connect their own
+            accounts, `organization` when organizations connect. Fixed at
+            creation.
+          example: user
         description:
           type:
             - string
@@ -43856,6 +44408,42 @@ components:
           example: Entry already present in list
       required:
         - message
+    AuthkitOauthResource:
+      type: object
+      properties:
+        object:
+          type: string
+          description: The object type.
+          const: authkit_oauth_resource
+        id:
+          type: string
+          description: The ID of the MCP resource indicator.
+          example: authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT
+        uri:
+          type: string
+          description: The resource URI.
+          example: https://api.example.com
+        default:
+          type: boolean
+          description: >-
+            Whether this is the default MCP resource indicator for the
+            environment.
+          example: false
+        created_at:
+          type: string
+          description: The timestamp when the MCP resource indicator was created.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          type: string
+          description: The timestamp when the MCP resource indicator was last updated.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - uri
+        - default
+        - created_at
+        - updated_at
     RedirectUri:
       type: object
       properties:
