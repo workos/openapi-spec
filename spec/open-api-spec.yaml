@@ -17136,6 +17136,237 @@ paths:
       summary: Authenticate
       tags:
         - user-management.authentication
+  /user_management/authkit_oauth_resources:
+    post:
+      description: >-
+        Adds an AuthKit OAuth resource — a resource indicator, per RFC 8707 — to
+        an environment, leaving any others in place.
+      operationId: AuthkitOauthResourcesController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuthkitOauthResourceDto'
+      responses:
+        '201':
+          description: AuthKit OAuth resource created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthkitOauthResource'
+              example:
+                object: authkit_oauth_resource
+                id: authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT
+                uri: https://api.example.com
+                default: false
+                created_at: '2026-01-15T12:00:00.000Z'
+                updated_at: '2026-01-15T12:00:00.000Z'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+        '422':
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: >-
+                  AuthKit OAuth resource 'https://api.example.com' already
+                  exists.
+      summary: Create an AuthKit OAuth resource
+      tags:
+        - user-management.authkit-oauth-resources
+    get:
+      description: >-
+        Lists the AuthKit OAuth resources (resource indicators) configured for
+        an environment.
+      operationId: AuthkitOauthResourcesController_list
+      parameters:
+        - name: before
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `before="obj_123"` to fetch a new batch
+            of objects before `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ123456789ABCDEFGHIJ
+            type: string
+        - name: after
+          required: false
+          in: query
+          description: >-
+            An object ID that defines your place in the list. When the ID is not
+            present, you are at the end of the list. For example, if you make a
+            list request and receive 100 objects, ending with `"obj_123"`, your
+            subsequent call can include `after="obj_123"` to fetch a new batch
+            of objects after `"obj_123"`.
+          schema:
+            example: xxx_01HXYZ987654321KJIHGFEDCBA
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Upper limit on the number of objects to return, between `1` and
+            `100`.
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+            type: integer
+        - name: order
+          required: false
+          in: query
+          description: >-
+            Order the results by the creation time. Supported values are `"asc"`
+            (ascending), `"desc"` (descending), and `"normal"` (descending with
+            reversed cursor semantics where `before` fetches older records and
+            `after` fetches newer records). Defaults to `normal`.
+          schema:
+            $ref: '#/components/schemas/PaginationOrder'
+      responses:
+        '200':
+          description: AuthKit OAuth resources listed successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      object:
+                        type: string
+                        description: Indicates this is a list response.
+                        const: list
+                      list_metadata:
+                        type: object
+                        properties:
+                          before:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the start
+                              of the list.
+                            example: authkit_oauth_resource_01HXYZ123456789ABCDEFGHIJ
+                          after:
+                            type:
+                              - string
+                              - 'null'
+                            description: >-
+                              An object ID that defines your place in the list.
+                              When the ID is not present, you are at the end of
+                              the list.
+                            example: authkit_oauth_resource_01HXYZ987654321KJIHGFEDCBA
+                        required:
+                          - before
+                          - after
+                        description: >-
+                          Pagination cursors for navigating between pages of
+                          results.
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        description: The list of records for the current page.
+                        items:
+                          $ref: '#/components/schemas/AuthkitOauthResource'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+      summary: List AuthKit OAuth resources
+      tags:
+        - user-management.authkit-oauth-resources
+  /user_management/authkit_oauth_resources/{id}:
+    delete:
+      description: >-
+        Removes an AuthKit OAuth resource from an environment. Any application
+        consents granted against it are removed too.
+      operationId: AuthkitOauthResourcesController_delete
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The ID of the AuthKit OAuth resource to delete.
+          schema:
+            type: string
+            example: authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT
+      responses:
+        '204':
+          description: AuthKit OAuth resource deleted successfully.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: Unauthorized
+        '404':
+          description: AuthKit OAuth resource not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+              example:
+                message: >-
+                  AuthKit OAuth resource not found:
+                  'authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT'.
+      summary: Delete an AuthKit OAuth resource
+      tags:
+        - user-management.authkit-oauth-resources
   /user_management/authorize:
     get:
       description: >-
@@ -24373,6 +24604,10 @@ tags:
     description: Single Sign-On endpoints.
   - name: user-management.authentication
     description: User authentication endpoints.
+  - name: user-management.authkit-oauth-resources
+    description: >-
+      Manage AuthKit OAuth resources, also known as resource indicators (RFC
+      8707).
   - name: user-management.cors-origins
     description: Manage CORS origins for user management.
   - name: user-management.data-providers
@@ -26855,6 +27090,26 @@ components:
         - user_id
         - pending_authentication_token
         - phone_number
+    CreateAuthkitOauthResourceDto:
+      type: object
+      properties:
+        uri:
+          type: string
+          description: >-
+            The resource URI. May be a wildcard pattern with a single `*` in the
+            leftmost hostname label, where enabled for the environment.
+          example: https://api.example.com
+        default:
+          type: boolean
+          description: >-
+            Whether the resource being created becomes the environment default,
+            clearing any previous default. Applies at creation only — this API
+            has no update endpoint yet, so changing the default on an existing
+            resource is done from the dashboard. A wildcard pattern cannot be
+            the default.
+          example: false
+      required:
+        - uri
     CreateRedirectUriDto:
       type: object
       properties:
@@ -43856,6 +44111,42 @@ components:
           example: Entry already present in list
       required:
         - message
+    AuthkitOauthResource:
+      type: object
+      properties:
+        object:
+          type: string
+          description: The object type.
+          const: authkit_oauth_resource
+        id:
+          type: string
+          description: The ID of the AuthKit OAuth resource.
+          example: authkit_oauth_resource_01EHZNVPK3SFK441A1RGBFSHRT
+        uri:
+          type: string
+          description: The resource URI.
+          example: https://api.example.com
+        default:
+          type: boolean
+          description: >-
+            Whether this is the default AuthKit OAuth resource for the
+            environment.
+          example: false
+        created_at:
+          type: string
+          description: The timestamp when the AuthKit OAuth resource was created.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          type: string
+          description: The timestamp when the AuthKit OAuth resource was last updated.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - uri
+        - default
+        - created_at
+        - updated_at
     RedirectUri:
       type: object
       properties:
