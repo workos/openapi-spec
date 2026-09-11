@@ -80,6 +80,8 @@ test('scopesForServices maps staged post-mount names to changelog scope keys', (
   // PipesProvider folds into the pipes scope via the override table.
   assert.deepEqual(scopesForServices('Pipes,PipesProvider'), new Set(['pipes']));
   assert.deepEqual(scopesForServices('UserManagement, SSO'), new Set(['user_management', 'sso']));
+  // Agents sub-services (post-mount `Agents<Sub>`) collapse onto the single agents scope.
+  assert.deepEqual(scopesForServices('AgentsRegistrations,AgentsBlueprintsTokens'), new Set(['agents']));
 });
 
 test('scopesForServices returns null for an empty/absent selection (full generation keeps every scope)', () => {

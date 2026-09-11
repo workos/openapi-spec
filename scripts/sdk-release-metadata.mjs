@@ -384,6 +384,9 @@ function sortStable(values) {
 export function publicScopeFromService(serviceName) {
   if (!serviceName) return 'sdk';
   if (SERVICE_SCOPE_OVERRIDES.has(serviceName)) return SERVICE_SCOPE_OVERRIDES.get(serviceName);
+  // Agents sub-services (`agents.registrations`, `agents.blueprints`, ...) all
+  // document under the single agents reference page.
+  if (serviceName.startsWith('Agents')) return 'agents';
   if (serviceName.startsWith('Directory')) return 'directory_sync';
   if (serviceName.startsWith('FeatureFlags')) return 'feature_flags';
   if (serviceName.startsWith('MultiFactorAuth')) return 'multi_factor_auth';
