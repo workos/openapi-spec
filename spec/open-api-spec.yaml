@@ -41087,6 +41087,7 @@ components:
                         - sessions
                         - auditLogEvents
                         - connections
+                        - directoryUsers
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -41135,6 +41136,7 @@ components:
                         - sessions
                         - auditLogEvents
                         - connections
+                        - directoryUsers
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -41183,6 +41185,7 @@ components:
                         - sessions
                         - auditLogEvents
                         - connections
+                        - directoryUsers
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -41231,6 +41234,7 @@ components:
                         - sessions
                         - auditLogEvents
                         - connections
+                        - directoryUsers
                       description: The type of resource being exported.
                       example: users
                   required:
