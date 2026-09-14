@@ -3649,7 +3649,7 @@ paths:
       summary: Check authorization
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_4
+      x-mutually-exclusive-body-groups: &ref_5
         resource_target:
           optional: false
           variants:
@@ -4292,7 +4292,7 @@ paths:
       summary: Assign a role
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_5
+      x-mutually-exclusive-body-groups: &ref_6
         resource_target:
           optional: false
           variants:
@@ -4363,7 +4363,7 @@ paths:
       summary: Remove a role assignment
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_6
+      x-mutually-exclusive-body-groups: &ref_7
         resource_target:
           optional: false
           variants:
@@ -6786,7 +6786,7 @@ paths:
       summary: Create an authorization resource
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_7
+      x-mutually-exclusive-body-groups: &ref_8
         parent_resource:
           optional: true
           variants:
@@ -8925,7 +8925,7 @@ paths:
       tags:
         - connections
       x-feature-flag: connections-api-migrations-capabilities-api
-      x-mutually-exclusive-body-groups: &ref_8
+      x-mutually-exclusive-body-groups: &ref_9
         protocol_options:
           optional: false
           variants:
@@ -10153,7 +10153,7 @@ paths:
       tags:
         - connections
       x-feature-flag: connections-api-migrations-capabilities-api
-      x-mutually-exclusive-body-groups: &ref_11
+      x-mutually-exclusive-body-groups: &ref_12
         protocol_options:
           optional: true
           variants:
@@ -10806,14 +10806,31 @@ paths:
               properties:
                 user_id:
                   type: string
-                  description: The ID of the user to authorize.
+                  description: >-
+                    The ID of the user to authorize. When `connection_owner` is
+                    `organization`, this is the user authorizing on behalf of
+                    the organization; they must be an active member of the
+                    organization and do not become the owner of the resulting
+                    connected account.
                   example: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id:
                   type: string
                   description: >-
                     An organization ID to scope the authorization to a specific
-                    organization.
+                    organization. Required when `connection_owner` is
+                    `organization`.
                   example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Who will own the connected account. `user` (the default)
+                    connects the user's own account. `organization` connects the
+                    organization's shared account and requires
+                    `organization_id`.
+                  example: user
                 return_to:
                   type: string
                   format: uri
@@ -13600,7 +13617,7 @@ paths:
       summary: Set Retention
       tags:
         - audit-logs
-      x-mutually-exclusive-body-groups: &ref_3
+      x-mutually-exclusive-body-groups: &ref_4
         retention:
           optional: false
           variants:
@@ -14690,6 +14707,623 @@ paths:
       summary: List authorized applications
       tags:
         - organizations.authorized-applications
+  /organizations/{organization_id}/connected_accounts/{slug}:
+    get:
+      description: >-
+        Retrieves an organization's [connected
+        account](/reference/pipes/connected-account) for a specific provider.
+      operationId: DataIntegrationsOrganizationController_getOrganizationDataInstallation
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: An [Organization](/reference/organization) identifier.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: slug
+          required: true
+          in: path
+          description: >-
+            The slug identifier of the provider (e.g., `github`, `slack`,
+            `notion`).
+          schema:
+            example: github
+            type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
+        - name: connected_account_id
+          required: false
+          in: query
+          description: >-
+            A [connected account](/reference/pipes/connected-account)
+            identifier. Use this to select a specific connection when the
+            organization has several for this provider.
+          schema:
+            minLength: 1
+            example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+      responses:
+        '200':
+          description: The connected account was retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+              example:
+                object: connected_account
+                id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                user_id: null
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                scopes:
+                  - repo
+                  - user:email
+                auth_method: oauth
+                api_key_last_4: null
+                client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
+                client_secret_last_4: cdef
+                config:
+                  instance_url: https://example.my.salesforce.com
+                state: connected
+                created_at: '2024-01-16T14:20:00.000Z'
+                updated_at: '2024-01-16T14:20:00.000Z'
+        '400':
+          description: The connected account selector is malformed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The organization or connected account was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            Several connected accounts match this organization for the provider;
+            one must be named.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
+      summary: Get an organization connected account
+      tags:
+        - organizations.data-providers
+      x-feature-flag: pipes-org-integrations
+    delete:
+      description: >-
+        Disconnects the organization's account for the provider, including
+        removing any stored access and refresh tokens. A member will need to
+        reauthorize if the organization wants to reconnect. This does not revoke
+        access on the provider side.
+      operationId: >-
+        DataIntegrationsOrganizationController_deleteOrganizationDataInstallation
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: An [Organization](/reference/organization) identifier.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: slug
+          required: true
+          in: path
+          description: >-
+            The slug identifier of the provider (e.g., `github`, `slack`,
+            `notion`).
+          schema:
+            example: github
+            type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
+        - name: connected_account_id
+          required: false
+          in: query
+          description: >-
+            A [connected account](/reference/pipes/connected-account)
+            identifier. Use this to select the connection to delete.
+          schema:
+            minLength: 1
+            example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+      responses:
+        '204':
+          description: The connected account was deleted successfully.
+        '400':
+          description: The connected account selector is malformed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The organization or connected account was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            Several connected accounts match this organization for the provider;
+            one must be named.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
+        '503':
+          description: >-
+            The connected account or its WorkOS OAuth grant is being changed by
+            another request. Retry the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_request
+                    const: concurrent_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Delete an organization connected account
+      tags:
+        - organizations.data-providers
+      x-feature-flag: pipes-org-integrations
+    post:
+      description: >-
+        Imports an organization-owned [connected
+        account](/reference/pipes/connected-account) by providing OAuth tokens
+        directly. Use this to migrate existing connections or set up connections
+        without going through the OAuth flow.
+      operationId: >-
+        DataIntegrationsOrganizationController_createOrganizationDataInstallation
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: An [Organization](/reference/organization) identifier.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: slug
+          required: true
+          in: path
+          description: >-
+            The slug identifier of the provider (e.g., `github`, `slack`,
+            `notion`).
+          schema:
+            example: github
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectedAccountDto'
+      responses:
+        '201':
+          description: The connected account was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+              example:
+                object: connected_account
+                id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                user_id: null
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                scopes:
+                  - repo
+                  - user:email
+                auth_method: oauth
+                api_key_last_4: null
+                client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
+                client_secret_last_4: cdef
+                config:
+                  instance_url: https://example.my.salesforce.com
+                state: connected
+                created_at: '2024-01-16T14:20:00.000Z'
+                updated_at: '2024-01-16T14:20:00.000Z'
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The organization or data integration was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            A connected account already exists for this organization and
+            integration.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: >-
+            The request body is malformed (`invalid_request_parameters`), the
+            data integration is not in a valid state
+            (`invalid_data_integration_state`), the token combination is invalid
+            (`invalid_token_combination`), or no client credentials are
+            configured for the data integration
+            (`client_credentials_not_configured`).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - invalid_token_combination
+                          - invalid_data_integration_state
+                          - client_credentials_not_configured
+                        description: The error code identifying the type of error.
+                        example: invalid_token_combination
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: invalid_request_parameters
+                        const: invalid_request_parameters
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Validation failed.
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              description: The validation error code.
+                              example: unknown_event_type
+                            message:
+                              type: string
+                              description: >-
+                                A human-readable description of the validation
+                                error.
+                              example: Invalid enum value.
+                          required:
+                            - code
+                            - message
+                        description: The list of validation errors.
+                    required:
+                      - code
+                      - message
+                      - errors
+      summary: Import an organization connected account
+      tags:
+        - organizations.data-providers
+      x-feature-flag: pipes-management-api
+    put:
+      description: >-
+        Updates an organization's [connected
+        account](/reference/pipes/connected-account) tokens, scopes, or state
+        for a specific provider.
+      operationId: >-
+        DataIntegrationsOrganizationController_updateOrganizationDataInstallation
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: An [Organization](/reference/organization) identifier.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: slug
+          required: true
+          in: path
+          description: >-
+            The slug identifier of the provider (e.g., `github`, `slack`,
+            `notion`).
+          schema:
+            example: github
+            type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
+        - name: connected_account_id
+          required: false
+          in: query
+          description: >-
+            A [connected account](/reference/pipes/connected-account)
+            identifier. Use this to select the connection to update.
+          schema:
+            minLength: 1
+            example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectedAccountDto'
+      responses:
+        '200':
+          description: The connected account was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+              example:
+                object: connected_account
+                id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                user_id: null
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                scopes:
+                  - repo
+                  - user:email
+                auth_method: oauth
+                api_key_last_4: null
+                client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
+                client_secret_last_4: cdef
+                config:
+                  instance_url: https://example.my.salesforce.com
+                state: connected
+                created_at: '2024-01-16T14:20:00.000Z'
+                updated_at: '2024-01-16T14:20:00.000Z'
+        '400':
+          description: The connected account selector is malformed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The organization or connected account was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: >-
+            Several connected accounts match this organization for the provider;
+            one must be named.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSelectionRequiredError'
+        '422':
+          description: The request body is malformed (`invalid_request_parameters`).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_request_parameters
+                    const: invalid_request_parameters
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Validation failed.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          description: The validation error code.
+                          example: unknown_event_type
+                        message:
+                          type: string
+                          description: >-
+                            A human-readable description of the validation
+                            error.
+                          example: Invalid enum value.
+                      required:
+                        - code
+                        - message
+                    description: The list of validation errors.
+                required:
+                  - code
+                  - message
+                  - errors
+      summary: Update an organization connected account
+      tags:
+        - organizations.data-providers
+      x-feature-flag: pipes-management-api
+  /organizations/{organization_id}/data_providers:
+    get:
+      description: >-
+        Retrieves the organization-owned providers configured for your
+        environment and the organization's [connected
+        account](/reference/pipes/connected-account) information for each.
+        Providers owned by individual users are not included.
+      operationId: DataIntegrationsOrganizationController_getOrganizationDataIntegrations
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: >-
+            An [Organization](/reference/organization) identifier to list
+            providers and connected accounts for.
+          schema:
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+            type: string
+        - name: supports_multiple_connections
+          required: false
+          in: query
+          description: >-
+            Set to `true` to use the plural connection contract. When omitted or
+            `false`, only the compatibility connection is considered.
+          schema:
+            example: true
+            type: boolean
+      responses:
+        '200':
+          description: The list of data providers was retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegrationsListResponse'
+              example:
+                object: list
+                data:
+                  - object: data_provider
+                    id: data_integration_01EHZNVPK3SFK441A1RGBFSHRT
+                    name: GitHub
+                    description: Connect your GitHub account to access repositories.
+                    slug: github
+                    integration_type: github
+                    credentials_type: oauth2
+                    scopes:
+                      - repo
+                      - user:email
+                    auth_methods:
+                      - oauth
+                    ownership: organization
+                    created_at: '2024-01-15T10:30:00.000Z'
+                    updated_at: '2024-01-15T10:30:00.000Z'
+                    integrationType: github
+                    credentialsType: oauth2
+                    createdAt: '2024-01-15T10:30:00.000Z'
+                    updatedAt: '2024-01-15T10:30:00.000Z'
+                    connected_account: &ref_1
+                      object: connected_account
+                      id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                      user_id: null
+                      organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                      scopes:
+                        - repo
+                        - user:email
+                      auth_method: oauth
+                      api_key_last_4: null
+                      client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
+                      client_secret_last_4: cdef
+                      config:
+                        instance_url: https://example.my.salesforce.com
+                      state: connected
+                      created_at: '2024-01-16T14:20:00.000Z'
+                      updated_at: '2024-01-16T14:20:00.000Z'
+                      userlandUserId: null
+                      organizationId: org_01EHZNVPK3SFK441A1RGBFSHRT
+                      createdAt: '2024-01-16T14:20:00.000Z'
+                      updatedAt: '2024-01-16T14:20:00.000Z'
+                    connected_accounts:
+                      - *ref_1
+        '401':
+          description: The request is missing a valid API key.
+        '404':
+          description: The organization was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: List providers for an organization
+      tags:
+        - organizations.data-providers
+      x-feature-flag: pipes-org-integrations
   /organizations/{organization_id}/it_contacts:
     get:
       description: Get the IT contacts for an organization.
@@ -19568,7 +20202,7 @@ paths:
       summary: Create an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_15
+      x-mutually-exclusive-body-groups: &ref_16
         role:
           optional: true
           variants:
@@ -19752,7 +20386,7 @@ paths:
       summary: Update an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_16
+      x-mutually-exclusive-body-groups: &ref_17
         role:
           optional: true
           variants:
@@ -21072,7 +21706,7 @@ paths:
       summary: Create a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_17
+      x-mutually-exclusive-body-groups: &ref_18
         password:
           optional: true
           variants:
@@ -21365,7 +21999,7 @@ paths:
       summary: Update a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_21
+      x-mutually-exclusive-body-groups: &ref_22
         password:
           optional: true
           variants:
@@ -23087,8 +23721,10 @@ paths:
             The request body is malformed (`invalid_request_parameters`), the
             data integration is not in a valid state
             (`invalid_data_integration_state`), the token combination is invalid
-            (`invalid_token_combination`), or `refresh_token` is not an active
-            WorkOS OAuth grant of this user (`invalid_refresh_token`).
+            (`invalid_token_combination`), no client credentials are configured
+            for the data integration (`client_credentials_not_configured`), or
+            `refresh_token` is not an active WorkOS OAuth grant of this user
+            (`invalid_refresh_token`).
           content:
             application/json:
               schema:
@@ -23101,6 +23737,7 @@ paths:
                           - invalid_refresh_token
                           - invalid_token_combination
                           - invalid_data_integration_state
+                          - client_credentials_not_configured
                         description: The error code identifying the type of error.
                         example: invalid_refresh_token
                       message:
@@ -25061,6 +25698,8 @@ tags:
     description: Manage organization-scoped API keys.
   - name: organizations.authorized-applications
     description: Manage authorized applications for organizations.
+  - name: organizations.data-providers
+    description: Manage organization-owned data providers and connected accounts.
   - name: organizations.feature-flags
     description: Manage organization-scoped feature flags.
   - name: organizations.it-contacts
@@ -25302,7 +25941,7 @@ components:
           example: An application for managing user access
         scopes:
           description: The OAuth scopes granted to the application.
-          example: &ref_1
+          example: &ref_2
             - openid
             - profile
             - email
@@ -25364,7 +26003,7 @@ components:
           example: An application for managing user access
         scopes:
           description: The OAuth scopes granted to the application.
-          example: *ref_1
+          example: *ref_2
           type:
             - array
             - 'null'
@@ -25437,7 +26076,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: &ref_2
+          patternProperties: &ref_3
             ^[a-zA-Z0-9_-]{0,40}$:
               anyOf:
                 - type: string
@@ -25469,7 +26108,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: *ref_2
+          patternProperties: *ref_3
       required:
         - id
         - type
@@ -25516,7 +26155,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: *ref_2
+          patternProperties: *ref_3
         version:
           type: integer
           description: What schema version the event is associated with.
@@ -25598,7 +26237,7 @@ components:
         - range_start
         - range_end
     UpdateAuditLogsRetentionDto:
-      x-mutually-exclusive-body-groups: *ref_3
+      x-mutually-exclusive-body-groups: *ref_4
       oneOf:
         - type: object
           properties:
@@ -25783,7 +26422,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - resource_id
-      x-mutually-exclusive-body-groups: *ref_4
+      x-mutually-exclusive-body-groups: *ref_5
     CreateGroupRoleAssignmentDto:
       type: object
       properties:
@@ -25924,7 +26563,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - resource_id
-      x-mutually-exclusive-body-groups: *ref_5
+      x-mutually-exclusive-body-groups: *ref_6
     RemoveRoleDto:
       allOf:
         - type: object
@@ -25983,7 +26622,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - resource_id
-      x-mutually-exclusive-body-groups: *ref_6
+      x-mutually-exclusive-body-groups: *ref_7
     SetRolePermissionsDto:
       type: object
       properties:
@@ -26333,7 +26972,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - parent_resource_id
-      x-mutually-exclusive-body-groups: *ref_7
+      x-mutually-exclusive-body-groups: *ref_8
     CreateConnectionKeyPairDto:
       type: object
       properties:
@@ -26451,7 +27090,7 @@ components:
           default: true
         token_authentication_method:
           type: string
-          enum: &ref_9
+          enum: &ref_10
             - client_secret_post
             - client_secret_basic
             - private_key_jwt
@@ -26467,7 +27106,7 @@ components:
           $ref: '#/components/schemas/CreateConnectionKeyPairDto'
         id_token_signature_algorithm:
           type: string
-          enum: &ref_10
+          enum: &ref_11
             - ES256
             - ES384
             - ES512
@@ -26623,7 +27262,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - saml_options
-      x-mutually-exclusive-body-groups: *ref_8
+      x-mutually-exclusive-body-groups: *ref_9
     PatchConnectionSamlOptionsDto:
       type: object
       properties:
@@ -26699,7 +27338,7 @@ components:
           example: true
         token_authentication_method:
           type: string
-          enum: *ref_9
+          enum: *ref_10
           description: >-
             The token-endpoint client authentication method. Moving to
             `private_key_jwt` generates a signing key pair if the connection has
@@ -26709,7 +27348,7 @@ components:
           example: client_secret_basic
         id_token_signature_algorithm:
           type: string
-          enum: *ref_10
+          enum: *ref_11
           description: The ID-token signing algorithm.
           example: RS256
         fetch_user_info:
@@ -26853,7 +27492,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - saml_options
-      x-mutually-exclusive-body-groups: *ref_11
+      x-mutually-exclusive-body-groups: *ref_12
     CreateCorsOriginDto:
       type: object
       properties:
@@ -27035,11 +27674,11 @@ components:
           type:
             - object
             - 'null'
-          additionalProperties: &ref_12
+          additionalProperties: &ref_13
             type: string
             maxLength: 600
           maxProperties: 50
-          example: &ref_13
+          example: &ref_14
             tier: diamond
           description: >-
             Object containing [metadata](/authkit/metadata) key/value pairs
@@ -27094,9 +27733,9 @@ components:
           type:
             - object
             - 'null'
-          additionalProperties: *ref_12
+          additionalProperties: *ref_13
           maxProperties: 50
-          example: *ref_13
+          example: *ref_14
           description: >-
             Object containing [metadata](/authkit/metadata) key/value pairs
             associated with the Organization.
@@ -27230,7 +27869,7 @@ components:
           example: application/x-www-form-urlencoded
         authenticate_via:
           type: string
-          enum: &ref_14
+          enum: &ref_15
             - request_body
             - basic_auth_header
           description: >-
@@ -27398,7 +28037,7 @@ components:
           example: application/x-www-form-urlencoded
         authenticate_via:
           type: string
-          enum: *ref_14
+          enum: *ref_15
           description: >-
             How client credentials are sent when exchanging authorization codes
             and refreshing tokens.
@@ -27983,9 +28622,9 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - role_slug
-      x-mutually-exclusive-body-groups: *ref_15
-    UpdateUserlandUserOrganizationMembershipDto:
       x-mutually-exclusive-body-groups: *ref_16
+    UpdateUserlandUserOrganizationMembershipDto:
+      x-mutually-exclusive-body-groups: *ref_17
       oneOf:
         - type: object
           not:
@@ -28107,9 +28746,9 @@ components:
               type:
                 - object
                 - 'null'
-              additionalProperties: *ref_12
+              additionalProperties: *ref_13
               maxProperties: 50
-              example: &ref_18
+              example: &ref_19
                 timezone: America/New_York
               description: >-
                 Object containing metadata key/value pairs associated with the
@@ -28208,7 +28847,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: &ref_19
+                  enum: &ref_20
                     - bcrypt
                     - firebase-scrypt
                     - ssha
@@ -28223,7 +28862,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: &ref_20
+                  enum: &ref_21
                     - prefix
                     - suffix
                   description: >-
@@ -28244,7 +28883,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_17
+      x-mutually-exclusive-body-groups: *ref_18
     UpdateUserlandUserDto:
       allOf:
         - type: object
@@ -28274,9 +28913,9 @@ components:
               type:
                 - object
                 - 'null'
-              additionalProperties: *ref_12
+              additionalProperties: *ref_13
               maxProperties: 50
-              example: *ref_18
+              example: *ref_19
               description: >-
                 Object containing metadata key/value pairs associated with the
                 user.
@@ -28358,7 +28997,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: *ref_19
+                  enum: *ref_20
                   description: >-
                     The algorithm originally used to hash the password, used
                     when providing a `password_hash`. Required with
@@ -28366,7 +29005,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: *ref_20
+                  enum: *ref_21
                   description: >-
                     The position of the salt relative to the password when the
                     `password_hash` digest was computed: `prefix` for `hash(salt
@@ -28385,7 +29024,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_21
+      x-mutually-exclusive-body-groups: *ref_22
     VerifyEmailAddressDto:
       type: object
       properties:
@@ -28494,7 +29133,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: &ref_22
+            enum: &ref_23
               - agent.blueprint.created
               - agent.blueprint.deleted
               - agent.blueprint.updated
@@ -28625,7 +29264,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: *ref_22
+            enum: *ref_23
           example:
             - user.created
             - dsync.user.created
@@ -32280,7 +32919,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_28
+          example: &ref_29
             department: Engineering
             job_title: Software Engineer
         role:
@@ -32474,7 +33113,7 @@ components:
               type: object
               additionalProperties: {}
               description: The event payload.
-              example: &ref_23
+              example: &ref_24
                 id: directory_user_01E1JG7J09H96KYP8HM9B0G5SJ
                 directory_id: directory_01ECAZ4NV9QMV47GW873HDCX74
                 organization_id: org_01EZTR6WYX1A0DSE2CYMGXQ24Y
@@ -32509,11 +33148,11 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_33
+          example: &ref_34
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
-            data: *ref_23
+            data: *ref_24
             created_at: '2021-06-25T19:07:33.155Z'
             context: {}
         - oneOf:
@@ -32713,7 +33352,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: &ref_24
+                      example: &ref_25
                         - crm:read
                         - email:send
                     invocable_by:
@@ -32726,7 +33365,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: &ref_25
+                          example: &ref_26
                             - manager
                         organization_ids:
                           type: array
@@ -32735,7 +33374,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: &ref_26
+                          example: &ref_27
                             - org_01EHWNCE74X7JSDV0X3SZ3KJNY
                       required:
                         - role_slugs
@@ -32894,7 +33533,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: *ref_24
+                      example: *ref_25
                     invocable_by:
                       type: object
                       properties:
@@ -32905,7 +33544,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: *ref_25
+                          example: *ref_26
                         organization_ids:
                           type: array
                           items:
@@ -32913,7 +33552,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: *ref_26
+                          example: *ref_27
                       required:
                         - role_slugs
                         - organization_ids
@@ -33949,7 +34588,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_27
+                      example: &ref_28
                         - users:read
                         - users:write
                     created_at:
@@ -34075,7 +34714,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_27
+                      example: *ref_28
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -34199,7 +34838,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_27
+                      example: *ref_28
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -37066,7 +37705,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_28
+                      example: *ref_29
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -37256,7 +37895,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_29
+                      example: &ref_30
                         - reports
                     enabled:
                       type: boolean
@@ -37417,7 +38056,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_29
+                      example: *ref_30
                     enabled:
                       type: boolean
                       description: >-
@@ -37577,7 +38216,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_29
+                      example: *ref_30
                     enabled:
                       type: boolean
                       description: >-
@@ -37857,7 +38496,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_29
+                      example: *ref_30
                     enabled:
                       type: boolean
                       description: >-
@@ -38845,7 +39484,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_30
+                      example: &ref_31
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -38995,7 +39634,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_30
+                      example: *ref_31
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -39822,7 +40461,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_31
+                      example: &ref_32
                         - users:read
                         - users:write
                     created_at:
@@ -39906,7 +40545,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_31
+                      example: *ref_32
                     created_at:
                       format: date-time
                       type: string
@@ -39988,7 +40627,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_31
+                      example: *ref_32
                     created_at:
                       format: date-time
                       type: string
@@ -40125,7 +40764,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_30
+                      example: *ref_31
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -41287,7 +41926,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_32
+                      example: &ref_33
                         - users:read
                         - users:write
                     created_at:
@@ -41353,7 +41992,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_32
+                      example: *ref_33
                     created_at:
                       format: date-time
                       type: string
@@ -41417,7 +42056,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_32
+                      example: *ref_33
                     created_at:
                       format: date-time
                       type: string
@@ -42557,7 +43196,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_33
+      example: *ref_34
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -42592,7 +43231,7 @@ components:
       example:
         object: list
         data:
-          - *ref_33
+          - *ref_34
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -44452,7 +45091,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_34
+                        example: &ref_35
                           - repo
                           - user:email
                       auth_method:
@@ -44502,7 +45141,7 @@ components:
                           `installation` scope, excluding any it declares as
                           secret. Only present when `auth_method` is
                           `client_credentials`.
-                        example: &ref_35
+                        example: &ref_36
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -44600,7 +45239,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_34
+                      example: *ref_35
                     auth_method:
                       type: string
                       enum:
@@ -44647,7 +45286,7 @@ components:
                         `installation` scope, excluding any it declares as
                         secret. Only present when `auth_method` is
                         `client_credentials`.
-                      example: *ref_35
+                      example: *ref_36
                     state:
                       type: string
                       enum:
