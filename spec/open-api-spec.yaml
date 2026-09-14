@@ -25719,9 +25719,11 @@ components:
       properties:
         sms_template:
           type: string
+          maxLength: 160
           description: >-
             A custom template for the SMS message. Use the {{code}} placeholder
-            to include the verification code.
+            to include the verification code. Must not contain URLs or domain
+            names.
           example: Your verification code is {{code}}.
     CheckAuthorizationDto:
       allOf:
