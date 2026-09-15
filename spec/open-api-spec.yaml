@@ -28262,8 +28262,9 @@ components:
         uri:
           type: string
           description: >-
-            The resource URI. May be a wildcard pattern with a single `*` in the
-            leftmost hostname label, where enabled for the environment.
+            The resource URI. May be a wildcard pattern with a single `*`,
+            either in the leftmost hostname label or as the final path segment,
+            where enabled for the environment.
           example: https://api.example.com
         default:
           type: boolean
