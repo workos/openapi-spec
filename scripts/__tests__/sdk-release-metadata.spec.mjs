@@ -7,6 +7,7 @@ import {
   factsFromCompat,
   factsFromDiff,
   groupFacts,
+  publicScopeFromService,
   renderChangelogMarkdown,
   scopesForServices,
 } from '../sdk-release-metadata.mjs';
@@ -82,6 +83,79 @@ test('scopesForServices maps staged post-mount names to changelog scope keys', (
   assert.deepEqual(scopesForServices('UserManagement, SSO'), new Set(['user_management', 'sso']));
   // Agents sub-services (post-mount `Agents<Sub>`) collapse onto the single agents scope.
   assert.deepEqual(scopesForServices('AgentsRegistrations,AgentsBlueprintsTokens'), new Set(['agents']));
+});
+
+test('organization and user data providers share the Pipes release scope', () => {
+  for (const service of ['OrganizationsDataProviders', 'UserManagementDataProviders']) {
+    assert.equal(publicScopeFromService(service), 'pipes');
+    const facts = factsFromDiff({ changes: [{ kind: 'service-added', name: service }] }, EMPTY_INDEXES);
+    assert.equal(facts[0].scope, 'pipes');
+    assert.ok(scopesForServices('Pipes').has(facts[0].scope));
+  }
+});
+
+for (const [name, scope] of [
+  ['ConnectedAccount', 'pipes'],
+  ['ConnectedAccountInput', 'pipes'],
+  ['ConnectedAccountAuthMethod', 'pipes'],
+  ['ConnectedAccountConnectionRole', 'pipes'],
+  ['GetOrganizationConnectedAccountOptions', 'pipes'],
+  ['Connection', 'sso'],
+  ['ConnectionType', 'sso'],
+  ['ConnectApplication', 'connect'],
+  ['ApplicationCredentials', 'connect'],
+]) {
+  test(`connected-account classification keeps ${name} in ${scope}`, () => {
+    const [fact] = factsFromDiff({ changes: [{ kind: 'model-added', name }] }, EMPTY_INDEXES);
+    assert.equal(fact.scope, scope);
+    const compat = factsFromCompat(compatBreak(`${name}.from_dict`), [], EMPTY_INDEXES);
+    assert.equal(compat[0].scope, scope);
+  });
+}
+
+test('ConnectedAccount model and enum release metadata agree with organization Pipes ownership', () => {
+  const indexes = buildIndexes([{
+    services: [{
+      name: 'OrganizationsDataProviders',
+      operations: [{ name: 'getOrganizationConnectedAccount', response: { kind: 'model', name: 'ConnectedAccount' } }],
+    }],
+    models: [{
+      name: 'ConnectedAccount',
+      fields: [{ name: 'auth_method', type: { kind: 'enum', name: 'ConnectedAccountAuthMethod' } }],
+    }],
+    enums: [{ name: 'ConnectedAccountAuthMethod', values: [] }],
+  }]);
+  const facts = factsFromDiff({ changes: [
+    { kind: 'model-added', name: 'ConnectedAccount' },
+    { kind: 'enum-added', name: 'ConnectedAccountAuthMethod' },
+  ] }, indexes);
+  for (const fact of facts) {
+    assert.equal(fact.scope, 'pipes');
+    assert.equal(fact.scope_source, 'name_and_ir');
+    assert.deepEqual(fact.scope_candidates, ['pipes']);
+  }
+  const entries = entriesFromGroups(groupFacts(facts), []);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].scope, 'pipes');
+  assert.equal(entries[0].docs_url, 'https://workos.com/docs/reference/pipes');
+});
+
+test('connected-account files are attributed to Pipes rather than Connect', () => {
+  // Unrelated symbols leave attribution to the file classifier alone.
+  const facts = factsFromDiff({ changes: [
+    { kind: 'model-added', name: 'DataIntegration' },
+    { kind: 'model-added', name: 'ConnectApplication' },
+  ] }, EMPTY_INDEXES);
+  const pipesFiles = [
+    'workos/types/connected_account.py',
+    'workos/types/connected_account_auth_method.py',
+    'Models/ConnectedAccount.cs',
+    'src/pipes/interfaces/get-organization-connected-account-options.interface.ts',
+  ];
+  const connectFiles = ['src/connect/interfaces/application.interface.ts'];
+  const entries = entriesFromGroups(groupFacts(facts), [...pipesFiles, ...connectFiles]);
+  assert.deepEqual(entries.find((entry) => entry.scope === 'pipes').file_paths, pipesFiles);
+  assert.deepEqual(entries.find((entry) => entry.scope === 'connect').file_paths, connectFiles);
 });
 
 test('scopesForServices returns null for an empty/absent selection (full generation keeps every scope)', () => {
