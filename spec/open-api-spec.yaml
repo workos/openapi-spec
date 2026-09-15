@@ -15324,6 +15324,7 @@ paths:
                       - user:email
                     auth_methods:
                       - oauth
+                    connection_owner: organization
                     ownership: organization
                     created_at: '2024-01-15T10:30:00.000Z'
                     updated_at: '2024-01-15T10:30:00.000Z'
@@ -45207,12 +45208,28 @@ components:
                   Defaults to `["oauth"]` if absent.
                 example:
                   - oauth
+              connection_owner:
+                type: string
+                enum:
+                  - user
+                  - organization
+                description: >-
+                  Who owns connections made through this provider: `user` for
+                  connections owned by individual users, or `organization` for a
+                  connection shared by every member of the organization. A
+                  provider row can exist before any connected account does.
+                example: user
               ownership:
                 type: string
                 enum:
                   - userland_user
                   - organization
-                description: Whether the provider is owned by a user or organization.
+                deprecated: true
+                description: >-
+                  Use `connection_owner` instead. Legacy spelling of the same
+                  value: `userland_user` corresponds to `connection_owner:
+                  "user"` and `organization` to `connection_owner:
+                  "organization"`.
               created_at:
                 type: string
                 description: The timestamp when the provider was created.
@@ -45607,6 +45624,7 @@ components:
               - integration_type
               - credentials_type
               - scopes
+              - connection_owner
               - ownership
               - created_at
               - updated_at
