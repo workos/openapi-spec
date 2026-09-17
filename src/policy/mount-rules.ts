@@ -77,6 +77,7 @@ export const mountRules: Record<string, string> = {
   'UserManagementOrganizationMembership*': 'OrganizationMembership',
 
   // Pipes / Data Providers -> Pipes
+  OrganizationsDataProviders: 'Pipes',
   UserManagementDataProviders: 'Pipes',
 
   // User Management MFA -> MultiFactorAuth

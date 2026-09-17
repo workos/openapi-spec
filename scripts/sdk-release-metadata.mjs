@@ -72,6 +72,7 @@ const SERVICE_SCOPE_OVERRIDES = new Map(
     FeatureFlagsTargets: 'feature_flags',
     MultiFactorAuthChallenges: 'multi_factor_auth',
     OrganizationsApiKeys: 'api_keys',
+    OrganizationsDataProviders: 'pipes',
     OrganizationsFeatureFlags: 'feature_flags',
     Permissions: 'authorization',
     PipesProvider: 'pipes',
@@ -417,7 +418,8 @@ export function scopesForServices(servicesArg) {
 function scopeFromName(name) {
   if (!name) return 'sdk';
 
-  if (/DataIntegration|Pipe/.test(name)) return 'pipes';
+  // Connected accounts belong to Pipes, not the broader Connect* family below.
+  if (/ConnectedAccount|DataIntegration|Pipe/.test(name)) return 'pipes';
   if (/SessionAuthenticate/.test(name)) return 'user_management';
   if (/WebhookEndpointEvents|Webhook/.test(name)) return 'webhooks';
   if (/^(ApiKey|ExpireApiKey|OrganizationApiKey|UserApiKey)/.test(name)) return 'api_keys';
@@ -494,6 +496,7 @@ function scopeFromFile(path) {
   if (/directorysync|directory_sync|dsync/.test(normalized)) return 'directory_sync';
   if (/radar/.test(normalized)) return 'radar';
   if (/vault|vaultobject/.test(normalized)) return 'vault';
+  if (/connectedaccount|dataintegration|pipes/.test(normalized)) return 'pipes';
   if (/connect|applicationcredential|externalauth|userobject/.test(normalized)) return 'connect';
   if (/featureflag|featureflags|feature_flags/.test(normalized)) return 'feature_flags';
   if (/multifactorauth|multi_factor_auth|mfa/.test(normalized)) return 'multi_factor_auth';
