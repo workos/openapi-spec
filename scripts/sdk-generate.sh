@@ -31,9 +31,17 @@ done
 # rejects outright. canonicalize-services folds those onto their post-mount
 # target using the same resolution oagen generate applies; genuine typos still
 # pass through and fail loudly. Its own failures degrade to the raw list.
+#
+# canonicalize-services prints an EMPTY list when the selection covers every
+# service (the dashboard's "Stage all"). Fall through to full generation then:
+# a scoped run disables oagen's pruner, so a resource a mount rule folded away
+# would leave its orphaned resource + test files on disk, still calling a client
+# accessor the regenerated client no longer has.
 if [[ -n "$SERVICES" ]]; then
   SERVICES="$(node "$(dirname "$0")/canonicalize-services.mjs" --spec "$SPEC" --services "$SERVICES")"
-  EXTRA_ARGS+=(--services "$SERVICES")
+  if [[ -n "$SERVICES" ]]; then
+    EXTRA_ARGS+=(--services "$SERVICES")
+  fi
 fi
 
 if [[ -z "$LANG" ]]; then

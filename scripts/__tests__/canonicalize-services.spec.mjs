@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   buildServiceIndex,
   canonicalizeServices,
+  coversAllServices,
   parseCsv,
 } from "../canonicalize-services.mjs";
 
@@ -90,4 +91,37 @@ test("parseCsv trims whitespace and drops empties", () => {
   ]);
   assert.deepEqual(parseCsv(""), []);
   assert.deepEqual(parseCsv(undefined), []);
+});
+
+// postMount for OPERATIONS is exactly these five.
+const ALL_POST_MOUNT = ["UserManagement", "SSO", "Organizations", "AuditLogs", "Vault"];
+
+test("coversAllServices is true when the selection equals the full post-mount set", () => {
+  const index = buildServiceIndex(OPERATIONS);
+  assert.equal(coversAllServices(ALL_POST_MOUNT, index), true);
+  assert.equal(coversAllServices([...ALL_POST_MOUNT].reverse(), index), true);
+});
+
+test("coversAllServices is false when any service is missing", () => {
+  const index = buildServiceIndex(OPERATIONS);
+  assert.equal(coversAllServices(ALL_POST_MOUNT.slice(0, -1), index), false);
+  assert.equal(coversAllServices([], index), false);
+});
+
+test("coversAllServices stays false when an unknown name rides along (typos still fail loudly)", () => {
+  const index = buildServiceIndex(OPERATIONS);
+  assert.equal(coversAllServices([...ALL_POST_MOUNT, "Vualt"], index), false);
+});
+
+test("coversAllServices is false against an empty index", () => {
+  assert.equal(coversAllServices(["SSO"], buildServiceIndex([])), false);
+});
+
+test("a pre-mount tag folded onto a listed service still yields full coverage after canonicalization", () => {
+  const index = buildServiceIndex(OPERATIONS);
+  const canonical = canonicalizeServices(
+    ["UserManagementRedirectUris", "Connections", ...ALL_POST_MOUNT],
+    index,
+  );
+  assert.equal(coversAllServices(canonical, index), true);
 });

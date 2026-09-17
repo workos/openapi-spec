@@ -15,6 +15,14 @@
  * oagen has never heard of (a genuine typo), passes through unchanged — so real
  * unknown-service typos still fail loudly at generation.
  *
+ * A selection that names EVERY post-mount service prints an empty list, so the
+ * caller falls through to full (unscoped) generation. `oagen generate --services`
+ * deliberately disables pruning so unselected services' files survive — but when
+ * everything is selected there is nothing to protect, and pruning is what
+ * deletes the orphaned resource + test files a mount rule leaves behind (e.g.
+ * `OrganizationsDataProviders` folding onto `Pipes`: the client drops the old
+ * accessor, and a scoped run would leave its test on disk calling it).
+ *
  * CLI:  node scripts/canonicalize-services.mjs --spec <path> --services <csv>
  *       → prints the canonical, de-duplicated CSV to stdout.
  * On any resolve failure it warns on stderr and echoes the input unchanged, so
@@ -87,6 +95,22 @@ export function canonicalizeServices(services, index) {
   return out;
 }
 
+/**
+ * True when `canonical` is exactly the full set of post-mount services — the
+ * caller selected everything. Set equality, not superset: an unknown name
+ * riding along keeps the run scoped so `oagen generate` still rejects the typo.
+ * @param {string[]} canonical
+ * @param {{ postMount: Set<string> }} index
+ * @returns {boolean}
+ */
+export function coversAllServices(canonical, index) {
+  if (index.postMount.size === 0) return false;
+  const selected = new Set(canonical);
+  if (selected.size !== index.postMount.size) return false;
+  for (const name of index.postMount) if (!selected.has(name)) return false;
+  return true;
+}
+
 /** Parse a comma-separated services string into trimmed, non-empty names. */
 export function parseCsv(csv) {
   return (csv ?? "")
@@ -122,7 +146,16 @@ function main(argv) {
 
   try {
     const index = buildServiceIndex(resolveOperations(spec));
-    process.stdout.write(canonicalizeServices(input, index).join(","));
+    const canonical = canonicalizeServices(input, index);
+    if (coversAllServices(canonical, index)) {
+      process.stderr.write(
+        `canonicalize-services: selection covers all ${index.postMount.size} services; ` +
+          "running unscoped so oagen prunes orphaned files\n",
+      );
+      process.stdout.write("");
+      return;
+    }
+    process.stdout.write(canonical.join(","));
   } catch (err) {
     // Degrade to today's behaviour: pass the list through untouched so
     // `oagen generate` still runs (and still validates the names itself).
