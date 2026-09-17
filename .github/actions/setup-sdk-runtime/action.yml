@@ -28,7 +28,7 @@ runs:
 
     - name: Setup Ruby
       if: inputs.language == 'ruby'
-      uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735 # v1.305.0
+      uses: ruby/setup-ruby@a0102e0972be65f351c307e2d64b9314a57c8073 # v1.324.0
       with:
         ruby-version: ${{ steps.sdk-version.outputs.version }}
         bundler-cache: true
