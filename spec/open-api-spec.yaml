@@ -28789,7 +28789,9 @@ components:
             email:
               type: string
               format: email
-              description: The email address of the user.
+              description: >-
+                The email address of the user. WorkOS trims whitespace and
+                converts the address to lowercase before storing it.
               example: marcelina.davis@example.com
             first_name:
               type:
