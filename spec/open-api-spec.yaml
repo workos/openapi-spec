@@ -15014,7 +15014,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConnectedAccountDto'
+              $ref: '#/components/schemas/OrganizationConnectedAccountDto'
       responses:
         '201':
           description: The connected account was created successfully.
@@ -15044,8 +15044,21 @@ paths:
                 updated_at: '2024-01-16T14:20:00.000Z'
         '401':
           description: The request is missing a valid API key.
+        '403':
+          description: The `user_id` is not an active member of the organization.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '404':
-          description: The organization or data integration was not found.
+          description: The organization, user, or data integration was not found.
           content:
             application/json:
               schema:
@@ -15187,7 +15200,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConnectedAccountDto'
+              $ref: '#/components/schemas/OrganizationConnectedAccountDto'
       responses:
         '200':
           description: The connected account was updated successfully.
@@ -15230,8 +15243,21 @@ paths:
                   - message
         '401':
           description: The request is missing a valid API key.
+        '403':
+          description: The `user_id` is not an active member of the organization.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
         '404':
-          description: The organization or connected account was not found.
+          description: The organization, user, or connected account was not found.
           content:
             application/json:
               schema:
@@ -20274,7 +20300,7 @@ paths:
       summary: Create an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_16
+      x-mutually-exclusive-body-groups: &ref_18
         role:
           optional: true
           variants:
@@ -20458,7 +20484,7 @@ paths:
       summary: Update an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_17
+      x-mutually-exclusive-body-groups: &ref_19
         role:
           optional: true
           variants:
@@ -21778,7 +21804,7 @@ paths:
       summary: Create a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_18
+      x-mutually-exclusive-body-groups: &ref_20
         password:
           optional: true
           variants:
@@ -22071,7 +22097,7 @@ paths:
       summary: Update a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_22
+      x-mutually-exclusive-body-groups: &ref_24
         password:
           optional: true
           variants:
@@ -28155,6 +28181,50 @@ components:
             Updates to a custom provider's OAuth definition. Only valid for
             custom-provider integrations.
           $ref: '#/components/schemas/UpdateCustomProviderDefinitionDto'
+    OrganizationConnectedAccountDto:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: The OAuth access token for the connected account.
+          example: gho_16C7e42F292c6912E7710c838347Ae178B4a
+        refresh_token:
+          type: string
+          description: The OAuth refresh token for the connected account.
+          example: ghr_xxxxxxxxxxxxxxxxxxxx
+        expires_at:
+          type: string
+          description: >-
+            The ISO-8601 timestamp when the access token expires. Required when
+            `access_token` is provided for tokens that expire.
+          example: '2025-12-31T23:59:59.000Z'
+          format: date-time
+        scopes:
+          description: The OAuth scopes granted for this connection.
+          example: &ref_16
+            - repo
+            - user:email
+          type: array
+          items:
+            type: string
+        state:
+          type: string
+          enum: &ref_17
+            - connected
+            - needs_reauthorization
+          description: >-
+            Explicitly set the state of the connected account. When omitted, the
+            state is derived from the token combination provided.
+          example: connected
+        user_id:
+          type: string
+          description: >-
+            The [User](/reference/authkit/user) identifier of the organization
+            member on whose behalf the connected account is being imported or
+            updated. The user must be an active member of the organization.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+      required:
+        - user_id
     ConnectedAccountDto:
       type: object
       properties:
@@ -28175,17 +28245,13 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example:
-            - repo
-            - user:email
+          example: *ref_16
           type: array
           items:
             type: string
         state:
           type: string
-          enum:
-            - connected
-            - needs_reauthorization
+          enum: *ref_17
           description: >-
             Explicitly set the state of the connected account. When omitted, the
             state is derived from the token combination provided.
@@ -28695,9 +28761,9 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - role_slug
-      x-mutually-exclusive-body-groups: *ref_16
+      x-mutually-exclusive-body-groups: *ref_18
     UpdateUserlandUserOrganizationMembershipDto:
-      x-mutually-exclusive-body-groups: *ref_17
+      x-mutually-exclusive-body-groups: *ref_19
       oneOf:
         - type: object
           not:
@@ -28823,7 +28889,7 @@ components:
                 - 'null'
               additionalProperties: *ref_13
               maxProperties: 50
-              example: &ref_19
+              example: &ref_21
                 timezone: America/New_York
               description: >-
                 Object containing metadata key/value pairs associated with the
@@ -28922,7 +28988,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: &ref_20
+                  enum: &ref_22
                     - bcrypt
                     - firebase-scrypt
                     - ssha
@@ -28937,7 +29003,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: &ref_21
+                  enum: &ref_23
                     - prefix
                     - suffix
                   description: >-
@@ -28958,7 +29024,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_18
+      x-mutually-exclusive-body-groups: *ref_20
     UpdateUserlandUserDto:
       allOf:
         - type: object
@@ -28990,7 +29056,7 @@ components:
                 - 'null'
               additionalProperties: *ref_13
               maxProperties: 50
-              example: *ref_19
+              example: *ref_21
               description: >-
                 Object containing metadata key/value pairs associated with the
                 user.
@@ -29072,7 +29138,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: *ref_20
+                  enum: *ref_22
                   description: >-
                     The algorithm originally used to hash the password, used
                     when providing a `password_hash`. Required with
@@ -29080,7 +29146,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: *ref_21
+                  enum: *ref_23
                   description: >-
                     The position of the salt relative to the password when the
                     `password_hash` digest was computed: `prefix` for `hash(salt
@@ -29099,7 +29165,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_22
+      x-mutually-exclusive-body-groups: *ref_24
     VerifyEmailAddressDto:
       type: object
       properties:
@@ -29208,7 +29274,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: &ref_23
+            enum: &ref_25
               - agent.blueprint.created
               - agent.blueprint.deleted
               - agent.blueprint.updated
@@ -29339,7 +29405,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: *ref_23
+            enum: *ref_25
           example:
             - user.created
             - dsync.user.created
@@ -32994,7 +33060,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_29
+          example: &ref_31
             department: Engineering
             job_title: Software Engineer
         role:
@@ -33233,7 +33299,7 @@ components:
               type: object
               additionalProperties: {}
               description: The event payload.
-              example: &ref_24
+              example: &ref_26
                 id: directory_user_01E1JG7J09H96KYP8HM9B0G5SJ
                 directory_id: directory_01ECAZ4NV9QMV47GW873HDCX74
                 organization_id: org_01EZTR6WYX1A0DSE2CYMGXQ24Y
@@ -33268,11 +33334,11 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_34
+          example: &ref_36
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
-            data: *ref_24
+            data: *ref_26
             created_at: '2021-06-25T19:07:33.155Z'
             context: {}
         - oneOf:
@@ -33472,7 +33538,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: &ref_25
+                      example: &ref_27
                         - crm:read
                         - email:send
                     invocable_by:
@@ -33485,7 +33551,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: &ref_26
+                          example: &ref_28
                             - manager
                         organization_ids:
                           type: array
@@ -33494,7 +33560,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: &ref_27
+                          example: &ref_29
                             - org_01EHWNCE74X7JSDV0X3SZ3KJNY
                       required:
                         - role_slugs
@@ -33653,7 +33719,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: *ref_25
+                      example: *ref_27
                     invocable_by:
                       type: object
                       properties:
@@ -33664,7 +33730,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: *ref_26
+                          example: *ref_28
                         organization_ids:
                           type: array
                           items:
@@ -33672,7 +33738,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: *ref_27
+                          example: *ref_29
                       required:
                         - role_slugs
                         - organization_ids
@@ -34708,7 +34774,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_28
+                      example: &ref_30
                         - users:read
                         - users:write
                     created_at:
@@ -34834,7 +34900,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_28
+                      example: *ref_30
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -34958,7 +35024,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_28
+                      example: *ref_30
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -37825,7 +37891,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_29
+                      example: *ref_31
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -38015,7 +38081,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_30
+                      example: &ref_32
                         - reports
                     enabled:
                       type: boolean
@@ -38176,7 +38242,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_30
+                      example: *ref_32
                     enabled:
                       type: boolean
                       description: >-
@@ -38336,7 +38402,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_30
+                      example: *ref_32
                     enabled:
                       type: boolean
                       description: >-
@@ -38616,7 +38682,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_30
+                      example: *ref_32
                     enabled:
                       type: boolean
                       description: >-
@@ -39604,7 +39670,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_31
+                      example: &ref_33
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -39754,7 +39820,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_31
+                      example: *ref_33
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -40581,7 +40647,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_32
+                      example: &ref_34
                         - users:read
                         - users:write
                     created_at:
@@ -40665,7 +40731,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_32
+                      example: *ref_34
                     created_at:
                       format: date-time
                       type: string
@@ -40747,7 +40813,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_32
+                      example: *ref_34
                     created_at:
                       format: date-time
                       type: string
@@ -40884,7 +40950,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_31
+                      example: *ref_33
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -42076,7 +42142,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_33
+                      example: &ref_35
                         - users:read
                         - users:write
                     created_at:
@@ -42142,7 +42208,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_33
+                      example: *ref_35
                     created_at:
                       format: date-time
                       type: string
@@ -42206,7 +42272,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_33
+                      example: *ref_35
                     created_at:
                       format: date-time
                       type: string
@@ -43346,7 +43412,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_34
+      example: *ref_36
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -43381,7 +43447,7 @@ components:
       example:
         object: list
         data:
-          - *ref_34
+          - *ref_36
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -45342,7 +45408,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_35
+                        example: &ref_37
                           - repo
                           - user:email
                       auth_method:
@@ -45392,7 +45458,7 @@ components:
                           `installation` scope, excluding any it declares as
                           secret. Only present when `auth_method` is
                           `client_credentials`.
-                        example: &ref_36
+                        example: &ref_38
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -45521,7 +45587,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_35
+                      example: *ref_37
                     auth_method:
                       type: string
                       enum:
@@ -45568,7 +45634,7 @@ components:
                         `installation` scope, excluding any it declares as
                         secret. Only present when `auth_method` is
                         `client_credentials`.
-                      example: *ref_36
+                      example: *ref_38
                     state:
                       type: string
                       enum:
