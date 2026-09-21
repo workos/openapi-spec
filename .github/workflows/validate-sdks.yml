@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Test sync conflict resolution
+        run: node --test scripts/__tests__/resolve-sync-conflicts.spec.mjs
+
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
@@ -433,6 +436,10 @@ jobs:
 
       - name: Check result
         run: |
+          if [[ "${{ needs.load-matrix.result }}" != "success" ]]; then
+            echo "SDK validation setup or sync conflict tests failed"
+            exit 1
+          fi
           if [[ "${{ needs.load-matrix.outputs.spec-changed }}" != "true" ]]; then
             echo "No spec changes, skipping SDK validation"
             exit 0

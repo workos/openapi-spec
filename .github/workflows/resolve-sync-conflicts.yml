@@ -1,0 +1,74 @@
+name: Resolve sync SHA conflicts
+
+on:
+  # Unlike pull_request, this runs even when the PR has merge conflicts.
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+  push:
+    branches: [main]
+    paths: ['.last-synced-sha']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview resolutions without updating PR branches
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resolve-sync-conflicts
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      (github.event.pull_request.user.login == 'workos-sdk-automation[bot]' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      # Always run trusted main-branch code, including on manual dispatches.
+      # Never check out the PR head or install its dependencies with these tokens.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Generate PR update token
+        id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ vars.SDK_BOT_APP_ID }}
+          private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: read
+
+      - name: Generate upstream comparison token
+        id: source-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ vars.SDK_BOT_APP_ID }}
+          private-key: ${{ secrets.SDK_BOT_PRIVATE_KEY }}
+          owner: workos
+          repositories: workos
+          permission-contents: read
+
+      - name: Resolve SHA-only conflicts
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_GH_TOKEN: ${{ steps.source-token.outputs.token }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          # Scan all open bot PRs so coalesced events cannot strand an older PR.
+          # The App token's updates trigger ordinary PR validation again.
+          args=()
+          if [ "$DRY_RUN" != "true" ]; then args+=(--write); fi
+          node scripts/resolve-sync-conflicts.mjs "${args[@]}"

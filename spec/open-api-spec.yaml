@@ -73,6 +73,34 @@ paths:
                       example:
                         - org_01EHWNCE74X7JSDV0X3SZ3KJNY
                   description: Who may mint sessions from this blueprint.
+                invocable_as:
+                  default: {}
+                  type: object
+                  properties:
+                    instance_types:
+                      default:
+                        - delegated
+                        - autonomous
+                      type: array
+                      items:
+                        type: string
+                        enum:
+                          - delegated
+                          - autonomous
+                      minItems: 1
+                      maxItems: 2
+                      description: >-
+                        Instance types that may be minted from this blueprint:
+                        `delegated` (a user-delegated session, minted with a
+                        user access token) and/or `autonomous` (a session acting
+                        as the agent itself, minted with an agent registration
+                        credential). Agent-delegated chaining and refreshes are
+                        checked against the type of the presenting instance.
+                        Defaults to both.
+                      example:
+                        - delegated
+                        - autonomous
+                  description: How sessions may be minted from this blueprint.
                 session_settings:
                   default:
                     max_age_seconds: 3600
@@ -442,6 +470,29 @@ paths:
                   description: >-
                     Who may mint sessions from this blueprint. Omitted lists are
                     left unchanged.
+                invocable_as:
+                  type: object
+                  properties:
+                    instance_types:
+                      type: array
+                      items:
+                        type: string
+                        enum:
+                          - delegated
+                          - autonomous
+                      minItems: 1
+                      maxItems: 2
+                      description: >-
+                        Instance types that may be minted from this blueprint:
+                        `delegated` and/or `autonomous`. At least one is
+                        required; existing sessions of a removed type are
+                        refused at their next refresh.
+                      example:
+                        - delegated
+                        - autonomous
+                  description: >-
+                    How sessions may be minted from this blueprint. Omitted
+                    lists are left unchanged.
                 session_settings:
                   type: object
                   properties:
@@ -940,6 +991,20 @@ paths:
                         description: The error code identifying the type of error.
                         example: organization_not_invocable
                         const: organization_not_invocable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: unsupported_invocation_type
+                        const: unsupported_invocation_type
                       message:
                         type: string
                         description: A human-readable description of the error.
@@ -30158,6 +30223,25 @@ components:
             - role_slugs
             - organization_ids
           description: Who may mint sessions from this blueprint.
+        invocable_as:
+          type: object
+          properties:
+            instance_types:
+              type: array
+              items:
+                type: string
+                enum:
+                  - delegated
+                  - autonomous
+              description: >-
+                Instance types that may be minted from this blueprint:
+                `delegated` and/or `autonomous`.
+              example:
+                - delegated
+                - autonomous
+          required:
+            - instance_types
+          description: How sessions may be minted from this blueprint.
         session_settings:
           type: object
           properties:
@@ -30197,6 +30281,7 @@ components:
         - description
         - permissions
         - invocable_by
+        - invocable_as
         - session_settings
         - created_at
         - updated_at
@@ -33060,7 +33145,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_31
+          example: &ref_32
             department: Engineering
             job_title: Software Engineer
         role:
@@ -33334,7 +33419,7 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_36
+          example: &ref_37
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
@@ -33566,6 +33651,26 @@ components:
                         - role_slugs
                         - organization_ids
                       description: Who may mint sessions from this blueprint.
+                    invocable_as:
+                      type: object
+                      properties:
+                        instance_types:
+                          type: array
+                          items:
+                            type: string
+                            enum:
+                              - delegated
+                              - autonomous
+                          description: >-
+                            Instance types that may be minted from this
+                            blueprint: `delegated` (acting for a user) and/or
+                            `autonomous` (acting as the agent itself).
+                          example: &ref_30
+                            - delegated
+                            - autonomous
+                      required:
+                        - instance_types
+                      description: How sessions may be minted from this blueprint.
                     session_settings:
                       type: object
                       properties:
@@ -33605,6 +33710,7 @@ components:
                     - description
                     - permissions
                     - invocable_by
+                    - invocable_as
                     - session_settings
                     - created_at
                     - updated_at
@@ -33743,6 +33849,24 @@ components:
                         - role_slugs
                         - organization_ids
                       description: Who may mint sessions from this blueprint.
+                    invocable_as:
+                      type: object
+                      properties:
+                        instance_types:
+                          type: array
+                          items:
+                            type: string
+                            enum:
+                              - delegated
+                              - autonomous
+                          description: >-
+                            Instance types that may be minted from this
+                            blueprint: `delegated` (acting for a user) and/or
+                            `autonomous` (acting as the agent itself).
+                          example: *ref_30
+                      required:
+                        - instance_types
+                      description: How sessions may be minted from this blueprint.
                     session_settings:
                       type: object
                       properties:
@@ -33782,6 +33906,7 @@ components:
                     - description
                     - permissions
                     - invocable_by
+                    - invocable_as
                     - session_settings
                     - created_at
                     - updated_at
@@ -34774,7 +34899,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_30
+                      example: &ref_31
                         - users:read
                         - users:write
                     created_at:
@@ -34900,7 +35025,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_30
+                      example: *ref_31
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -35024,7 +35149,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_30
+                      example: *ref_31
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -37891,7 +38016,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_31
+                      example: *ref_32
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -38081,7 +38206,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_32
+                      example: &ref_33
                         - reports
                     enabled:
                       type: boolean
@@ -38242,7 +38367,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_32
+                      example: *ref_33
                     enabled:
                       type: boolean
                       description: >-
@@ -38402,7 +38527,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_32
+                      example: *ref_33
                     enabled:
                       type: boolean
                       description: >-
@@ -38682,7 +38807,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_32
+                      example: *ref_33
                     enabled:
                       type: boolean
                       description: >-
@@ -39670,7 +39795,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_33
+                      example: &ref_34
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -39820,7 +39945,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_33
+                      example: *ref_34
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -40647,7 +40772,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_34
+                      example: &ref_35
                         - users:read
                         - users:write
                     created_at:
@@ -40731,7 +40856,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_34
+                      example: *ref_35
                     created_at:
                       format: date-time
                       type: string
@@ -40813,7 +40938,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_34
+                      example: *ref_35
                     created_at:
                       format: date-time
                       type: string
@@ -40950,7 +41075,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_33
+                      example: *ref_34
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -42146,7 +42271,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_35
+                      example: &ref_36
                         - users:read
                         - users:write
                     created_at:
@@ -42212,7 +42337,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_35
+                      example: *ref_36
                     created_at:
                       format: date-time
                       type: string
@@ -42276,7 +42401,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_35
+                      example: *ref_36
                     created_at:
                       format: date-time
                       type: string
@@ -43416,7 +43541,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_36
+      example: *ref_37
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -43451,7 +43576,7 @@ components:
       example:
         object: list
         data:
-          - *ref_36
+          - *ref_37
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -45412,7 +45537,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_37
+                        example: &ref_38
                           - repo
                           - user:email
                       auth_method:
@@ -45462,7 +45587,7 @@ components:
                           `installation` scope, excluding any it declares as
                           secret. Only present when `auth_method` is
                           `client_credentials`.
-                        example: &ref_38
+                        example: &ref_39
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -45591,7 +45716,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_37
+                      example: *ref_38
                     auth_method:
                       type: string
                       enum:
@@ -45638,7 +45763,7 @@ components:
                         `installation` scope, excluding any it declares as
                         secret. Only present when `auth_method` is
                         `client_credentials`.
-                      example: *ref_38
+                      example: *ref_39
                     state:
                       type: string
                       enum:
