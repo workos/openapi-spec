@@ -41943,6 +41943,7 @@ components:
                         - auditLogEvents
                         - connections
                         - directoryUsers
+                        - scimLogs
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -41992,6 +41993,7 @@ components:
                         - auditLogEvents
                         - connections
                         - directoryUsers
+                        - scimLogs
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -42041,6 +42043,7 @@ components:
                         - auditLogEvents
                         - connections
                         - directoryUsers
+                        - scimLogs
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -42090,6 +42093,7 @@ components:
                         - auditLogEvents
                         - connections
                         - directoryUsers
+                        - scimLogs
                       description: The type of resource being exported.
                       example: users
                   required:
