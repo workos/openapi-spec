@@ -10472,7 +10472,6 @@ paths:
       summary: Create a data integration
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
     get:
       description: >-
         Lists the environment's data integrations configured with `custom` or
@@ -10581,7 +10580,6 @@ paths:
       summary: List data integrations
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
   /data-integrations/{slug}:
     get:
       description: Retrieves the user-owned data integration by its slug.
@@ -10619,7 +10617,6 @@ paths:
       summary: Get a data integration
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
     put:
       description: >-
         Updates the description, enabled state, or custom credentials of the
@@ -10719,7 +10716,6 @@ paths:
       summary: Update a data integration
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
     delete:
       description: >-
         Deletes the user-owned data integration and all of its connected
@@ -10755,7 +10751,6 @@ paths:
       summary: Delete a data integration
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
   /data-integrations/{slug}/api-key:
     put:
       description: >-
@@ -11416,7 +11411,6 @@ paths:
       summary: Get an organization-owned data integration
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
     put:
       description: >-
         Updates the description, enabled state, or custom credentials of the
@@ -11555,7 +11549,6 @@ paths:
       summary: Update an organization-owned data integration
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
     delete:
       description: >-
         Deletes the organization-owned data integration for a provider and all
@@ -11593,7 +11586,6 @@ paths:
       summary: Delete an organization-owned data integration
       tags:
         - pipes
-      x-feature-flag: pipes-management-api
   /data-integrations/{slug}/token:
     post:
       description: >-
@@ -15216,7 +15208,7 @@ paths:
       summary: Import an organization connected account
       tags:
         - organizations.data-providers
-      x-feature-flag: pipes-management-api
+      x-feature-flag: pipes-org-integrations
     put:
       description: >-
         Updates an organization's [connected
@@ -15384,7 +15376,7 @@ paths:
       summary: Update an organization connected account
       tags:
         - organizations.data-providers
-      x-feature-flag: pipes-management-api
+      x-feature-flag: pipes-org-integrations
   /organizations/{organization_id}/data_providers:
     get:
       description: >-
@@ -23968,7 +23960,6 @@ paths:
       summary: Import a connected account
       tags:
         - user-management.data-providers
-      x-feature-flag: pipes-management-api
     put:
       description: >-
         Updates a user's [connected account](/reference/pipes/connected-account)
@@ -24149,7 +24140,6 @@ paths:
       summary: Update a connected account
       tags:
         - user-management.data-providers
-      x-feature-flag: pipes-management-api
   /user_management/users/{user_id}/data_providers:
     get:
       description: >-
