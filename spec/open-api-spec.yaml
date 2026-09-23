@@ -4365,6 +4365,7 @@ paths:
                 source:
                   type: direct
                   group_role_assignment_id: null
+                  group: null
                 created_at: '2026-01-15T12:00:00.000Z'
                 updated_at: '2026-01-15T12:00:00.000Z'
           description: Created
@@ -32231,9 +32232,28 @@ components:
                 The ID of the group role assignment the role was derived from,
                 or null if direct.
               example: null
+            group:
+              description: The group the role was derived from, or null if direct.
+              example: null
+              oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The unique ID of the Group the role was derived from.
+                      example: group_01HXYZ123456789ABCDEFGHIJ
+                    name:
+                      type: string
+                      description: The name of the Group the role was derived from.
+                      example: Marketing team
+                  required:
+                    - id
+                    - name
+                - type: 'null'
           required:
             - type
             - group_role_assignment_id
+            - group
           description: The origin of the role assignment.
         created_at:
           format: date-time
