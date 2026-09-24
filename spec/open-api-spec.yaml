@@ -11513,6 +11513,14 @@ paths:
         Returns credentials for a user's connected account. Branches on the
         installation's `auth_method`: OAuth installations return an access token
         (refreshed if needed); API-key installations return the stored secret.
+        Every active credential includes `config`: provider-declared, non-secret
+        values from the installation snapshot, with current provider defaults
+        for unset fields. Editing integration or organization configuration does
+        not change the snapshot; reconnect or explicitly rebind the connection
+        to adopt those edits. Defaults remain live, so a changed default can
+        appear in `config` before a cached token is refreshed or re-minted.
+        Credentials that never refresh require a reconnect or rebind when a
+        default changes their routing.
       operationId: DataIntegrationsController_vendCredentials
       parameters:
         - name: slug
@@ -11593,6 +11601,7 @@ paths:
                     - repo
                     - user:email
                   missing_scopes: []
+                  config: {}
         '400':
           description: Bad Request
           content:
@@ -45591,6 +45600,22 @@ components:
                 the access token, they're listed here. Present for `oauth` and
                 `client_credentials` credentials; absent for `api_key`.
               example: []
+            config:
+              type: object
+              additionalProperties:
+                type: string
+              description: >-
+                Provider-declared, non-secret config from the installation
+                snapshot, with current defaults for unset fields. Includes both
+                integration- and installation-scope fields; omits undeclared
+                fields and fields marked secret. Use these values to address a
+                per-tenant host, such as Snowflake's `account` or Zendesk's
+                `subdomain`. Empty when no values are disclosable. Changes to
+                integration or organization pins require reconnecting or
+                explicitly rebinding the connection. Defaults are live and can
+                differ from a cached token's audience until refresh or re-mint.
+              example: &ref_39
+                account: myorg-myaccount
           required:
             - object
             - auth_method
@@ -45598,6 +45623,7 @@ components:
             - expires_at
             - scopes
             - missing_scopes
+            - config
         - type: object
           properties:
             object:
@@ -45619,10 +45645,26 @@ components:
               format: password
               description: The API key secret.
               example: sk-1234567890abcdef
+            config:
+              type: object
+              additionalProperties:
+                type: string
+              description: >-
+                Provider-declared, non-secret config from the installation
+                snapshot, with current defaults for unset fields. Includes both
+                integration- and installation-scope fields; omits undeclared
+                fields and fields marked secret. Use these values to address a
+                per-tenant host, such as Snowflake's `account` or Zendesk's
+                `subdomain`. Empty when no values are disclosable. Changes to
+                integration or organization pins require reconnecting or
+                explicitly rebinding the connection. Defaults are live and can
+                differ from a cached token's audience until refresh or re-mint.
+              example: *ref_39
           required:
             - object
             - auth_method
             - value
+            - config
         - type: object
           properties:
             object:
@@ -45680,6 +45722,21 @@ components:
                 provider. Only present for `client_credentials` credentials.
               example:
                 instance_url: https://acme.my.salesforce.com
+            config:
+              type: object
+              additionalProperties:
+                type: string
+              description: >-
+                Provider-declared, non-secret config from the installation
+                snapshot, with current defaults for unset fields. Includes both
+                integration- and installation-scope fields; omits undeclared
+                fields and fields marked secret. Use these values to address a
+                per-tenant host, such as Snowflake's `account` or Zendesk's
+                `subdomain`. Empty when no values are disclosable. Changes to
+                integration or organization pins require reconnecting or
+                explicitly rebinding the connection. Defaults are live and can
+                differ from a cached token's audience until refresh or re-mint.
+              example: *ref_39
           required:
             - object
             - auth_method
@@ -45688,6 +45745,7 @@ components:
             - scopes
             - missing_scopes
             - metadata
+            - config
     DataIntegrationCredentialsResponse:
       oneOf:
         - type: object
@@ -46058,7 +46116,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_39
+                        example: &ref_40
                           - repo
                           - user:email
                       auth_method:
@@ -46108,7 +46166,7 @@ components:
                           `installation` scope, excluding any it declares as
                           secret. Only present when `auth_method` is
                           `client_credentials`.
-                        example: &ref_40
+                        example: &ref_41
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -46237,7 +46295,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_39
+                      example: *ref_40
                     auth_method:
                       type: string
                       enum:
@@ -46284,7 +46342,7 @@ components:
                         `installation` scope, excluding any it declares as
                         secret. Only present when `auth_method` is
                         `client_credentials`.
-                      example: *ref_40
+                      example: *ref_41
                     state:
                       type: string
                       enum:
