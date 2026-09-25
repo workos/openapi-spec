@@ -660,8 +660,20 @@ jobs:
           FRAGMENT_DIR=".changelog-pending"
           mkdir -p "$FRAGMENT_DIR"
           FRAGMENT_PATH="$FRAGMENT_DIR/$(date -u +%Y-%m-%dT%H-%M-%S)-${{ github.sha }}.md"
+          # Policy: nothing that lands in the SDK repo carries the conventional
+          # breaking marker — this header is inlined into CHANGELOG.md by the
+          # SDK's release workflow, and open-batch-pr.mjs already removed it from
+          # the commits, title and body. The classify step keeps producing the
+          # `!` on purpose (paper trail: entries_json, the diagnostics artifact,
+          # the step summary); it is removed here, last, by a plain substitution.
+          HEADER="* [#${PR_NUMBER}](${PR_URL}) ${TYPE}(generated)${BANG}: ${SUMMARY}"
+          CLEAN_HEADER="${HEADER//)!: /): }"
+          if [ "$CLEAN_HEADER" != "$HEADER" ]; then
+            echo "::notice title=Breaking-change marker removed from release-notes fragment — ${{ matrix.language }}::Classified '${TYPE}(generated)${BANG}: ${SUMMARY}'; written as '${TYPE}(generated): ${SUMMARY}' so the release stays minor."
+            printf -- '- Release-notes fragment header for #%s was classified `%s(generated)%s`; written without the marker.\n\n' "$PR_NUMBER" "$TYPE" "$BANG" >> "$GITHUB_STEP_SUMMARY"
+          fi
           {
-            echo "* [#${PR_NUMBER}](${PR_URL}) ${TYPE}(generated)${BANG}: ${SUMMARY}"
+            echo "$CLEAN_HEADER"
             echo
             if [ -n "$OVERRIDE_MD" ]; then
               printf '%s\n' "$OVERRIDE_MD"
@@ -681,9 +693,13 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: oagen-diagnostics-${{ matrix.language }}
+          # classify-entries.json and pr-body.md are the pre-strip paper trail:
+          # the `!` the classifier assigned before open-batch-pr.mjs removed it.
           path: |
             openapi-spec/.oagen/${{ matrix.language }}/
             /tmp/diff-report.json
+            /tmp/classify-entries.json
+            /tmp/pr-body.md
           retention-days: 14
 
       # Preview only: run the SDK's own CI (build + tests) on the freshly

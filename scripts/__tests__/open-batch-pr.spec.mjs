@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,13 +8,16 @@ import { fileURLToPath } from 'node:url';
 
 import {
   batchBranchName,
+  breakingHeadlines,
   catchAllMessage,
   entryHeadline,
   joinScopes,
   orderedEntries,
   parseServices,
   prTitle,
+  recordBreakingMarkers,
   rewriteOverrideRefs,
+  stripBreakingMarkers,
   titleScopes,
 } from '../open-batch-pr.mjs';
 
@@ -229,9 +232,9 @@ function freshClone(root, origin, name) {
   return work;
 }
 
-function runScript(args) {
+function runScript(args, env = {}) {
   try {
-    const stdout = execFileSync('node', [SCRIPT, ...args], { encoding: 'utf8' });
+    const stdout = execFileSync('node', [SCRIPT, ...args], { encoding: 'utf8', env: { ...process.env, ...env } });
     return { code: 0, stdout, stderr: '' };
   } catch (err) {
     return { code: err.status ?? 1, stdout: err.stdout ?? '', stderr: err.stderr ?? '' };
@@ -396,6 +399,133 @@ test('per-entry ordered commits + shared catch-all over the scoped diff', () => 
       'fix(sso): fix conn',
       'feat(vault): add object',
     ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// ── policy: no breaking marker leaves this script ─────────────────────────────
+// The classifier keeps producing `feat!` (that is the paper trail); this script
+// is the last hop before the SDK repo and removes the marker from every
+// conventional headline while recording the originals.
+test('stripBreakingMarkers drops the bang from titles, summary headings and override lines only', () => {
+  assert.equal(stripBreakingMarkers('feat(generated)!: Changes to pipes'), 'feat(generated): Changes to pipes');
+  assert.equal(stripBreakingMarkers('feat!: change default for order'), 'feat: change default for order');
+  const body = [
+    '## Summary',
+    '',
+    '### feat(pipes)!: Change Pipes API surface',
+    '',
+    '- SDK surface change: Parameter "userId" removed from "Pipes.updateDataIntegrationApiKey"!',
+    '',
+    'BEGIN_COMMIT_OVERRIDE',
+    'feat(pipes)!: Change Pipes API surface (#450)',
+    'fix(vault): Update Vault API surface (#450)',
+    'END_COMMIT_OVERRIDE',
+  ].join('\n');
+  const stripped = stripBreakingMarkers(body);
+  assert.match(stripped, /^### feat\(pipes\): Change Pipes API surface$/m);
+  assert.match(stripped, /^feat\(pipes\): Change Pipes API surface \(#450\)$/m);
+  assert.match(stripped, /^fix\(vault\): Update Vault API surface \(#450\)$/m);
+  // A `!` inside prose is not a marker and is left alone.
+  assert.match(stripped, /updateDataIntegrationApiKey"!$/m);
+  assert.doesNotMatch(stripped, /^(#+ )?(feat|fix|chore)(\([^)]+\))?!: /m);
+  // Idempotent and safe on empty input.
+  assert.equal(stripBreakingMarkers(stripped), stripped);
+  assert.equal(stripBreakingMarkers(''), '');
+  assert.equal(stripBreakingMarkers(undefined), '');
+
+  assert.deepEqual(breakingHeadlines(body), [
+    '### feat(pipes)!: Change Pipes API surface',
+    'feat(pipes)!: Change Pipes API surface (#450)',
+  ]);
+  assert.deepEqual(breakingHeadlines('nothing here'), []);
+});
+
+test('recordBreakingMarkers writes a notice + step summary with the originals and returns the distinct count', () => {
+  const out = { stdout: '', summary: '' };
+  const io = { stdout: (t) => (out.stdout += t), stepSummary: (t) => (out.summary += t) };
+  const count = recordBreakingMarkers(
+    ['feat(vault)!: Change Vault API surface', 'feat(generated)!: Changes to vault', 'feat(vault)!: Change Vault API surface'],
+    { batchId: 'b1', lang: 'php' },
+    io,
+  );
+  assert.equal(count, 2);
+  assert.match(out.stdout, /^::notice title=Breaking-change markers removed — php \(batch b1\)::2 conventional headline\(s\)/);
+  assert.doesNotMatch(out.stdout, /\n.+\n/, 'annotation stays on one line');
+  assert.match(out.summary, /^### ⚠️ Breaking-change markers removed — php \(batch b1\)$/m);
+  assert.match(out.summary, /^- `feat\(vault\)!: Change Vault API surface`$/m);
+  assert.match(out.summary, /^- `feat\(generated\)!: Changes to vault`$/m);
+
+  // Nothing stripped → silent.
+  const quiet = { stdout: '', summary: '' };
+  const quietIo = { stdout: (t) => (quiet.stdout += t), stepSummary: (t) => (quiet.summary += t) };
+  assert.equal(recordBreakingMarkers([], { batchId: 'b1', lang: 'php' }, quietIo), 0);
+  assert.equal(quiet.stdout + quiet.summary, '');
+});
+
+test('a feat! entry opens with no "!" anywhere the SDK repo sees, and the paper trail records it', () => {
+  const { root, origin } = setupOrigin();
+  try {
+    const work = freshClone(root, origin, 'work');
+    writeFileSync(join(work, 'src/workos/vault/client.py'), 'signature changed\n');
+    const entriesPath = join(root, 'entries.json');
+    writeFileSync(
+      entriesPath,
+      JSON.stringify([
+        { prefix: 'feat!', scope: 'vault', summary: 'Change Vault API surface', file_paths: ['src/workos/vault/client.py'] },
+      ]),
+    );
+    const bodyPath = join(root, 'body.md');
+    writeFileSync(
+      bodyPath,
+      [
+        '## Summary',
+        '',
+        '### feat(vault)!: Change Vault API surface',
+        '',
+        '- SDK surface change: Parameter "secret" removed from "Vault.createObject".',
+        '',
+        'BEGIN_COMMIT_OVERRIDE',
+        'feat(vault)!: Change Vault API surface',
+        'END_COMMIT_OVERRIDE',
+        '',
+      ].join('\n'),
+    );
+    const summaryPath = join(root, 'step-summary.md');
+    const outputPath = join(root, 'github-output.txt');
+    writeFileSync(summaryPath, '');
+    writeFileSync(outputPath, '');
+
+    const r = runScript(
+      ['--batch-id', 'guard1', '--lang', 'python', '--services', 'Vault', '--sdk-dir', work,
+        '--entries-file', entriesPath, '--body-file', bodyPath, '--dry-run'],
+      { GITHUB_STEP_SUMMARY: summaryPath, GITHUB_OUTPUT: outputPath },
+    );
+    assert.equal(r.code, 0, r.stderr);
+
+    // Title: the classifier's feat(generated)! still rolls up, the marker does not.
+    assert.match(r.stdout, /DRY-RUN gh pr create --title feat\(generated\): Changes to vault /);
+    assert.doesNotMatch(r.stdout, /--title [^\n]*!/);
+
+    // Commit subjects on the pushed branch carry no marker either.
+    const subjects = g(origin, 'log', '--format=%s', 'oagen/batch-guard1');
+    assert.match(subjects, /^feat\(vault\): Change Vault API surface$/m);
+    assert.doesNotMatch(subjects, /!:/);
+
+    // The body handed to gh: heading + override line stripped, prose intact.
+    const writtenBody = readFileSync(join(tmpdir(), 'oagen-batch-pr-body-oagen-batch-guard1.md'), 'utf8');
+    assert.match(writtenBody, /^### feat\(vault\): Change Vault API surface$/m);
+    assert.match(writtenBody, /^feat\(vault\): Change Vault API surface$/m);
+    assert.doesNotMatch(writtenBody, /!: /);
+    assert.match(writtenBody, /Parameter "secret" removed/);
+
+    // Paper trail: notice on stdout, originals in the step summary, count output.
+    assert.match(r.stdout, /::notice title=Breaking-change markers removed — python \(batch guard1\)::/);
+    const summary = readFileSync(summaryPath, 'utf8');
+    assert.match(summary, /^- `feat\(vault\)!: Change Vault API surface`$/m);
+    assert.match(summary, /^- `feat\(generated\)!: Changes to vault`$/m);
+    assert.match(readFileSync(outputPath, 'utf8'), /^breaking_markers_stripped=3$/m);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -15,6 +15,11 @@
 //   4. force-pushes the branch to <remote> so a re-dispatch with the same
 //      batch_id UPDATES the one branch instead of opening a second (NFR-2.2)
 //   5. creates-or-reuses the PR for that branch
+//   6. removes the conventional-commit breaking marker (`!`) from everything
+//      that lands in the SDK repo — commit subjects, PR title, PR body — right
+//      before it is written, and records the original headlines as the paper
+//      trail (stdout notice, $GITHUB_STEP_SUMMARY, `breaking_markers_stripped`
+//      output). See the breaking-marker policy block below.
 //
 // Boundary: git branch/commit/push run against <remote> for real — in the local
 // playground <remote> is a bare repo, so idempotence is exercised without
@@ -199,6 +204,71 @@ export function rewriteOverrideRefs(body, prNumber) {
     .join('\n');
 }
 
+// ── breaking-marker policy ─────────────────────────────────────────────────────
+// Generated PRs never carry the conventional-commit breaking marker: release-
+// please turns a `!` in the squash title or a BEGIN_COMMIT_OVERRIDE line into a
+// major version, and a regeneration is at most a minor release. The classifier
+// deliberately keeps flagging call-shape changes as `feat!` — that is the paper
+// trail (classify-entries.json in the diagnostics artifact, the notice and step
+// summary written by recordBreakingMarkers, the `breaking_markers_stripped`
+// output). The marker is removed here, at the very end, from every conventional
+// headline the SDK repo would see: commit subjects, the PR title, `### type(
+// scope)!:` summary headings in the body, and the override-block lines. A `!`
+// anywhere else (prose, code) is left alone.
+const BREAKING_HEADLINE = /^(#{1,6}\s+)?(feat|fix|chore)(\([^)]+\))?!(: )/;
+
+export function stripBreakingMarkers(text) {
+  return String(text ?? '')
+    .split('\n')
+    .map((line) => line.replace(BREAKING_HEADLINE, '$1$2$3$4'))
+    .join('\n');
+}
+
+// The headlines that carry a marker, verbatim, for the paper trail.
+export function breakingHeadlines(text) {
+  return String(text ?? '')
+    .split('\n')
+    .filter((line) => BREAKING_HEADLINE.test(line));
+}
+
+const defaultIo = {
+  stdout: (text) => process.stdout.write(text),
+  stepSummary: process.env.GITHUB_STEP_SUMMARY
+    ? (text) => appendFileSync(process.env.GITHUB_STEP_SUMMARY, text)
+    : null,
+};
+
+// Paper trail for removed markers: a workflow notice (surfaces on the run's
+// summary page), a section in $GITHUB_STEP_SUMMARY when running in Actions, and
+// the count for the `breaking_markers_stripped` step output. Returns the count
+// of distinct headlines that carried a marker.
+export function recordBreakingMarkers(headlines, { batchId, lang }, io = defaultIo) {
+  const unique = [...new Set((headlines ?? []).filter(Boolean))];
+  if (unique.length === 0) return 0;
+  const where = `${lang} (batch ${batchId})`;
+  io.stdout(
+    `::notice title=Breaking-change markers removed — ${where}::` +
+      `${unique.length} conventional headline(s) were classified breaking; the "!" was removed from the ` +
+      `commits, PR title and body so the release stays minor. Originals: ${unique.join(' | ')}\n`,
+  );
+  if (io.stepSummary) {
+    io.stepSummary(
+      [
+        `### ⚠️ Breaking-change markers removed — ${where}`,
+        '',
+        'The classifier flagged these headlines as breaking. Per policy the `!` was removed from the',
+        'commits, PR title and body before the PR was opened, so the release stays a minor bump.',
+        'Original headlines:',
+        '',
+        ...unique.map((line) => `- \`${line}\``),
+        '',
+        '',
+      ].join('\n'),
+    );
+  }
+  return unique.length;
+}
+
 // ── git / gh runners ─────────────────────────────────────────────────────────
 function git(cwd, gitArgs, { allowFail = false } = {}) {
   try {
@@ -231,7 +301,10 @@ function gh(ghArgs, { dryRun, stub = '' }) {
 }
 
 // ── commit assembly ────────────────────────────────────────────────────────────
+// Returns the entry headlines that carried a breaking marker (verbatim) for the
+// paper trail; the commit subjects themselves are written without it.
 function buildCommits(cwd, entries, services) {
+  const strippedHeadlines = [];
   const initialStaged = git(cwd, ['diff', '--cached', '--name-only'])
     .split('\n')
     .map((l) => l.trim())
@@ -249,7 +322,9 @@ function buildCommits(cwd, entries, services) {
       git(cwd, ['add', '-A']);
       continue;
     }
-    git(cwd, ['commit', '-m', entryHeadline(entry)]);
+    const headline = entryHeadline(entry);
+    if (BREAKING_HEADLINE.test(headline)) strippedHeadlines.push(headline);
+    git(cwd, ['commit', '-m', stripBreakingMarkers(headline)]);
     git(cwd, ['add', '-A']);
   }
 
@@ -257,6 +332,7 @@ function buildCommits(cwd, entries, services) {
   if (hasStagedChanges(cwd)) {
     git(cwd, ['commit', '-m', catchAllMessage(services)]);
   }
+  return strippedHeadlines;
 }
 
 function defaultBody(services, batchId, lang) {
@@ -299,17 +375,25 @@ export function run(args) {
   const entries = args.entriesFile && existsSync(args.entriesFile)
     ? JSON.parse(readFileSync(args.entriesFile, 'utf8'))
     : [];
-  buildCommits(sdkDir, entries, services);
+  const strippedCommitHeadlines = buildCommits(sdkDir, entries, services);
 
   // Force-push: same batch_id → same branch, overwritten (idempotent, NFR-2.2).
   git(sdkDir, ['push', '--force', remote, branch]);
 
   // Create-or-reuse the PR for this branch. Derive the title from the classify
   // entries so it describes what changed; fall back to services/batch otherwise.
-  const title = prTitle(services, batchId, entries);
-  const bodyText = args.bodyFile && existsSync(args.bodyFile)
+  // Title and body pass through stripBreakingMarkers last (policy block above);
+  // the originals go to the paper trail.
+  const rawTitle = prTitle(services, batchId, entries);
+  const rawBody = args.bodyFile && existsSync(args.bodyFile)
     ? readFileSync(args.bodyFile, 'utf8')
     : defaultBody(services, batchId, lang);
+  const title = stripBreakingMarkers(rawTitle);
+  const bodyText = stripBreakingMarkers(rawBody);
+  const strippedMarkers = recordBreakingMarkers(
+    [...strippedCommitHeadlines, ...breakingHeadlines(rawTitle), ...breakingHeadlines(rawBody)],
+    { batchId, lang },
+  );
 
   const existing = gh(
     ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'number,url', '--jq', '.[0] | select(.number) | "\\(.number)\\t\\(.url)"'],
@@ -348,8 +432,8 @@ export function run(args) {
   }
 
   // Under --dry-run no real PR exists; emit unambiguous empty outputs.
-  if (dryRun) return { branch, skipped: null, prNumber: null, prUrl: null };
-  return { branch, skipped: null, prNumber, prUrl };
+  if (dryRun) return { branch, skipped: null, prNumber: null, prUrl: null, strippedMarkers };
+  return { branch, skipped: null, prNumber, prUrl, strippedMarkers };
 }
 
 // PR body is transient and lives outside the SDK tree so it can never be picked
@@ -367,6 +451,7 @@ function emitOutputs(result) {
     `skipped=${result.skipped ?? ''}`,
     `pr_number=${result.prNumber ?? ''}`,
     `pr_url=${result.prUrl ?? ''}`,
+    `breaking_markers_stripped=${result.strippedMarkers ?? 0}`,
   ];
   appendFileSync(process.env.GITHUB_OUTPUT, `${lines.join('\n')}\n`);
 }
