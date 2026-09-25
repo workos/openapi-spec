@@ -10767,12 +10767,198 @@ paths:
       tags:
         - pipes
   /data-integrations/{slug}/api-key:
+    post:
+      description: >-
+        Creates another API key-based connected account for the specified
+        integration, owned by the user or, when `connection_owner` is
+        `organization`, shared by the organization. Requires `connection_intent:
+        add` and does not accept `connected_account_id`; use PUT to create or
+        rotate the compatibility connection or to update an exact connection.
+        Creating an additional connection is not yet available: until it is,
+        this endpoint succeeds only when the owner has no connection for this
+        integration, which creates the compatibility connection, and otherwise
+        returns 404 `multiple_connections_unavailable`.
+      operationId: DataIntegrationsController_createApiKeyConnection
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The identifier of the integration.
+          schema:
+            example: github
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: A [User](/reference/authkit/user) identifier.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An [Organization](/reference/organization) identifier.
+                    Optional parameter to scope the connection to a specific
+                    organization. Required when `connection_owner` is
+                    `organization`.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Whose connection to create or rotate. `user` (the default)
+                    addresses the connection owned by `user_id`. `organization`
+                    addresses the connection shared by every member of
+                    `organization_id`; `user_id` then identifies the member
+                    performing the request and must be an active member of the
+                    organization.
+                  example: user
+                secret:
+                  type: string
+                  minLength: 1
+                  description: The API key secret to store for this integration.
+                  example: sk-1234567890abcdef
+                connection_intent:
+                  type: string
+                  description: >-
+                    Must be `add`: this endpoint only creates another
+                    connection. The first connection for an owner shape fills
+                    the compatibility slot; later connections are standard.
+                    Creating an additional connection is not yet available:
+                    until it is, `add` succeeds only when the owner has no
+                    connection for this integration and otherwise returns 404
+                    `multiple_connections_unavailable`.
+                  example: add
+                  const: add
+              required:
+                - user_id
+                - secret
+                - connection_intent
+              additionalProperties: false
+      responses:
+        '201':
+          description: The connected account that was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+              example:
+                object: connected_account
+                id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_role: standard
+                account_identifier: null
+                account_display_name: null
+                user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                scopes: []
+                auth_method: api_key
+                api_key_last_4: cdef
+                state: connected
+                created_at: '2024-01-16T14:20:00.000Z'
+                updated_at: '2024-01-16T14:20:00.000Z'
+        '400':
+          description: >-
+            The request is invalid, including a missing `connection_intent: add`
+            or a supplied `connected_account_id`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: >-
+            The data integration was not found, or
+            `multiple_connections_unavailable` when creating an additional
+            connection is not yet available.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - multiple_connections_unavailable
+                          - entity_not_found
+                        description: The error code identifying the type of error.
+                        example: multiple_connections_unavailable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
+        '503':
+          description: >-
+            Another connection is being created for this owner and provider.
+            Retry the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_request
+                    const: concurrent_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Create another API key connected account
+      tags:
+        - pipes
+      x-feature-flag: pipes-multiple-connections
     put:
       description: >-
         Creates or updates an API-key-based installation for the specified
         integration, owned by the user or, when `connection_owner` is
         `organization`, shared by the organization. If an installation already
-        exists, the stored API key is rotated to the new value.
+        exists, the stored API key is rotated to the new value. To create
+        another connection, use POST.
       operationId: DataIntegrationsController_upsertApiKey
       parameters:
         - name: slug
@@ -10823,51 +11009,6 @@ paths:
                   required:
                     - user_id
                     - secret
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    secret:
-                      type: string
-                      minLength: 1
-                      description: The API key secret to store for this integration.
-                      example: sk-1234567890abcdef
-                    connection_intent:
-                      type: string
-                      description: >-
-                        Create another connection. The first connection for an
-                        owner shape fills the compatibility slot; later
-                        connections are standard.
-                      example: add
-                      const: add
-                  required:
-                    - user_id
-                    - secret
-                    - connection_intent
                   additionalProperties: false
                 - type: object
                   properties:
@@ -11168,12 +11309,213 @@ paths:
       tags:
         - pipes
   /data-integrations/{slug}/client-credentials:
+    post:
+      description: >-
+        Creates another client credentials-based connected account for the
+        specified integration, owned by the user or, when `connection_owner` is
+        `organization`, shared by the organization. Requires `connection_intent:
+        add` and does not accept `connected_account_id`; use PUT to create or
+        rotate the compatibility connection or to update an exact connection.
+        Creating an additional connection is not yet available: until it is,
+        this endpoint succeeds only when the owner has no connection for this
+        integration, which creates the compatibility connection, and otherwise
+        returns 404 `multiple_connections_unavailable`.
+      operationId: DataIntegrationsController_createClientCredentialsConnection
+      parameters:
+        - name: slug
+          required: true
+          in: path
+          description: The identifier of the integration.
+          schema:
+            example: salesforce
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: A [User](/reference/authkit/user) identifier.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An [Organization](/reference/organization) identifier.
+                    Optional parameter to scope the connection to a specific
+                    organization. Required when `connection_owner` is
+                    `organization`.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Whose connection to create or rotate. `user` (the default)
+                    addresses the connection owned by `user_id`. `organization`
+                    addresses the connection shared by every member of
+                    `organization_id`; `user_id` then identifies the member
+                    performing the request and must be an active member of the
+                    organization.
+                  example: user
+                client_id:
+                  type: string
+                  minLength: 1
+                  description: The OAuth client ID to store for this integration.
+                  example: 3MVG9...
+                client_secret:
+                  type: string
+                  minLength: 1
+                  description: The OAuth client secret to store for this integration.
+                  example: shhh-secret
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Provider-specific configuration values collected for this
+                    installation, keyed by the provider's config field
+                    descriptors.
+                  example:
+                    salesforce_host: acme.my.salesforce.com
+                connection_intent:
+                  type: string
+                  description: >-
+                    Must be `add`: this endpoint only creates another
+                    connection. The first connection for an owner shape fills
+                    the compatibility slot; later connections are standard.
+                    Creating an additional connection is not yet available:
+                    until it is, `add` succeeds only when the owner has no
+                    connection for this integration and otherwise returns 404
+                    `multiple_connections_unavailable`.
+                  example: add
+                  const: add
+              required:
+                - user_id
+                - client_id
+                - client_secret
+                - connection_intent
+              additionalProperties: false
+      responses:
+        '201':
+          description: The connected account that was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectedAccount'
+              example:
+                object: connected_account
+                id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_role: standard
+                account_identifier: null
+                account_display_name: null
+                user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                scopes: []
+                auth_method: client_credentials
+                state: connected
+                created_at: '2024-01-16T14:20:00.000Z'
+                updated_at: '2024-01-16T14:20:00.000Z'
+        '400':
+          description: >-
+            The request is invalid, including a missing `connection_intent: add`
+            or a supplied `connected_account_id`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: >-
+            The data integration was not found, or
+            `multiple_connections_unavailable` when creating an additional
+            connection is not yet available.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - multiple_connections_unavailable
+                          - entity_not_found
+                        description: The error code identifying the type of error.
+                        example: multiple_connections_unavailable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
+        '503':
+          description: >-
+            Another connection is being created for this owner and provider.
+            Retry the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_request
+                    const: concurrent_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Create another client credentials connected account
+      tags:
+        - pipes
+      x-feature-flag: pipes-multiple-connections
     put:
       description: >-
         Creates or updates a client-credentials-based installation for the
         specified integration, owned by the user or, when `connection_owner` is
         `organization`, shared by the organization. If an installation already
-        exists, the stored client credentials are rotated to the new values.
+        exists, the stored client credentials are rotated to the new values. To
+        create another connection, use POST.
       operationId: DataIntegrationsController_upsertClientCredentials
       parameters:
         - name: slug
@@ -11240,66 +11582,6 @@ paths:
                     - user_id
                     - client_id
                     - client_secret
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    client_id:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client ID to store for this integration.
-                      example: 3MVG9...
-                    client_secret:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client secret to store for this integration.
-                      example: shhh-secret
-                    config:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      description: >-
-                        Provider-specific configuration values collected for
-                        this installation, keyed by the provider's config field
-                        descriptors.
-                      example: *ref_1
-                    connection_intent:
-                      type: string
-                      description: >-
-                        Create another connection. The first connection for an
-                        owner shape fills the compatibility slot; later
-                        connections are standard.
-                      example: add
-                      const: add
-                  required:
-                    - user_id
-                    - client_id
-                    - client_secret
-                    - connection_intent
                   additionalProperties: false
                 - type: object
                   properties:
@@ -11647,8 +11929,8 @@ paths:
                   - message
         '409':
           description: >-
-            Several connected accounts match this user for the provider; one
-            must be named.
+            Several connected accounts match this user or organization for the
+            provider; one must be named.
           content:
             application/json:
               schema:
@@ -12045,8 +12327,8 @@ paths:
                   - message
         '409':
           description: >-
-            Several connected accounts match this user for the provider; one
-            must be named.
+            Several connected accounts match this user or organization for the
+            provider; one must be named.
           content:
             application/json:
               schema:
@@ -15456,18 +15738,41 @@ paths:
                 required:
                   - message
         '404':
-          description: The organization, user, or data integration was not found.
+          description: >-
+            The organization, user, or data integration was not found, or
+            `multiple_connections_unavailable` when `connection_intent: add`
+            would create an additional connection before that capability is
+            available.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - multiple_connections_unavailable
+                          - entity_not_found
+                        description: The error code identifying the type of error.
+                        example: multiple_connections_unavailable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
         '409':
           description: >-
             The compatibility connection already exists for this organization
@@ -24237,18 +24542,41 @@ paths:
         '401':
           description: The request is missing a valid API key.
         '404':
-          description: The user, organization, or data integration was not found.
+          description: >-
+            The user, organization, or data integration was not found, or
+            `multiple_connections_unavailable` when `connection_intent: add`
+            would create an additional connection before that capability is
+            available.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - multiple_connections_unavailable
+                          - entity_not_found
+                        description: The error code identifying the type of error.
+                        example: multiple_connections_unavailable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
         '409':
           description: >-
             A connected account already exists for this user, integration, and
@@ -28688,7 +29016,11 @@ components:
           type: string
           description: >-
             Set to `add` to create another connected account. Omit this field
-            for permanent compatibility behavior.
+            for permanent compatibility behavior. Creating an additional
+            connection is not yet available: until it is, `add` succeeds only
+            when the owner has no connection for this integration, which creates
+            the compatibility connection, and otherwise returns 404
+            `multiple_connections_unavailable`.
           example: add
           const: add
       required:
@@ -28768,7 +29100,11 @@ components:
           type: string
           description: >-
             Set to `add` to create another connected account. Omit this field
-            for permanent compatibility behavior.
+            for permanent compatibility behavior. Creating an additional
+            connection is not yet available: until it is, `add` succeeds only
+            when the owner has no connection for this integration, which creates
+            the compatibility connection, and otherwise returns 404
+            `multiple_connections_unavailable`.
           example: add
           const: add
     ConnectedAccountDto:
