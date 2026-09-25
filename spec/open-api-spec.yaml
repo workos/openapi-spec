@@ -12237,6 +12237,129 @@ paths:
       summary: Delete a Directory
       tags:
         - directories
+  /directories/{id}/sync:
+    post:
+      description: >-
+        Request an asynchronous sync from the directory provider. Currently
+        supports Google Workspace directories in linked or validating state.
+        Manual requests share a five-minute per-directory cooldown across the
+        API, Dashboard, Admin Portal, and MCP. Acceptance means the request was
+        queued, not that the sync has started or completed. A running sync
+        prevents another request from being queued.
+      operationId: DirectoriesController_syncDirectory
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Unique identifier for the Directory.
+          schema:
+            example: directory_01ECAZ4NV9QMV47GW873HDCX74
+            type: string
+      responses:
+        '202':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectorySyncResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '409':
+          description: A sync is already in progress. No additional sync was queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: directory_sync_in_progress
+                    const: directory_sync_in_progress
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '422':
+          description: The directory provider or state does not support manual sync.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: directory_sync_unsupported
+                    const: directory_sync_unsupported
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '429':
+          description: The directory is within the manual-sync cooldown window.
+          headers:
+            Retry-After:
+              description: Seconds to wait before requesting another manual sync.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectorySyncRateLimitError'
+        '503':
+          description: Directory syncing is temporarily paused. No sync was queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: directory_sync_disabled
+                    const: directory_sync_disabled
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+      summary: Sync a Directory
+      tags:
+        - directories
   /directory_groups:
     get:
       description: >-
@@ -32974,6 +33097,41 @@ components:
         - data
         - list_metadata
         - list_metadata
+    DirectorySyncResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: >-
+            The sync request was queued for asynchronous processing. This does
+            not indicate that the sync has started or completed.
+          example: queued
+          const: queued
+      required:
+        - status
+    DirectorySyncRateLimitError:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code identifying the type of error.
+          example: directory_sync_rate_limited
+          const: directory_sync_rate_limited
+        message:
+          type: string
+          description: A human-readable description of the error.
+          example: Request could not be processed.
+        retry_after_seconds:
+          type: integer
+          exclusiveMinimum: 0
+          description: >-
+            The number of seconds to wait before requesting another manual sync
+            of this directory.
+          example: 120
+      required:
+        - code
+        - message
+        - retry_after_seconds
     DirectoryGroup:
       type: object
       properties:
