@@ -22525,6 +22525,25 @@ paths:
                 required:
                   - code
                   - message
+        '503':
+          description: Another request is updating the same user. Retry the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_request
+                    const: concurrent_request
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
       summary: Update a user
       tags:
         - user-management.users
