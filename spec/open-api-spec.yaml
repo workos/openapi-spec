@@ -8968,20 +8968,49 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: The error code identifying the type of error.
-                    example: connection_deletion_in_progress
-                    const: connection_deletion_in_progress
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: Request could not be processed.
-                required:
-                  - code
-                  - message
+                oneOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: connection_deletion_in_progress
+                        const: connection_deletion_in_progress
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: resource_limit_exceeded
+                        const: resource_limit_exceeded
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: too_many_sp_encryption_certs
+                        const: too_many_sp_encryption_certs
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
         '422':
           description: Unprocessable Entity
           content:
