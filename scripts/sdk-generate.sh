@@ -132,6 +132,15 @@ PY
   EXTRA_ARGS+=(--api-surface "$TMP_SURFACE")
 fi
 
+# These emitters preserve positional arguments and public model aliases from
+# the existing SDK surface. Capture it before generation overwrites any files.
+# A new SDK has no manifest/baseline yet and uses the normal generated surface.
+if [[ "$LANG" == "go" || "$LANG" == "kotlin" || "$LANG" == "php" ]] && [[ -f "$OUTPUT/.oagen-manifest.json" ]]; then
+  TMP_SURFACE="$(mktemp "${TMPDIR:-/tmp}/oagen-${LANG}-surface.XXXXXX")"
+  npx oagen extract --sdk-path "$OUTPUT" --lang "$LANG" --output "$TMP_SURFACE" >/dev/null
+  EXTRA_ARGS+=(--api-surface "$TMP_SURFACE")
+fi
+
 # `${EXTRA_ARGS[@]+…}` guard: macOS runners still ship bash 3.2, where expanding
 # an empty array under `set -u` is a fatal "unbound variable" error. Only `ios`
 # reaches line 127 with EXTRA_ARGS still empty (`--services` and the node
@@ -143,4 +152,5 @@ fi
 # handler `$?` == 0 for this particular fatal, so even `cleanup() { local s=$?;
 # …; exit $s; }` still exits 0. Ordinary command failures are unaffected — they
 # propagate through the trap correctly. Avoiding the error is the only fix.
-exec npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" --output "$OUTPUT" "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
+# Keep the EXIT trap active so temporary surfaces/worktrees are cleaned up.
+npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" --output "$OUTPUT" "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
