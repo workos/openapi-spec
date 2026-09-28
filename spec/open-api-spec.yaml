@@ -10956,6 +10956,38 @@ paths:
                           'org_01EHQMYV6MBK39QC5PZXHY59C3'.
                     required:
                       - message
+        '409':
+          description: >-
+            `connected_account_limit_reached` when the provider and owner
+            already have 25 connections.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: connected_account_limit_reached
+                        const: connected_account_limit_reached
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
         '503':
           description: >-
             Another connection is being created for this owner and provider.
@@ -11512,6 +11544,39 @@ paths:
                           'org_01EHQMYV6MBK39QC5PZXHY59C3'.
                     required:
                       - message
+        '409':
+          description: >-
+            `connected_account_limit_reached` when explicit add would create a
+            standard connection for a provider and owner that already has 25
+            connections.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: connected_account_limit_reached
+                        const: connected_account_limit_reached
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
         '422':
           description: The selected connected account does not use OAuth authentication.
           content:
@@ -11680,6 +11745,38 @@ paths:
                           - entity_not_found
                         description: The error code identifying the type of error.
                         example: multiple_connections_unavailable
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
+        '409':
+          description: >-
+            `connected_account_limit_reached` when the provider and owner
+            already have 25 connections.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: connected_account_limit_reached
+                        const: connected_account_limit_reached
                       message:
                         type: string
                         description: A human-readable description of the error.
@@ -16131,18 +16228,37 @@ paths:
         '409':
           description: >-
             The compatibility connection already exists for this organization
-            and integration.
+            and integration, or `connected_account_limit_reached` when
+            `connection_intent: add` would create a standard connection and the
+            owner already has 25 connections.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: connected_account_limit_reached
+                        const: connected_account_limit_reached
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
         '422':
           description: >-
             The request body is malformed (`invalid_request_parameters`), the
@@ -24934,19 +25050,38 @@ paths:
                       - message
         '409':
           description: >-
-            A connected account already exists for this user, integration, and
-            organization.
+            The compatibility connection already exists for this user,
+            integration, and organization, or `connected_account_limit_reached`
+            when `connection_intent: add` would create a standard connection and
+            the owner already has 25 connections.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
-                required:
-                  - message
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The error code identifying the type of error.
+                        example: connected_account_limit_reached
+                        const: connected_account_limit_reached
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: >-
+                          Organization not found:
+                          'org_01EHQMYV6MBK39QC5PZXHY59C3'.
+                    required:
+                      - message
         '422':
           description: >-
             The request body is malformed (`invalid_request_parameters`), the
