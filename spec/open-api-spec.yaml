@@ -21581,6 +21581,28 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: >-
+                      This organization membership is managed by a directory and
+                      cannot be deleted. Remove the user from the directory in
+                      the identity provider instead.
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: organization_membership_directory_managed
+                    const: organization_membership_directory_managed
+                required:
+                  - message
+                  - code
       summary: Delete an organization membership
       tags:
         - user-management.organization-membership
