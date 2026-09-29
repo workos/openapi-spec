@@ -12231,7 +12231,8 @@ paths:
         '403':
           description: >-
             The user is not an active member of the organization named for an
-            organization connection.
+            organization connection or an organization-scoped personal
+            connection.
           content:
             application/json:
               schema:
@@ -12629,7 +12630,8 @@ paths:
         '403':
           description: >-
             The user is not an active member of the organization named for an
-            organization connection.
+            organization connection or an organization-scoped personal
+            connection.
           content:
             application/json:
               schema:
