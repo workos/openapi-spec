@@ -10823,6 +10823,25 @@ paths:
             schema:
               type: object
               properties:
+                account_display_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    A mutable, non-unique label. Omit to preserve an existing
+                    label; null clears it. Labels are never account identifiers.
+                  maxLength: 255
+                  example: Acme production
+                account_identifier:
+                  type:
+                    - string
+                    - 'null'
+                  minLength: 1
+                  description: >-
+                    A developer-attested provider account identifier, never
+                    inferred from a label or credential. Omit to preserve an
+                    existing identifier; null clears it.
+                  example: workspace_123
                 user_id:
                   type: string
                   description: A [User](/reference/authkit/user) identifier.
@@ -10876,13 +10895,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 connection_role: standard
-                account_identifier: null
-                account_display_name: null
+                account_identifier: workspace_123
+                account_display_name: Acme production
                 user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                 scopes: []
@@ -10901,9 +10920,11 @@ paths:
                 type: object
                 properties:
                   message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                    oneOf:
+                      - type: string
+                      - type: array
+                        items:
+                          type: string
                 required:
                   - message
         '401':
@@ -11037,6 +11058,26 @@ paths:
               oneOf:
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
+                    account_identifier:
+                      type:
+                        - string
+                        - 'null'
+                      minLength: 1
+                      description: >-
+                        A developer-attested provider account identifier, never
+                        inferred from a label or credential. Omit to preserve an
+                        existing identifier; null clears it.
+                      example: workspace_123
                     user_id:
                       type: string
                       description: A [User](/reference/authkit/user) identifier.
@@ -11073,6 +11114,26 @@ paths:
                   additionalProperties: false
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
+                    account_identifier:
+                      type:
+                        - string
+                        - 'null'
+                      minLength: 1
+                      description: >-
+                        A developer-attested provider account identifier, never
+                        inferred from a label or credential. Omit to preserve an
+                        existing identifier; null clears it.
+                      example: workspace_123
                     user_id:
                       type: string
                       description: A [User](/reference/authkit/user) identifier.
@@ -11125,6 +11186,26 @@ paths:
                   additionalProperties: false
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
+                    account_identifier:
+                      type:
+                        - string
+                        - 'null'
+                      minLength: 1
+                      description: >-
+                        A developer-attested provider account identifier, never
+                        inferred from a label or credential. Omit to preserve an
+                        existing identifier; null clears it.
+                      example: workspace_123
                     user_id:
                       type: string
                       description: A [User](/reference/authkit/user) identifier.
@@ -11173,13 +11254,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 connection_role: compatibility
-                account_identifier: null
-                account_display_name: null
+                account_identifier: workspace_123
+                account_display_name: Acme production
                 user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                 scopes: []
@@ -11196,9 +11277,11 @@ paths:
                 type: object
                 properties:
                   message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                    oneOf:
+                      - type: string
+                      - type: array
+                        items:
+                          type: string
                 required:
                   - message
         '401':
@@ -11292,6 +11375,16 @@ paths:
               oneOf:
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
                     user_id:
                       type: string
                       description: >-
@@ -11342,6 +11435,16 @@ paths:
                   additionalProperties: false
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
                     user_id:
                       type: string
                       description: >-
@@ -11407,6 +11510,16 @@ paths:
                   additionalProperties: false
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
                     user_id:
                       type: string
                       description: >-
@@ -11485,9 +11598,11 @@ paths:
                 type: object
                 properties:
                   message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                    oneOf:
+                      - type: string
+                      - type: array
+                        items:
+                          type: string
                 required:
                   - message
         '401':
@@ -11614,6 +11729,25 @@ paths:
             schema:
               type: object
               properties:
+                account_display_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    A mutable, non-unique label. Omit to preserve an existing
+                    label; null clears it. Labels are never account identifiers.
+                  maxLength: 255
+                  example: Acme production
+                account_identifier:
+                  type:
+                    - string
+                    - 'null'
+                  minLength: 1
+                  description: >-
+                    A developer-attested provider account identifier, never
+                    inferred from a label or credential. Omit to preserve an
+                    existing identifier; null clears it.
+                  example: workspace_123
                 user_id:
                   type: string
                   description: A [User](/reference/authkit/user) identifier.
@@ -11683,13 +11817,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 connection_role: standard
-                account_identifier: null
-                account_display_name: null
+                account_identifier: workspace_123
+                account_display_name: Acme production
                 user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                 scopes: []
@@ -11707,9 +11841,11 @@ paths:
                 type: object
                 properties:
                   message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                    oneOf:
+                      - type: string
+                      - type: array
+                        items:
+                          type: string
                 required:
                   - message
         '401':
@@ -11843,6 +11979,26 @@ paths:
               oneOf:
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
+                    account_identifier:
+                      type:
+                        - string
+                        - 'null'
+                      minLength: 1
+                      description: >-
+                        A developer-attested provider account identifier, never
+                        inferred from a label or credential. Omit to preserve an
+                        existing identifier; null clears it.
+                      example: workspace_123
                     user_id:
                       type: string
                       description: A [User](/reference/authkit/user) identifier.
@@ -11895,6 +12051,26 @@ paths:
                   additionalProperties: false
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
+                    account_identifier:
+                      type:
+                        - string
+                        - 'null'
+                      minLength: 1
+                      description: >-
+                        A developer-attested provider account identifier, never
+                        inferred from a label or credential. Omit to preserve an
+                        existing identifier; null clears it.
+                      example: workspace_123
                     user_id:
                       type: string
                       description: A [User](/reference/authkit/user) identifier.
@@ -11962,6 +12138,26 @@ paths:
                   additionalProperties: false
                 - type: object
                   properties:
+                    account_display_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        A mutable, non-unique label. Omit to preserve an
+                        existing label; null clears it. Labels are never account
+                        identifiers.
+                      maxLength: 255
+                      example: Acme production
+                    account_identifier:
+                      type:
+                        - string
+                        - 'null'
+                      minLength: 1
+                      description: >-
+                        A developer-attested provider account identifier, never
+                        inferred from a label or credential. Omit to preserve an
+                        existing identifier; null clears it.
+                      example: workspace_123
                     user_id:
                       type: string
                       description: A [User](/reference/authkit/user) identifier.
@@ -12025,13 +12221,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 connection_role: compatibility
-                account_identifier: null
-                account_display_name: null
+                account_identifier: workspace_123
+                account_display_name: Acme production
                 user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                 organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                 scopes: []
@@ -12047,9 +12243,11 @@ paths:
                 type: object
                 properties:
                   message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                    oneOf:
+                      - type: string
+                      - type: array
+                        items:
+                          type: string
                 required:
                   - message
         '401':
@@ -15954,7 +16152,7 @@ paths:
                 user_id: null
                 organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                 connection_role: compatibility
-                account_identifier: acme-workspace
+                account_identifier: workspace_123
                 account_display_name: Acme production
                 scopes:
                   - repo
@@ -16155,14 +16353,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 user_id: null
                 organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                 connection_role: compatibility
-                account_identifier: acme-workspace
+                account_identifier: workspace_123
                 account_display_name: Acme production
                 scopes:
                   - repo
@@ -16416,14 +16614,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                 user_id: null
                 organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                 connection_role: compatibility
-                account_identifier: acme-workspace
+                account_identifier: workspace_123
                 account_display_name: Acme production
                 scopes:
                   - repo
@@ -16592,7 +16790,7 @@ paths:
                       user_id: null
                       organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
                       connection_role: compatibility
-                      account_identifier: acme-workspace
+                      account_identifier: workspace_123
                       account_display_name: Acme production
                       scopes:
                         - repo
@@ -25033,7 +25231,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
         '401':
           description: The request is missing a valid API key.
         '404':
@@ -25270,7 +25468,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccount'
+                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
         '400':
           description: The connected account selector is malformed.
           content:
@@ -29487,6 +29685,21 @@ components:
     CreateOrganizationConnectedAccountDto:
       type: object
       properties:
+        account_display_name:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A mutable, non-unique connection label; null clears it. Not an
+            account identifier.
+          maxLength: 255
+          example: Acme production
+        account_identifier:
+          type:
+            - string
+            - 'null'
+          description: A developer-attested account identifier; null clears it.
+          example: workspace_123
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -29542,6 +29755,21 @@ components:
     OrganizationConnectedAccountDto:
       type: object
       properties:
+        account_display_name:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A mutable, non-unique connection label; null clears it. Not an
+            account identifier.
+          maxLength: 255
+          example: Acme production
+        account_identifier:
+          type:
+            - string
+            - 'null'
+          description: A developer-attested account identifier; null clears it.
+          example: workspace_123
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -29582,6 +29810,21 @@ components:
     CreateConnectedAccountDto:
       type: object
       properties:
+        account_display_name:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A mutable, non-unique connection label; null clears it. Not an
+            account identifier.
+          maxLength: 255
+          example: Acme production
+        account_identifier:
+          type:
+            - string
+            - 'null'
+          description: A developer-attested account identifier; null clears it.
+          example: workspace_123
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -29624,6 +29867,21 @@ components:
     ConnectedAccountDto:
       type: object
       properties:
+        account_display_name:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A mutable, non-unique connection label; null clears it. Not an
+            account identifier.
+          maxLength: 255
+          example: Acme production
+        account_identifier:
+          type:
+            - string
+            - 'null'
+          description: A developer-attested account identifier; null clears it.
+          example: workspace_123
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -46691,7 +46949,7 @@ components:
           required:
             - active
             - error
-    ConnectedAccount:
+    ConnectedAccountWriteResponse:
       type: object
       properties:
         object:
@@ -46823,6 +47081,26 @@ components:
           type: string
           description: The timestamp when the connection was last updated.
           example: '2024-01-16T14:20:00.000Z'
+        warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                const: duplicate_account_display_name
+              message:
+                type: string
+                description: A human-readable explanation of the non-blocking warning.
+                example: >-
+                  Another connection for this provider and owner has the same
+                  label.
+            required:
+              - code
+              - message
+          description: >-
+            Non-blocking warnings about an explicitly supplied label, omitted
+            when no duplicate exists. Reads do not include this field.
       required:
         - object
         - id
@@ -47340,6 +47618,150 @@ components:
       required:
         - object
         - data
+    ConnectedAccount:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the connected account object.
+          const: connected_account
+        id:
+          type: string
+          description: The unique identifier of the connected account.
+          example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+        connection_role:
+          type: string
+          enum:
+            - compatibility
+            - standard
+          description: >-
+            Whether this row is the compatibility connection visible to
+            undeclared clients or a standard peer for plural-aware clients. The
+            role does not indicate preference or creation order.
+          example: compatibility
+        account_identifier:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A best-effort identifier for the provider account this connection
+            points at. It is correlation metadata, not the connection identifier
+            or a selector.
+          example: workspace_123
+        account_display_name:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A mutable, non-unique display name for the provider account
+            connection.
+          example: Acme production
+        user_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The [User](/reference/authkit/user) identifier associated with this
+            connection.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        organization_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The [Organization](/reference/organization) identifier associated
+            with this connection, or `null` if not scoped to an organization.
+          example: null
+        scopes:
+          type: array
+          items:
+            type: string
+          description: The OAuth scopes granted for this connection.
+          example:
+            - repo
+            - user:email
+        auth_method:
+          type: string
+          enum:
+            - oauth
+            - api_key
+            - client_credentials
+          description: >-
+            The authentication method used for this connection (`oauth`,
+            `api_key`, or `client_credentials`). Defaults to `oauth` if absent.
+          example: oauth
+        api_key_last_4:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The last four characters of the API key, or `null` for OAuth
+            connections.
+          example: null
+        client_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The client ID supplied for this connection. Only present when
+            `auth_method` is `client_credentials`.
+          example: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
+        client_secret_last_4:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The last four characters of the client secret supplied for this
+            connection, or `null` when it can't be read. Only present when
+            `auth_method` is `client_credentials`.
+          example: cdef
+        config:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            The connection-level configuration values stored for this connection
+            — the fields the provider declares at `installation` scope,
+            excluding secret and undeclared fields. Returned for every
+            authentication method; empty when no stored values can be disclosed.
+          example:
+            instance_url: https://example.my.salesforce.com
+        state:
+          type: string
+          enum:
+            - connected
+            - needs_reauthorization
+            - disconnected
+          description: >-
+            The state of the connected account:
+
+            - `connected`: The connection is active and tokens are valid.
+
+            - `needs_reauthorization`: The user needs to reauthorize the
+            connection, typically because required scopes have changed.
+
+            - `disconnected`: The connection has been disconnected.
+          example: connected
+        created_at:
+          type: string
+          description: The timestamp when the connection was created.
+          example: '2024-01-16T14:20:00.000Z'
+        updated_at:
+          type: string
+          description: The timestamp when the connection was last updated.
+          example: '2024-01-16T14:20:00.000Z'
+      required:
+        - object
+        - id
+        - connection_role
+        - account_identifier
+        - account_display_name
+        - user_id
+        - organization_id
+        - scopes
+        - state
+        - created_at
+        - updated_at
     PortalLinkResponse:
       type: object
       properties:
