@@ -16,6 +16,9 @@ export const operationHints: Record<string, OperationHint> = {
   // so the key here uses `{provider}` to match the post-transform path.
   'POST /data-integrations/{provider}/token': { name: 'get_access_token' },
 
+  // -- Directory Sync -----------------------------------------------------------
+  'POST /directories/{id}/sync': { name: 'sync_directory' },
+
   // -- SSO ----------------------------------------------------------------------
   'GET /sso/authorize': {
     name: 'get_authorization_url',
