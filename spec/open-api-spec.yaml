@@ -31132,6 +31132,14 @@ components:
             - authorization_code
             - urn:ietf:params:oauth:grant-type:token-exchange
           example: authorization_code
+        code_verifier:
+          type: string
+          description: >-
+            The PKCE code verifier matching the `code_challenge` sent with the
+            authorization request. Required when the authorization request
+            included a `code_challenge`. Must be sent in the request body.
+          example: code_verifier_value
+          format: password
         subject_token:
           type: string
           description: >-
