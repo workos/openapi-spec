@@ -2302,6 +2302,25 @@ paths:
                         description: The list of records for the current page.
                         items:
                           $ref: '#/components/schemas/AuditLogActionJson'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Not Found
           content:
@@ -2359,6 +2378,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditLogSchemaJson'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '422':
           description: Unprocessable Entity
           content:
@@ -2471,6 +2509,25 @@ paths:
                         description: The list of records for the current page.
                         items:
                           $ref: '#/components/schemas/AuditLogSchemaJson'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Not Found
           content:
@@ -2599,6 +2656,25 @@ paths:
                 errors:
                   - instancePath: /targets
           description: Bad Request
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           content:
             application/json:
@@ -2737,6 +2813,25 @@ paths:
               example:
                 message: Invalid date range
                 code: invalid_audit_log_export_range_date
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
       summary: Create Export
       tags:
         - audit-logs
@@ -2769,6 +2864,25 @@ paths:
                 url: https://exports.audit-logs.com/audit-log-exports/export.csv
                 created_at: '2022-09-02T17:14:57.094Z'
                 updated_at: '2022-09-02T17:14:57.094Z'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Audit Log Export not found.
           content:
@@ -3346,6 +3460,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupRoleAssignmentList'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -3399,6 +3532,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupRoleAssignment'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -3486,6 +3638,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupRoleAssignmentList'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -3618,6 +3789,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupRoleAssignment'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -3725,6 +3915,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthorizationCheck'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -3911,6 +4120,25 @@ paths:
                 required:
                   - code
                   - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -4040,6 +4268,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthorizationPermissionList'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -4167,6 +4414,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthorizationPermissionList'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -4300,6 +4566,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserRoleAssignmentList'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -4369,6 +4654,25 @@ paths:
                 created_at: '2026-01-15T12:00:00.000Z'
                 updated_at: '2026-01-15T12:00:00.000Z'
           description: Created
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -5553,6 +5857,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthorizationResource'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -5693,6 +6016,25 @@ paths:
                     description: The error code identifying the type of error.
                     example: lock_timeout
                     const: lock_timeout
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
                   message:
                     type: string
                     description: A human-readable description of the error.
@@ -6018,6 +6360,25 @@ paths:
                 required:
                   - code
                   - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -6150,6 +6511,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserRoleAssignmentList'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -6679,6 +7059,25 @@ paths:
                 required:
                   - code
                   - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -6829,6 +7228,25 @@ paths:
                     required:
                       - code
                       - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -6933,6 +7351,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthorizationResource'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -7072,6 +7509,25 @@ paths:
                     description: The error code identifying the type of error.
                     example: lock_timeout
                     const: lock_timeout
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
                   message:
                     type: string
                     description: A human-readable description of the error.
@@ -7357,6 +7813,25 @@ paths:
                 required:
                   - code
                   - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -7473,6 +7948,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserRoleAssignmentList'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -10816,6 +11310,21 @@ paths:
           schema:
             example: github
             type: string
+        - name: idempotency-key
+          in: header
+          description: >-
+            Makes retries of this explicit add return the connection the first
+            attempt created instead of creating another. Reuse the same key for
+            every retry of one request. A matching retry within 24 hours returns
+            the existing connection; reusing the key for a different owner,
+            integration, or authentication method, or after 24 hours while that
+            connection exists, returns 409 `idempotency_key_conflict`. If that
+            connection was deleted, the key creates a new one. Requests without
+            a key are not retry-safe.
+          required: false
+          schema:
+            type: string
+            example: 0b6c3f0e-7a51-4c3a-9d8e-2f1b5a6c7d80
       requestBody:
         required: true
         content:
@@ -10980,7 +11489,9 @@ paths:
         '409':
           description: >-
             `connected_account_limit_reached` when the provider and owner
-            already have 25 connections.
+            already have 25 connections, or `idempotency_key_conflict` when the
+            `Idempotency-Key` was already used for a different connection
+            request or its replay window has passed.
           content:
             application/json:
               schema:
@@ -10989,9 +11500,11 @@ paths:
                     properties:
                       code:
                         type: string
+                        enum:
+                          - connected_account_limit_reached
+                          - idempotency_key_conflict
                         description: The error code identifying the type of error.
                         example: connected_account_limit_reached
-                        const: connected_account_limit_reached
                       message:
                         type: string
                         description: A human-readable description of the error.
@@ -11722,6 +12235,21 @@ paths:
           schema:
             example: salesforce
             type: string
+        - name: idempotency-key
+          in: header
+          description: >-
+            Makes retries of this explicit add return the connection the first
+            attempt created instead of creating another. Reuse the same key for
+            every retry of one request. A matching retry within 24 hours returns
+            the existing connection; reusing the key for a different owner,
+            integration, or authentication method, or after 24 hours while that
+            connection exists, returns 409 `idempotency_key_conflict`. If that
+            connection was deleted, the key creates a new one. Requests without
+            a key are not retry-safe.
+          required: false
+          schema:
+            type: string
+            example: 0b6c3f0e-7a51-4c3a-9d8e-2f1b5a6c7d80
       requestBody:
         required: true
         content:
@@ -11901,7 +12429,9 @@ paths:
         '409':
           description: >-
             `connected_account_limit_reached` when the provider and owner
-            already have 25 connections.
+            already have 25 connections, or `idempotency_key_conflict` when the
+            `Idempotency-Key` was already used for a different connection
+            request or its replay window has passed.
           content:
             application/json:
               schema:
@@ -11910,9 +12440,11 @@ paths:
                     properties:
                       code:
                         type: string
+                        enum:
+                          - connected_account_limit_reached
+                          - idempotency_key_conflict
                         description: The error code identifying the type of error.
                         example: connected_account_limit_reached
-                        const: connected_account_limit_reached
                       message:
                         type: string
                         description: A human-readable description of the error.
@@ -13944,6 +14476,25 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_flag_target_update
+                    const: concurrent_flag_target_update
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
       summary: Disable a feature flag
       tags:
         - feature-flags
@@ -14073,6 +14624,25 @@ paths:
                     description: A human-readable description of the error.
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
+                  - message
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: concurrent_flag_target_update
+                    const: concurrent_flag_target_update
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
                   - message
       summary: Enable a feature flag
       tags:
@@ -14937,6 +15507,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditLogsRetentionJson'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Not Found
           content:
@@ -14977,6 +15566,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditLogsRetentionJson'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Not Found
           content:
@@ -16164,6 +16772,8 @@ paths:
                 config:
                   instance_url: https://example.my.salesforce.com
                 state: connected
+                established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                state_reason: null
                 created_at: '2024-01-16T14:20:00.000Z'
                 updated_at: '2024-01-16T14:20:00.000Z'
         '400':
@@ -16341,6 +16951,21 @@ paths:
           schema:
             example: github
             type: string
+        - name: idempotency-key
+          in: header
+          description: >-
+            Makes retries of this explicit add return the connection the first
+            attempt created instead of creating another. Reuse the same key for
+            every retry of one request. A matching retry within 24 hours returns
+            the existing connection; reusing the key for a different owner,
+            integration, or authentication method, or after 24 hours while that
+            connection exists, returns 409 `idempotency_key_conflict`. If that
+            connection was deleted, the key creates a new one. Requests without
+            a key are not retry-safe.
+          required: false
+          schema:
+            type: string
+            example: 0b6c3f0e-7a51-4c3a-9d8e-2f1b5a6c7d80
       requestBody:
         required: true
         content:
@@ -16372,6 +16997,8 @@ paths:
                 config:
                   instance_url: https://example.my.salesforce.com
                 state: connected
+                established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                state_reason: null
                 created_at: '2024-01-16T14:20:00.000Z'
                 updated_at: '2024-01-16T14:20:00.000Z'
         '401':
@@ -16428,9 +17055,11 @@ paths:
         '409':
           description: >-
             The compatibility connection already exists for this organization
-            and integration, or `connected_account_limit_reached` when
+            and integration, `connected_account_limit_reached` when
             `connection_intent: add` would create a standard connection and the
-            owner already has 25 connections.
+            owner already has 25 connections, or `idempotency_key_conflict` when
+            the `Idempotency-Key` was already used for a different connection
+            request or its replay window has passed.
           content:
             application/json:
               schema:
@@ -16439,9 +17068,11 @@ paths:
                     properties:
                       code:
                         type: string
+                        enum:
+                          - connected_account_limit_reached
+                          - idempotency_key_conflict
                         description: The error code identifying the type of error.
                         example: connected_account_limit_reached
-                        const: connected_account_limit_reached
                       message:
                         type: string
                         description: A human-readable description of the error.
@@ -16633,6 +17264,8 @@ paths:
                 config:
                   instance_url: https://example.my.salesforce.com
                 state: connected
+                established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                state_reason: null
                 created_at: '2024-01-16T14:20:00.000Z'
                 updated_at: '2024-01-16T14:20:00.000Z'
         '400':
@@ -16802,6 +17435,8 @@ paths:
                       config:
                         instance_url: https://example.my.salesforce.com
                       state: connected
+                      established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                      state_reason: null
                       created_at: '2024-01-16T14:20:00.000Z'
                       updated_at: '2024-01-16T14:20:00.000Z'
                       userlandUserId: null
@@ -17086,6 +17721,25 @@ paths:
       responses:
         '204':
           description: No Content
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -17371,6 +18025,25 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
@@ -17488,6 +18161,25 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
       summary: Create an attempt
       tags:
         - radar
@@ -17540,6 +18232,25 @@ paths:
                     description: A human-readable description of the error.
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
+                  - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
                   - message
         '404':
           description: Not Found
@@ -17628,6 +18339,25 @@ paths:
                     description: A human-readable description of the error.
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
+                  - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
                   - message
       summary: Add an entry to a Radar list
       tags:
@@ -20539,6 +21269,25 @@ paths:
                     required:
                       - code
                       - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Not Found
           content:
@@ -20899,6 +21648,25 @@ paths:
                     required:
                       - code
                       - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Not Found
           content:
@@ -25219,6 +25987,21 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: idempotency-key
+          in: header
+          description: >-
+            Makes retries of this explicit add return the connection the first
+            attempt created instead of creating another. Reuse the same key for
+            every retry of one request. A matching retry within 24 hours returns
+            the existing connection; reusing the key for a different owner,
+            integration, or authentication method, or after 24 hours while that
+            connection exists, returns 409 `idempotency_key_conflict`. If that
+            connection was deleted, the key creates a new one. Requests without
+            a key are not retry-safe.
+          required: false
+          schema:
+            type: string
+            example: 0b6c3f0e-7a51-4c3a-9d8e-2f1b5a6c7d80
       requestBody:
         required: true
         content:
@@ -25273,9 +26056,11 @@ paths:
         '409':
           description: >-
             The compatibility connection already exists for this user,
-            integration, and organization, or `connected_account_limit_reached`
+            integration, and organization, `connected_account_limit_reached`
             when `connection_intent: add` would create a standard connection and
-            the owner already has 25 connections.
+            the owner already has 25 connections, or `idempotency_key_conflict`
+            when the `Idempotency-Key` was already used for a different
+            connection request or its replay window has passed.
           content:
             application/json:
               schema:
@@ -25284,9 +26069,11 @@ paths:
                     properties:
                       code:
                         type: string
+                        enum:
+                          - connected_account_limit_reached
+                          - idempotency_key_conflict
                         description: The error code identifying the type of error.
                         example: connected_account_limit_reached
-                        const: connected_account_limit_reached
                       message:
                         type: string
                         description: A human-readable description of the error.
@@ -25897,6 +26684,25 @@ paths:
                   - updated_at
                   - object
                 x-inline-with-overrides: true
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '404':
           description: Not Found
           content:
@@ -34920,6 +35726,29 @@ components:
             - needs_reauthorization
           description: The state of the connected account.
           example: connected
+        established_by_user_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The ID of the User whose authorization established the connected
+            account, or null when it is developer-managed, its establisher is
+            unknown, or the establishing member left the organization.
+            Historical events may omit this field.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        state_reason:
+          description: >-
+            Why WorkOS put the connected account in its current state, or null
+            when there is no WorkOS-recorded reason.
+            `establishing_member_membership_ended` means the member who
+            established an organization-owned connection is no longer an active
+            member. Additional values may be added. Historical events may omit
+            this field.
+          example: null
+          oneOf:
+            - type: string
+              const: establishing_member_membership_ended
+            - type: 'null'
         created_at:
           format: date-time
           type: string
@@ -47078,9 +47907,40 @@ components:
 
             - `needs_reauthorization`: The user needs to reauthorize the
             connection, typically because required scopes have changed.
+            `state_reason` explains why when WorkOS invalidated the connection
+            itself.
 
             - `disconnected`: The connection has been disconnected.
           example: connected
+        established_by_user_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The [User](/reference/authkit/user) whose authorization established
+            this connection. `null` when the connection is developer-managed or
+            its establisher is unknown, and when the establishing member lost
+            access to the organization — in which case `state_reason` is
+            `establishing_member_membership_ended`.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        state_reason:
+          description: >-
+            Why WorkOS put the connection in its current `state`, or `null` when
+            there is no WorkOS-recorded reason:
+
+            - `establishing_member_membership_ended`: The member who established
+            this organization-owned connection is no longer an active member of
+            the organization, so its credentials were cleared. An organization
+            admin must provide new credentials.
+
+
+            Additional values may be added; treat an unrecognized value as an
+            unknown reason.
+          example: null
+          oneOf:
+            - type: string
+              const: establishing_member_membership_ended
+            - type: 'null'
         created_at:
           type: string
           description: The timestamp when the connection was created.
@@ -47372,11 +48232,44 @@ components:
 
                           - `needs_reauthorization`: The user needs to
                           reauthorize the connection, typically because required
-                          scopes have changed.
+                          scopes have changed. `state_reason` explains why when
+                          WorkOS invalidated the connection itself.
 
                           - `disconnected`: The connection has been
                           disconnected.
                         example: connected
+                      established_by_user_id:
+                        type:
+                          - string
+                          - 'null'
+                        description: >-
+                          The [User](/reference/authkit/user) whose
+                          authorization established this connection. `null` when
+                          the connection is developer-managed or its establisher
+                          is unknown, and when the establishing member lost
+                          access to the organization — in which case
+                          `state_reason` is
+                          `establishing_member_membership_ended`.
+                        example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                      state_reason:
+                        description: >-
+                          Why WorkOS put the connection in its current `state`,
+                          or `null` when there is no WorkOS-recorded reason:
+
+                          - `establishing_member_membership_ended`: The member
+                          who established this organization-owned connection is
+                          no longer an active member of the organization, so its
+                          credentials were cleared. An organization admin must
+                          provide new credentials.
+
+
+                          Additional values may be added; treat an unrecognized
+                          value as an unknown reason.
+                        example: null
+                        oneOf:
+                          - type: string
+                            const: establishing_member_membership_ended
+                          - type: 'null'
                       created_at:
                         type: string
                         description: The timestamp when the connection was created.
@@ -47547,10 +48440,42 @@ components:
 
                         - `needs_reauthorization`: The user needs to reauthorize
                         the connection, typically because required scopes have
-                        changed.
+                        changed. `state_reason` explains why when WorkOS
+                        invalidated the connection itself.
 
                         - `disconnected`: The connection has been disconnected.
                       example: connected
+                    established_by_user_id:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The [User](/reference/authkit/user) whose authorization
+                        established this connection. `null` when the connection
+                        is developer-managed or its establisher is unknown, and
+                        when the establishing member lost access to the
+                        organization — in which case `state_reason` is
+                        `establishing_member_membership_ended`.
+                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                    state_reason:
+                      description: >-
+                        Why WorkOS put the connection in its current `state`, or
+                        `null` when there is no WorkOS-recorded reason:
+
+                        - `establishing_member_membership_ended`: The member who
+                        established this organization-owned connection is no
+                        longer an active member of the organization, so its
+                        credentials were cleared. An organization admin must
+                        provide new credentials.
+
+
+                        Additional values may be added; treat an unrecognized
+                        value as an unknown reason.
+                      example: null
+                      oneOf:
+                        - type: string
+                          const: establishing_member_membership_ended
+                        - type: 'null'
                     created_at:
                       type: string
                       description: The timestamp when the connection was created.
@@ -47747,9 +48672,40 @@ components:
 
             - `needs_reauthorization`: The user needs to reauthorize the
             connection, typically because required scopes have changed.
+            `state_reason` explains why when WorkOS invalidated the connection
+            itself.
 
             - `disconnected`: The connection has been disconnected.
           example: connected
+        established_by_user_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The [User](/reference/authkit/user) whose authorization established
+            this connection. `null` when the connection is developer-managed or
+            its establisher is unknown, and when the establishing member lost
+            access to the organization — in which case `state_reason` is
+            `establishing_member_membership_ended`.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        state_reason:
+          description: >-
+            Why WorkOS put the connection in its current `state`, or `null` when
+            there is no WorkOS-recorded reason:
+
+            - `establishing_member_membership_ended`: The member who established
+            this organization-owned connection is no longer an active member of
+            the organization, so its credentials were cleared. An organization
+            admin must provide new credentials.
+
+
+            Additional values may be added; treat an unrecognized value as an
+            unknown reason.
+          example: null
+          oneOf:
+            - type: string
+              const: establishing_member_membership_ended
+            - type: 'null'
         created_at:
           type: string
           description: The timestamp when the connection was created.
