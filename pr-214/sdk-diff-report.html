@@ -613556,7 +613556,7 @@
                     <tr>
     <td class="d2h-code-side-linenumber d2h-info"></td>
     <td class="d2h-info">
-        <div class="d2h-code-side-line">@@ -39,14 +39,22 @@ pub struct ConnectedAccount {</div>
+        <div class="d2h-code-side-line">@@ -39,14 +39,23 @@ pub struct ConnectedAccount {</div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-cntx">
@@ -613666,6 +613666,16 @@
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">&nbsp;</span>
             <span class="d2h-code-line-ctn">    pub state: ConnectedAccountState,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -613959,7 +613969,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Additional values may be added; treat an unrecognized value as an unknown reason.</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F;</span>
         </div>
     </td>
 </tr><tr>
@@ -613969,7 +613979,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Additional values may be added; treat an unrecognized value as an unknown reason.</span>
         </div>
     </td>
 </tr><tr>
@@ -613979,17 +613989,17 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub state_reason: Option&lt;String&gt;,</span>
+            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
         </div>
     </td>
 </tr><tr>
-    <td class="d2h-code-side-linenumber d2h-cntx">
+    <td class="d2h-code-side-linenumber d2h-ins">
       58
     </td>
-    <td class="d2h-cntx">
+    <td class="d2h-ins">
         <div class="d2h-code-side-line">
-            <span class="d2h-code-line-prefix">&nbsp;</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was created.</span>
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">    pub state_reason: Option&lt;String&gt;,</span>
         </div>
     </td>
 </tr><tr>
@@ -613999,12 +614009,22 @@
     <td class="d2h-cntx">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">&nbsp;</span>
-            <span class="d2h-code-line-ctn">    pub created_at: String,</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was created.</span>
         </div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-cntx">
       60
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    pub created_at: String,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      61
     </td>
     <td class="d2h-cntx">
         <div class="d2h-code-side-line">
@@ -614326,7 +614346,17 @@
                     <tr>
     <td class="d2h-code-side-linenumber d2h-info"></td>
     <td class="d2h-info">
-        <div class="d2h-code-side-line">@@ -0,0 +1,65 @@</div>
+        <div class="d2h-code-side-line">@@ -0,0 +1,66 @@</div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
+        </div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
@@ -615539,7 +615569,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Additional values may be added; treat an unrecognized value as an unknown reason.</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F;</span>
         </div>
     </td>
 </tr><tr>
@@ -615549,7 +615579,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Additional values may be added; treat an unrecognized value as an unknown reason.</span>
         </div>
     </td>
 </tr><tr>
@@ -615559,7 +615589,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub state_reason: Option&lt;String&gt;,</span>
+            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
         </div>
     </td>
 </tr><tr>
@@ -615569,7 +615599,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was created.</span>
+            <span class="d2h-code-line-ctn">    pub state_reason: Option&lt;String&gt;,</span>
         </div>
     </td>
 </tr><tr>
@@ -615579,7 +615609,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub created_at: String,</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was created.</span>
         </div>
     </td>
 </tr><tr>
@@ -615589,7 +615619,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was last updated.</span>
+            <span class="d2h-code-line-ctn">    pub created_at: String,</span>
         </div>
     </td>
 </tr><tr>
@@ -615599,7 +615629,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub updated_at: String,</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was last updated.</span>
         </div>
     </td>
 </tr><tr>
@@ -615609,7 +615639,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Non-blocking warnings about an explicitly supplied label, omitted when no duplicate exists. Reads do not include this field.</span>
+            <span class="d2h-code-line-ctn">    pub updated_at: String,</span>
         </div>
     </td>
 </tr><tr>
@@ -615619,7 +615649,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Non-blocking warnings about an explicitly supplied label, omitted when no duplicate exists. Reads do not include this field.</span>
         </div>
     </td>
 </tr><tr>
@@ -615629,12 +615659,22 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub warnings: Option&lt;Vec&lt;ConnectedAccountWriteResponseWarning&gt;&gt;,</span>
+            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
         </div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-ins">
       65
+    </td>
+    <td class="d2h-ins">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">    pub warnings: Option&lt;Vec&lt;ConnectedAccountWriteResponseWarning&gt;&gt;,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-ins">
+      66
     </td>
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
@@ -620641,7 +620681,7 @@
                     <tr>
     <td class="d2h-code-side-linenumber d2h-info"></td>
     <td class="d2h-info">
-        <div class="d2h-code-side-line">@@ -39,14 +39,22 @@ pub struct DataIntegrationsListResponseDataConnectedAccount {</div>
+        <div class="d2h-code-side-line">@@ -39,14 +39,23 @@ pub struct DataIntegrationsListResponseDataConnectedAccount {</div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-cntx">
@@ -620751,6 +620791,16 @@
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">&nbsp;</span>
             <span class="d2h-code-line-ctn">    pub state: DataIntegrationsListResponseDataConnectedAccountState,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -621044,7 +621094,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Additional values may be added; treat an unrecognized value as an unknown reason.</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F;</span>
         </div>
     </td>
 </tr><tr>
@@ -621054,7 +621104,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Additional values may be added; treat an unrecognized value as an unknown reason.</span>
         </div>
     </td>
 </tr><tr>
@@ -621064,17 +621114,17 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub state_reason: Option&lt;String&gt;,</span>
+            <span class="d2h-code-line-ctn">    #[serde(skip_serializing_if = &quot;Option::is_none&quot;, default)]</span>
         </div>
     </td>
 </tr><tr>
-    <td class="d2h-code-side-linenumber d2h-cntx">
+    <td class="d2h-code-side-linenumber d2h-ins">
       58
     </td>
-    <td class="d2h-cntx">
+    <td class="d2h-ins">
         <div class="d2h-code-side-line">
-            <span class="d2h-code-line-prefix">&nbsp;</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was created.</span>
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">    pub state_reason: Option&lt;String&gt;,</span>
         </div>
     </td>
 </tr><tr>
@@ -621084,12 +621134,22 @@
     <td class="d2h-cntx">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">&nbsp;</span>
-            <span class="d2h-code-line-ctn">    pub created_at: String,</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; The timestamp when the connection was created.</span>
         </div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-cntx">
       60
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">    pub created_at: String,</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      61
     </td>
     <td class="d2h-cntx">
         <div class="d2h-code-side-line">
