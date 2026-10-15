@@ -45,6 +45,7 @@ export const operationHints: Record<string, OperationHint> = {
 
   // -- Admin Portal -------------------------------------------------------------
   'POST /portal/generate_link': { name: 'generate_link' },
+  'POST /portal/revoke_link': { name: 'revoke_link' },
 
   // -- Agents -- disambiguate co-mounted validate operations --------------------
   // `Agents*` folds every agents sub-service onto one service, so both
