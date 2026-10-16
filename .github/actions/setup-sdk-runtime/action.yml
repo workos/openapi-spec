@@ -18,7 +18,10 @@ runs:
       shell: bash
       run: |
         case "${{ inputs.language }}" in
-          ruby)   echo "version=$(cat .ruby-version)" >> "$GITHUB_OUTPUT" ;;
+          # Ruby: major.minor only. setup-ruby bakes its known-version table into
+          # each release, so an exact patch newer than the pinned action fails with
+          # "Unknown version X". A prefix resolves to the newest patch it knows.
+          ruby)   echo "version=$(cut -d. -f1,2 .ruby-version)" >> "$GITHUB_OUTPUT" ;;
           python) echo "version=$(cat .python-version 2>/dev/null || grep -Po '(?<=requires-python.*>=)\d+\.\d+' pyproject.toml)" >> "$GITHUB_OUTPUT" ;;
           go)     echo "version=$(grep '^go ' go.mod | awk '{print $2}')" >> "$GITHUB_OUTPUT" ;;
           dotnet) echo "version=$(grep -Po '(?<=<TargetFramework>net)\d+\.\d+' $(find . -name '*.csproj' -path '*/src/*' | head -1))" >> "$GITHUB_OUTPUT" ;;
