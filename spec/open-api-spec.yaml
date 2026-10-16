@@ -18170,7 +18170,7 @@ paths:
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
                   - message
-      summary: Revoke Portal Links
+      summary: Revoke a Portal Link
       tags:
         - admin-portal
   /radar/attempts:
