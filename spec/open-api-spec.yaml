@@ -1795,6 +1795,47 @@ paths:
       summary: Get an agent registration
       tags:
         - agents.registrations
+  /agents/registrations/{id}/revoke:
+    post:
+      description: >-
+        Revoke an agent registration by ID. Revocation is permanent: the
+        registration, its identity assertions, and every access token or API key
+        issued from it stop working, and the agent must register again. Revoking
+        an already revoked registration succeeds and returns the original
+        `revoked_at`. The registration is scoped to the environment of the API
+        key used to authenticate the request.
+      operationId: AgentAdminController_revokeRegistration
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the agent registration.
+          schema:
+            type: string
+            example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRegistration'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Revoke an agent registration
+      tags:
+        - agents.registrations
   /agents/sessions:
     get:
       description: >-
@@ -32526,6 +32567,15 @@ components:
             - revoked
           description: The current verification status of the registration.
           example: verified
+        revoked_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            The timestamp when the registration was revoked, or `null` if it has
+            not been revoked.
+          example: null
         kind:
           type: string
           enum:
@@ -32622,6 +32672,7 @@ components:
         - agent_identity
         - organization_id
         - status
+        - revoked_at
         - kind
         - claim
         - created_at
@@ -41513,6 +41564,34 @@ components:
                               example:
                                 - beta
                                 - release
+                            owner:
+                              description: >-
+                                The previous owner of the flag, or `null` if it
+                                had none.
+                              oneOf:
+                                - type: object
+                                  properties:
+                                    email:
+                                      type: string
+                                      description: The email address of the flag owner.
+                                      example: jane@example.com
+                                    first_name:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      description: The first name of the flag owner.
+                                      example: Jane
+                                    last_name:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      description: The last name of the flag owner.
+                                      example: Doe
+                                  required:
+                                    - email
+                                    - first_name
+                                    - last_name
+                                - type: 'null'
                             enabled:
                               type: boolean
                               description: Whether the flag was previously enabled.
