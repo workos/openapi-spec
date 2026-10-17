@@ -1192,7 +1192,7 @@ function defaultingReorders(changes) {
 // its old position plus the number of inserted parameters now ahead of it. That
 // arithmetic needs the insertion's `new.position`; a report without one cannot
 // be placed and nothing on that symbol is forgiven. Merely counting insertions
-// is unsound — a parameter hopping over an unmoved neighbour while an insertion
+// is unsound — a parameter hopping over an unmoved neighbor while an insertion
 // pads the distance looks identical to a pure shift, because the report never
 // lists the unmoved parameter (the exhaustive test in
 // sdk-release-metadata.spec.mjs pins this). A move the arithmetic cannot explain
