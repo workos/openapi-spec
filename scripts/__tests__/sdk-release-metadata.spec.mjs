@@ -641,7 +641,7 @@ test('factsFromCompat keeps a shift breaking when the insertion carries no posit
   assert.equal(factsFromCompat(report, [], EMPTY_INDEXES).length, 1);
 });
 
-// A parameter hopping over an unmoved neighbour while an insertion pads the
+// A parameter hopping over an unmoved neighbor while an insertion pads the
 // distance: [a, b] -> [x, b, a, y, z]. Counting insertions alone (two
 // non-terminal ones, `a` moved by two) would forgive it; the arithmetic sees
 // only one insertion ahead of `a`'s new slot and keeps the real reorder.

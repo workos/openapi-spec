@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Scoped generation: forward --services to `oagen generate`. Absent (or empty)
-# means full generation — no flag is appended, preserving the default behaviour
+# means full generation — no flag is appended, preserving the default behavior
 # every existing caller relies on. An unknown service makes oagen exit non-zero
 # with the valid-name list, which `set -euo pipefail` propagates as a job failure.
 #

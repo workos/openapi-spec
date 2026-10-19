@@ -157,7 +157,7 @@ function main(argv) {
     }
     process.stdout.write(canonical.join(","));
   } catch (err) {
-    // Degrade to today's behaviour: pass the list through untouched so
+    // Degrade to today's behavior: pass the list through untouched so
     // `oagen generate` still runs (and still validates the names itself).
     process.stderr.write(
       `canonicalize-services: could not resolve post-mount names (${err.message}); ` +
