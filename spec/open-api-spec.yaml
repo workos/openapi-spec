@@ -18866,33 +18866,20 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        const: connection_invalid
-                      error_description:
-                        type: string
-                        description: A human-readable description of the error.
-                        example: >-
-                          Single Logout is only supported for GenericOIDC
-                          connections.
-                    required:
-                      - error
-                      - error_description
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        const: unauthorized_client
-                      error_description:
-                        type: string
-                        description: A human-readable description of the error.
-                        example: Unauthorized
-                    required:
-                      - error
-                      - error_description
+                type: object
+                properties:
+                  error:
+                    type: string
+                    const: connection_invalid
+                  error_description:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: >-
+                      Single Logout is only supported for GenericOIDC
+                      connections.
+                required:
+                  - error
+                  - error_description
         '404':
           description: Not Found
           content:
