@@ -14179,15 +14179,24 @@ paths:
         - name: range_start
           required: false
           in: query
-          description: ISO-8601 date string to filter events created after this date.
+          description: >-
+            ISO 8601 UTC timestamp with a `Z` suffix to filter events created
+            after this date. Timezone offsets such as `+00:00` are not accepted.
           schema:
+            format: date-time
+            pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$
             example: '2025-01-01T00:00:00Z'
             type: string
         - name: range_end
           required: false
           in: query
-          description: ISO-8601 date string to filter events created before this date.
+          description: >-
+            ISO 8601 UTC timestamp with a `Z` suffix to filter events created
+            before this date. Timezone offsets such as `+00:00` are not
+            accepted.
           schema:
+            format: date-time
+            pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$
             example: '2025-12-31T23:59:59Z'
             type: string
         - name: organization_id
