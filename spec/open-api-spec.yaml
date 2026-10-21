@@ -44664,6 +44664,7 @@ components:
                         - connections
                         - directoryUsers
                         - scimLogs
+                        - radarDetections
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -44714,6 +44715,7 @@ components:
                         - connections
                         - directoryUsers
                         - scimLogs
+                        - radarDetections
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -44764,6 +44766,7 @@ components:
                         - connections
                         - directoryUsers
                         - scimLogs
+                        - radarDetections
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -44814,6 +44817,7 @@ components:
                         - connections
                         - directoryUsers
                         - scimLogs
+                        - radarDetections
                       description: The type of resource being exported.
                       example: users
                   required:
