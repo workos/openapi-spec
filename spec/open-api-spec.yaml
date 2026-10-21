@@ -17745,25 +17745,6 @@ paths:
       responses:
         '204':
           description: No Content
-        '402':
-          description: ''
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: The error code identifying the type of error.
-                    example: production_feature_requires_billing
-                    const: production_feature_requires_billing
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: Request could not be processed.
-                required:
-                  - code
-                  - message
         '403':
           description: Forbidden
           content:
@@ -17823,6 +17804,25 @@ paths:
                     description: A human-readable description of the error.
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
+                  - message
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: daily_quota_exceeded
+                    const: daily_quota_exceeded
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
                   - message
         '503':
           description: ''
@@ -21344,25 +21344,6 @@ paths:
                     required:
                       - code
                       - message
-        '402':
-          description: ''
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: The error code identifying the type of error.
-                    example: production_feature_requires_billing
-                    const: production_feature_requires_billing
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: Request could not be processed.
-                required:
-                  - code
-                  - message
         '404':
           description: Not Found
           content:
@@ -21723,25 +21704,6 @@ paths:
                     required:
                       - code
                       - message
-        '402':
-          description: ''
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: The error code identifying the type of error.
-                    example: production_feature_requires_billing
-                    const: production_feature_requires_billing
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: Request could not be processed.
-                required:
-                  - code
-                  - message
         '404':
           description: Not Found
           content:
@@ -26797,25 +26759,6 @@ paths:
                   - updated_at
                   - object
                 x-inline-with-overrides: true
-        '402':
-          description: ''
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: The error code identifying the type of error.
-                    example: production_feature_requires_billing
-                    const: production_feature_requires_billing
-                  message:
-                    type: string
-                    description: A human-readable description of the error.
-                    example: Request could not be processed.
-                required:
-                  - code
-                  - message
         '404':
           description: Not Found
           content:
