@@ -11334,10 +11334,6 @@ paths:
         `organization`, shared by the organization. Requires `connection_intent:
         add` and does not accept `connected_account_id`; use PUT to create or
         rotate the compatibility connection or to update an exact connection.
-        Creating an additional connection is not yet available: until it is,
-        this endpoint succeeds only when the owner has no connection for this
-        integration, which creates the compatibility connection, and otherwise
-        returns 404 `multiple_connections_unavailable`.
       operationId: DataIntegrationsController_createApiKeyConnection
       parameters:
         - name: slug
@@ -11424,10 +11420,6 @@ paths:
                     Must be `add`: this endpoint only creates another
                     connection. The first connection for an owner shape fills
                     the compatibility slot; later connections are standard.
-                    Creating an additional connection is not yet available:
-                    until it is, `add` succeeds only when the owner has no
-                    connection for this integration and otherwise returns 404
-                    `multiple_connections_unavailable`.
                   example: add
                   const: add
               required:
@@ -11491,8 +11483,8 @@ paths:
         '404':
           description: >-
             The data integration was not found, or
-            `multiple_connections_unavailable` when creating an additional
-            connection is not yet available.
+            `multiple_connections_unavailable` when additional connections are
+            turned off for the team.
           content:
             application/json:
               schema:
@@ -11583,7 +11575,6 @@ paths:
       summary: Create another API key connected account
       tags:
         - pipes
-      x-feature-flag: pipes-multiple-connections
     put:
       description: >-
         Creates or updates an API-key-based installation for the specified
@@ -12044,14 +12035,10 @@ paths:
                       description: >-
                         Create another connection. The first connection for an
                         owner shape fills the compatibility slot; later
-                        connections are standard. Creating an additional
-                        connection is not yet available: until it is, `add`
-                        succeeds only when the owner has no connection for this
-                        integration and otherwise returns 404
-                        `multiple_connections_unavailable`. Omit
-                        `connection_intent` to use the compatibility connection,
-                        or send `reauthorize` with `connected_account_id` to
-                        reauthorize one exact connection.
+                        connections are standard. Omit `connection_intent` to
+                        use the compatibility connection, or send `reauthorize`
+                        with `connected_account_id` to reauthorize one exact
+                        connection.
                       example: add
                       const: add
                   required:
@@ -12176,8 +12163,8 @@ paths:
             `connected_account_not_found` when `connected_account_id` does not
             name a connection for this owner and integration; or
             `multiple_connections_unavailable` when `connection_intent: add`
-            would create an additional connection before that capability is
-            available.
+            would create an additional connection while additional connections
+            are turned off for the team.
           content:
             application/json:
               schema:
@@ -12259,10 +12246,6 @@ paths:
         `organization`, shared by the organization. Requires `connection_intent:
         add` and does not accept `connected_account_id`; use PUT to create or
         rotate the compatibility connection or to update an exact connection.
-        Creating an additional connection is not yet available: until it is,
-        this endpoint succeeds only when the owner has no connection for this
-        integration, which creates the compatibility connection, and otherwise
-        returns 404 `multiple_connections_unavailable`.
       operationId: DataIntegrationsController_createClientCredentialsConnection
       parameters:
         - name: slug
@@ -12364,10 +12347,6 @@ paths:
                     Must be `add`: this endpoint only creates another
                     connection. The first connection for an owner shape fills
                     the compatibility slot; later connections are standard.
-                    Creating an additional connection is not yet available:
-                    until it is, `add` succeeds only when the owner has no
-                    connection for this integration and otherwise returns 404
-                    `multiple_connections_unavailable`.
                   example: add
                   const: add
               required:
@@ -12431,8 +12410,8 @@ paths:
         '404':
           description: >-
             The data integration was not found, or
-            `multiple_connections_unavailable` when creating an additional
-            connection is not yet available.
+            `multiple_connections_unavailable` when additional connections are
+            turned off for the team.
           content:
             application/json:
               schema:
@@ -12523,7 +12502,6 @@ paths:
       summary: Create another client credentials connected account
       tags:
         - pipes
-      x-feature-flag: pipes-multiple-connections
     put:
       description: >-
         Creates or updates a client-credentials-based installation for the
@@ -17066,8 +17044,8 @@ paths:
           description: >-
             The organization, user, or data integration was not found, or
             `multiple_connections_unavailable` when `connection_intent: add`
-            would create an additional connection before that capability is
-            available.
+            would create an additional connection while additional connections
+            are turned off for the team.
           content:
             application/json:
               schema:
@@ -26156,8 +26134,8 @@ paths:
           description: >-
             The user, organization, or data integration was not found, or
             `multiple_connections_unavailable` when `connection_intent: add`
-            would create an additional connection before that capability is
-            available.
+            would create an additional connection while additional connections
+            are turned off for the team.
           content:
             application/json:
               schema:
@@ -30684,11 +30662,7 @@ components:
           type: string
           description: >-
             Set to `add` to create another connected account. Omit this field
-            for permanent compatibility behavior. Creating an additional
-            connection is not yet available: until it is, `add` succeeds only
-            when the owner has no connection for this integration, which creates
-            the compatibility connection, and otherwise returns 404
-            `multiple_connections_unavailable`.
+            for permanent compatibility behavior.
           example: add
           const: add
       required:
@@ -30798,11 +30772,7 @@ components:
           type: string
           description: >-
             Set to `add` to create another connected account. Omit this field
-            for permanent compatibility behavior. Creating an additional
-            connection is not yet available: until it is, `add` succeeds only
-            when the owner has no connection for this integration, which creates
-            the compatibility connection, and otherwise returns 404
-            `multiple_connections_unavailable`.
+            for permanent compatibility behavior.
           example: add
           const: add
     ConnectedAccountDto:
