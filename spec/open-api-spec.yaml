@@ -17745,6 +17745,25 @@ paths:
       responses:
         '204':
           description: No Content
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
         '403':
           description: Forbidden
           content:
