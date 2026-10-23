@@ -25064,6 +25064,12 @@ paths:
           schema:
             type: string
             example: user_01E4ZCR3C56J083X43JQXF3JK5
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendVerificationEmailDto'
       responses:
         '200':
           description: OK
@@ -25102,6 +25108,25 @@ paths:
                     description: A human-readable description of the error.
                     example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
                 required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: invalid_request_parameters
+                    const: invalid_request_parameters
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Validation failed.
+                required:
+                  - code
                   - message
         '429':
           description: ''
@@ -31040,6 +31065,104 @@ components:
             An optional Radar signals ID to correlate client-side signals with
             this request.
           example: 01JBS0GN92GC2RJQS4X9DBPQ2A
+        locale:
+          type: string
+          description: >-
+            The locale to use when rendering the Magic Auth email. Defaults to
+            the environment's default locale. See [supported
+            locales](/authkit/hosted-ui#localization).
+          enum:
+            - af
+            - am
+            - ar
+            - bg
+            - bn
+            - bs
+            - ca
+            - cs
+            - da
+            - de
+            - de-DE
+            - el
+            - en
+            - en-AU
+            - en-CA
+            - en-GB
+            - en-US
+            - es
+            - es-419
+            - es-ES
+            - es-US
+            - et
+            - fa
+            - fi
+            - fil
+            - fr
+            - fr-BE
+            - fr-CA
+            - fr-FR
+            - fy
+            - gl
+            - gu
+            - ha
+            - he
+            - hi
+            - hr
+            - hu
+            - hy
+            - id
+            - is
+            - it
+            - it-IT
+            - ja
+            - jv
+            - ka
+            - kk
+            - km
+            - kn
+            - ko
+            - lt
+            - lv
+            - mk
+            - ml
+            - mn
+            - mr
+            - ms
+            - my
+            - nb
+            - ne
+            - nl
+            - nl-BE
+            - nl-NL
+            - nn
+            - 'no'
+            - pa
+            - pl
+            - pt
+            - pt-BR
+            - pt-PT
+            - ro
+            - ru
+            - sk
+            - sl
+            - sq
+            - sr
+            - sv
+            - sw
+            - ta
+            - te
+            - th
+            - tr
+            - uk
+            - ur
+            - uz
+            - vi
+            - zh
+            - zh-CN
+            - zh-HK
+            - zh-TW
+            - zu
+          example: en
       required:
         - email
     CreateUserlandUserInviteOptionsDto:
@@ -31076,6 +31199,10 @@ components:
           example: user_01HYGBX8ZGD19949T3BM4FW1C3
         locale:
           type: string
+          description: >-
+            The locale to use when rendering the invitation email. Defaults to
+            the environment's default locale. See [supported
+            locales](/authkit/hosted-ui#localization).
           enum:
             - af
             - am
@@ -31167,9 +31294,6 @@ components:
             - zh-HK
             - zh-TW
             - zu
-          description: >-
-            The locale to use when rendering the invitation email. See
-            [supported locales](/authkit/hosted-ui/localization).
           example: en
       required:
         - email
@@ -31178,6 +31302,10 @@ components:
       properties:
         locale:
           type: string
+          description: >-
+            The locale to use when rendering the invitation email. Defaults to
+            the environment's default locale. See [supported
+            locales](/authkit/hosted-ui#localization).
           enum:
             - af
             - am
@@ -31269,9 +31397,6 @@ components:
             - zh-HK
             - zh-TW
             - zu
-          description: >-
-            The locale to use when rendering the invitation email. See
-            [supported locales](/authkit/hosted-ui/localization).
           example: en
     CreateUserlandUserOrganizationMembershipDto:
       allOf:
@@ -31747,6 +31872,107 @@ components:
                     required:
                       - password
       x-mutually-exclusive-body-groups: *ref_26
+    SendVerificationEmailDto:
+      type: object
+      properties:
+        locale:
+          type: string
+          description: >-
+            The locale to use when rendering the verification email. Defaults to
+            the environment's default locale. See [supported
+            locales](/authkit/hosted-ui#localization).
+          enum:
+            - af
+            - am
+            - ar
+            - bg
+            - bn
+            - bs
+            - ca
+            - cs
+            - da
+            - de
+            - de-DE
+            - el
+            - en
+            - en-AU
+            - en-CA
+            - en-GB
+            - en-US
+            - es
+            - es-419
+            - es-ES
+            - es-US
+            - et
+            - fa
+            - fi
+            - fil
+            - fr
+            - fr-BE
+            - fr-CA
+            - fr-FR
+            - fy
+            - gl
+            - gu
+            - ha
+            - he
+            - hi
+            - hr
+            - hu
+            - hy
+            - id
+            - is
+            - it
+            - it-IT
+            - ja
+            - jv
+            - ka
+            - kk
+            - km
+            - kn
+            - ko
+            - lt
+            - lv
+            - mk
+            - ml
+            - mn
+            - mr
+            - ms
+            - my
+            - nb
+            - ne
+            - nl
+            - nl-BE
+            - nl-NL
+            - nn
+            - 'no'
+            - pa
+            - pl
+            - pt
+            - pt-BR
+            - pt-PT
+            - ro
+            - ru
+            - sk
+            - sl
+            - sq
+            - sr
+            - sv
+            - sw
+            - ta
+            - te
+            - th
+            - tr
+            - uk
+            - ur
+            - uz
+            - vi
+            - zh
+            - zh-CN
+            - zh-HK
+            - zh-TW
+            - zu
+          example: en
     VerifyEmailAddressDto:
       type: object
       properties:
@@ -31765,6 +31991,104 @@ components:
           format: email
           description: The email address of the user requesting a password reset.
           example: marcelina.davis@example.com
+        locale:
+          type: string
+          description: >-
+            The locale to use when rendering the password reset email. Defaults
+            to the environment's default locale. See [supported
+            locales](/authkit/hosted-ui#localization).
+          enum:
+            - af
+            - am
+            - ar
+            - bg
+            - bn
+            - bs
+            - ca
+            - cs
+            - da
+            - de
+            - de-DE
+            - el
+            - en
+            - en-AU
+            - en-CA
+            - en-GB
+            - en-US
+            - es
+            - es-419
+            - es-ES
+            - es-US
+            - et
+            - fa
+            - fi
+            - fil
+            - fr
+            - fr-BE
+            - fr-CA
+            - fr-FR
+            - fy
+            - gl
+            - gu
+            - ha
+            - he
+            - hi
+            - hr
+            - hu
+            - hy
+            - id
+            - is
+            - it
+            - it-IT
+            - ja
+            - jv
+            - ka
+            - kk
+            - km
+            - kn
+            - ko
+            - lt
+            - lv
+            - mk
+            - ml
+            - mn
+            - mr
+            - ms
+            - my
+            - nb
+            - ne
+            - nl
+            - nl-BE
+            - nl-NL
+            - nn
+            - 'no'
+            - pa
+            - pl
+            - pt
+            - pt-BR
+            - pt-PT
+            - ro
+            - ru
+            - sk
+            - sl
+            - sq
+            - sr
+            - sv
+            - sw
+            - ta
+            - te
+            - th
+            - tr
+            - uk
+            - ur
+            - uz
+            - vi
+            - zh
+            - zh-CN
+            - zh-HK
+            - zh-TW
+            - zu
+          example: en
       required:
         - email
     CreatePasswordResetDto:
@@ -31788,6 +32112,104 @@ components:
           type: string
           description: The new email address to change to.
           example: new.email@example.com
+        locale:
+          type: string
+          description: >-
+            The locale to use when rendering the email change email. Defaults to
+            the environment's default locale. See [supported
+            locales](/authkit/hosted-ui#localization).
+          enum:
+            - af
+            - am
+            - ar
+            - bg
+            - bn
+            - bs
+            - ca
+            - cs
+            - da
+            - de
+            - de-DE
+            - el
+            - en
+            - en-AU
+            - en-CA
+            - en-GB
+            - en-US
+            - es
+            - es-419
+            - es-ES
+            - es-US
+            - et
+            - fa
+            - fi
+            - fil
+            - fr
+            - fr-BE
+            - fr-CA
+            - fr-FR
+            - fy
+            - gl
+            - gu
+            - ha
+            - he
+            - hi
+            - hr
+            - hu
+            - hy
+            - id
+            - is
+            - it
+            - it-IT
+            - ja
+            - jv
+            - ka
+            - kk
+            - km
+            - kn
+            - ko
+            - lt
+            - lv
+            - mk
+            - ml
+            - mn
+            - mr
+            - ms
+            - my
+            - nb
+            - ne
+            - nl
+            - nl-BE
+            - nl-NL
+            - nn
+            - 'no'
+            - pa
+            - pl
+            - pt
+            - pt-BR
+            - pt-PT
+            - ro
+            - ru
+            - sk
+            - sl
+            - sq
+            - sr
+            - sv
+            - sw
+            - ta
+            - te
+            - th
+            - tr
+            - uk
+            - ur
+            - uz
+            - vi
+            - zh
+            - zh-CN
+            - zh-HK
+            - zh-TW
+            - zu
+          example: en
       required:
         - new_email
     ConfirmEmailChangeDto:
