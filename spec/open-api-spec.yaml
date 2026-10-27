@@ -3649,6 +3649,110 @@ paths:
       summary: Assign a role to a group
       tags:
         - authorization
+    patch:
+      description: >-
+        Add and remove role assignments for a group in a single atomic
+        operation. Additions that already exist and removals that match no
+        assignment are skipped. An assignment in both lists is rejected. `add`
+        and `remove` must contain between 1 and 100 entries combined.
+      operationId: AuthorizationGroupRoleAssignmentsController_patchGroupRoleAssignments
+      parameters:
+        - name: group_id
+          required: true
+          in: path
+          description: The ID of the group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchGroupRoleAssignmentsDto'
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: group_role_assignment_update_overlap
+                    const: group_role_assignment_update_overlap
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: production_feature_requires_billing
+                    const: production_feature_requires_billing
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Update role assignments for a group
+      tags:
+        - authorization
     put:
       description: >-
         Replace all role assignments for a group with the provided list.
@@ -28999,6 +29103,33 @@ components:
           example: project
       required:
         - role_slug
+    PatchGroupRoleAssignmentsDto:
+      type: object
+      properties:
+        add:
+          default: []
+          description: >-
+            Role assignments to add to the group. Assignments that already exist
+            are skipped.
+          example:
+            - role_slug: admin
+            - role_slug: member
+              resource_id: authz_resource_01HXYZ123456789ABCDEFGH
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplaceGroupRoleAssignmentEntryDto'
+        remove:
+          default: []
+          description: >-
+            Role assignments to remove from the group. Entries that match no
+            assignment are skipped.
+          example:
+            - role_slug: editor
+              resource_type_slug: project
+              resource_external_id: proj-789
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplaceGroupRoleAssignmentEntryDto'
     ReplaceGroupRoleAssignmentsDto:
       type: object
       properties:
