@@ -192,6 +192,11 @@ export const operationHints: Record<string, OperationHint> = {
   // -- Organizations -- singularized names --------------------------------------
   'POST /organizations': { name: 'create_organization' },
 
+  // -- Groups -- PUT replaces the whole list; `update_*` is left for a partial PATCH
+  'PUT /organizations/{organizationId}/groups/{groupId}/organization-memberships': {
+    name: 'replace_group_organization_memberships',
+  },
+
   // -- Directory Sync -- shortened names ----------------------------------------
   'GET /directory_groups': { name: 'list_groups' },
   'GET /directory_groups/{id}': { name: 'get_group' },
