@@ -42,6 +42,7 @@ jobs:
               - 'operationOverrides.node.json'
               - 'scripts/generate-services.mjs'
               - 'tsdown.config.ts'
+              - 'tsconfig.json'
               - 'package.json'
               - 'package-lock.json'
 
