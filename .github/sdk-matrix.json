@@ -18,7 +18,8 @@
   },
   {
     "language": "php",
-    "sdk_repo": "workos/workos-php"
+    "sdk_repo": "workos/workos-php",
+    "baseline_ref": "v9.4.0"
   },
   {
     "language": "python",

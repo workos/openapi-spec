@@ -6,6 +6,7 @@ LANG=""
 OUTPUT=""
 NAMESPACE=""
 SERVICES=""
+BASELINE_REF=""
 EXTRA_ARGS=()
 TMP_SURFACE=""
 TMP_SDK=""
@@ -16,6 +17,7 @@ while [[ $# -gt 0 ]]; do
     --output)    OUTPUT="$2";    shift 2 ;;
     --namespace) NAMESPACE="$2"; shift 2 ;;
     --services)  SERVICES="$2";  shift 2 ;;
+    --baseline-ref) BASELINE_REF="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -45,7 +47,7 @@ if [[ -n "$SERVICES" ]]; then
 fi
 
 if [[ -z "$LANG" ]]; then
-  echo "Usage: sdk-generate.sh --lang <language> --output <path> [--namespace <ns>] [--services <list>]" >&2
+  echo "Usage: sdk-generate.sh --lang <language> --output <path> [--namespace <ns>] [--services <list>] [--baseline-ref <git-ref>]" >&2
   exit 1
 fi
 
@@ -80,15 +82,62 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ "$LANG" == "node" && -f "$OUTPUT/package.json" && -d "$OUTPUT/src" ]]; then
-  TMP_SURFACE="$(mktemp "${TMPDIR:-/tmp}/oagen-node-surface.XXXXXX")"
+# Languages whose shipped SDK `oagen extract` can read into an API surface. Keep
+# in step with oagen's extractor registry (src/compat/extractor-registry.ts).
+EXTRACTABLE_LANGS=" node php python ruby go rust kotlin dotnet "
+
+# A live SDK checkout is the baseline: the surface extracted from it lets the
+# emitter keep the names and positions callers already depend on. A scratch
+# output directory has no history worth preserving and gets no surface — and a
+# scratch directory inside this repository (`.oagen/<lang>/sdk`) is still
+# scratch: only the root of its own checkout counts as a live SDK.
+is_checkout_root() {
+  local top
+  top="$(git -C "$1" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  [[ "$top" == "$(cd "$1" && pwd -P)" ]]
+}
+is_live_sdk() {
+  [[ "$EXTRACTABLE_LANGS" == *" $LANG "* ]] || return 1
+  if [[ "$LANG" == "node" ]]; then
+    [[ -f "$1/package.json" && -d "$1/src" ]]
+  else
+    is_checkout_root "$1"
+  fi
+}
+
+# Make `--baseline-ref` resolvable in a shallow checkout: a tag that is not
+# present locally is fetched on demand. Anything else must already exist.
+ensure_ref() {
+  git -C "$1" rev-parse --verify --quiet "$2^{commit}" >/dev/null && return 0
+  git -C "$1" fetch --quiet --depth 1 origin "refs/tags/$2:refs/tags/$2" >/dev/null 2>&1 || true
+  git -C "$1" rev-parse --verify --quiet "$2^{commit}" >/dev/null \
+    || { echo "sdk-generate.sh: baseline ref '$2' not found in $1" >&2; exit 1; }
+}
+
+# The baseline is the SDK as shipped: HEAD by default, or `--baseline-ref` when
+# HEAD is not the surface to preserve (a repair release after a broken one). An
+# explicit ref that could not be honored is an error, never a silent no-op —
+# `--baseline-ref HEAD` included, since it asks for a surface just as firmly.
+if [[ -n "$BASELINE_REF" ]]; then
+  if [[ "$EXTRACTABLE_LANGS" != *" $LANG "* ]]; then
+    echo "sdk-generate.sh: --baseline-ref has no effect for $LANG: oagen has no extractor for it" >&2
+    exit 1
+  fi
+  if ! is_checkout_root "$OUTPUT"; then
+    echo "sdk-generate.sh: --baseline-ref needs --output to be the root of an SDK checkout" >&2
+    exit 1
+  fi
+fi
+if is_live_sdk "$OUTPUT"; then
+  TMP_SURFACE="$(mktemp "${TMPDIR:-/tmp}/oagen-${LANG}-surface.XXXXXX")"
   EXTRACT_SDK="$OUTPUT"
-  if git -C "$OUTPUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    TMP_SDK="$(mktemp -d "${TMPDIR:-/tmp}/oagen-node-sdk.XXXXXX")"
-    git -C "$OUTPUT" worktree add --detach "$TMP_SDK" HEAD >/dev/null 2>&1
+  if is_checkout_root "$OUTPUT"; then
+    ensure_ref "$OUTPUT" "${BASELINE_REF:-HEAD}"
+    TMP_SDK="$(mktemp -d "${TMPDIR:-/tmp}/oagen-${LANG}-sdk.XXXXXX")"
+    git -C "$OUTPUT" worktree add --detach "$TMP_SDK" "${BASELINE_REF:-HEAD}" >/dev/null 2>&1
     EXTRACT_SDK="$TMP_SDK"
 
-    if [[ -f "$OUTPUT/.oagen-manifest.json" ]]; then
+    if [[ "$LANG" == "node" && -f "$OUTPUT/.oagen-manifest.json" ]]; then
       RECOVERY_COUNT="$(python3 - <<'PY' "$OUTPUT" "$TMP_SDK"
 import json
 import pathlib
@@ -133,9 +182,9 @@ PY
 fi
 
 # `${EXTRA_ARGS[@]+…}` guard: macOS runners still ship bash 3.2, where expanding
-# an empty array under `set -u` is a fatal "unbound variable" error. Only `ios`
-# reaches line 127 with EXTRA_ARGS still empty (`--services` and the node
-# `--api-surface` branch both populate it), which is why that job alone was
+# an empty array under `set -u` is a fatal "unbound variable" error. A language
+# without an extractor (ios, android, elixir) reaches the exec with EXTRA_ARGS
+# still empty unless `--services` was given, which is why the ios job alone was
 # affected: it reported success while generating nothing, then ran CI against
 # the unmodified checkout.
 #

@@ -114,7 +114,15 @@ jobs:
 
       - name: Generate SDK
         working-directory: openapi-spec
-        run: npm run sdk:generate -- --lang ${{ matrix.language }} --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}"
+        env:
+          # The same per-language baseline the release path passes, so
+          # validation exercises the signatures that will actually ship.
+          BASELINE_REF: ${{ matrix.baseline_ref || '' }}
+        run: |
+          npm run sdk:generate -- \
+            --lang ${{ matrix.language }} \
+            --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
+            ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"}
 
       - name: Run SDK CI
         working-directory: ${{ env.SDK_CHECKOUT_PATH }}
