@@ -16278,6 +16278,96 @@ paths:
       summary: List Group members
       tags:
         - groups
+    put:
+      description: >-
+        Replace the members of a group with the given organization memberships.
+        Members not in the list are removed. An empty list removes every member.
+      operationId: GroupMembershipsController_replaceMembers
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: Unique identifier of the Organization.
+          schema:
+            type: string
+            example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+        - name: groupId
+          required: true
+          in: path
+          description: Unique identifier of the Group.
+          schema:
+            type: string
+            example: group_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceGroupMembershipsDto'
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code identifying the type of error.
+                    example: group_membership_limit_exceeded
+                    const: group_membership_limit_exceeded
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: Request could not be processed.
+                required:
+                  - code
+                  - message
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Replace Group members
+      tags:
+        - groups
   /organizations/{organizationId}/groups/{groupId}/organization-memberships/{omId}:
     delete:
       description: Remove an organization membership from a group.
@@ -29773,6 +29863,22 @@ components:
           example: om_01HXYZ123456789ABCDEFGHIJ
       required:
         - organization_membership_id
+    ReplaceGroupMembershipsDto:
+      type: object
+      properties:
+        organization_membership_ids:
+          maxItems: 500
+          description: >-
+            The complete list of organization membership IDs the group should
+            contain, up to 500. Any current members not included are removed
+            from the group.
+          example:
+            - om_01HXYZ123456789ABCDEFGHIJ
+          type: array
+          items:
+            type: string
+      required:
+        - organization_membership_ids
     CreateGroupDto:
       type: object
       properties:
