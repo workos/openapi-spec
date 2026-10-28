@@ -12662,6 +12662,7 @@ paths:
                     - repo
                     - user:email
                   missing_scopes: []
+                  metadata: {}
                   config: {}
         '400':
           description: Bad Request
@@ -47928,6 +47929,18 @@ components:
                 the access token, they're listed here. Present for `oauth` and
                 `client_credentials` credentials; absent for `api_key`.
               example: []
+            metadata:
+              type: object
+              additionalProperties: {}
+              description: >-
+                Non-sensitive fields captured from the provider token response
+                (e.g. Salesforce `instance_url`), as configured for the
+                provider. Captured on OAuth code exchange and refresh, and on
+                each `client_credentials` mint. A field a later OAuth refresh
+                omits keeps its stored value. Present for `oauth` and
+                `client_credentials` credentials; absent for `api_key`.
+              example: &ref_39
+                instance_url: https://acme.my.salesforce.com
             config:
               type: object
               additionalProperties:
@@ -47951,6 +47964,7 @@ components:
             - expires_at
             - scopes
             - missing_scopes
+            - metadata
             - config
         - type: object
           properties:
@@ -48047,9 +48061,11 @@ components:
               description: >-
                 Non-sensitive fields captured from the provider token response
                 (e.g. Salesforce `instance_url`), as configured for the
-                provider. Only present for `client_credentials` credentials.
-              example:
-                instance_url: https://acme.my.salesforce.com
+                provider. Captured on OAuth code exchange and refresh, and on
+                each `client_credentials` mint. A field a later OAuth refresh
+                omits keeps its stored value. Present for `oauth` and
+                `client_credentials` credentials; absent for `api_key`.
+              example: *ref_39
             config:
               type: object
               additionalProperties:
@@ -48496,7 +48512,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_39
+                        example: &ref_40
                           - repo
                           - user:email
                       auth_method:
@@ -48546,7 +48562,7 @@ components:
                           `installation` scope, excluding secret and undeclared
                           fields. Returned for every authentication method;
                           empty when no stored values can be disclosed.
-                        example: &ref_40
+                        example: &ref_41
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -48731,7 +48747,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_39
+                      example: *ref_40
                     auth_method:
                       type: string
                       enum:
@@ -48778,7 +48794,7 @@ components:
                         `installation` scope, excluding secret and undeclared
                         fields. Returned for every authentication method; empty
                         when no stored values can be disclosed.
-                      example: *ref_40
+                      example: *ref_41
                     state:
                       type: string
                       enum:
