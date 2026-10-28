@@ -194,7 +194,7 @@ export const operationHints: Record<string, OperationHint> = {
 
   // -- Groups -- PUT replaces the whole list; `update_*` is left for a partial PATCH
   'PUT /organizations/{organizationId}/groups/{groupId}/organization-memberships': {
-    name: 'replace_group_organization_memberships',
+    name: 'set_group_organization_memberships',
   },
 
   // -- Directory Sync -- shortened names ----------------------------------------
