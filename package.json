@@ -56,14 +56,14 @@
     "lodash": "^4.17.23"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
-    "@workos/oagen": "^0.31.0",
-    "@workos/oagen-emitters": "^0.24.18",
+    "@types/node": "^26.6.6",
+    "@workos/oagen": "^0.32.1",
+    "@workos/oagen-emitters": "^0.25.1",
     "diff2html": "^3.4.56",
     "husky": "^9.1.7",
     "js-yaml": "^5.5.0",
-    "openapi-to-postmanv2": "^6.4.0",
-    "tsdown": "^0.23.1",
+    "openapi-to-postmanv2": "^6.4.2",
+    "tsdown": "^0.23.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
