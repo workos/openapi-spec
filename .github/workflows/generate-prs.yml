@@ -163,6 +163,9 @@ jobs:
         working-directory: openapi-spec
         env:
           SERVICES_INPUT: ${{ inputs.services }}
+          # Set per language in sdk-matrix.json while a repair release must
+          # baseline on the last compatible tag instead of the SDK's HEAD.
+          BASELINE_REF: ${{ matrix.baseline_ref || '' }}
         run: |
           # Strip any spaces from the CSV so "Vault, SSO" threads as a single
           # quoted --services value instead of word-splitting into a bogus "SSO"
@@ -171,7 +174,8 @@ jobs:
           npm run sdk:generate -- \
             --lang ${{ matrix.language }} \
             --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
-            ${SERVICES:+--services "$SERVICES"}
+            ${SERVICES:+--services "$SERVICES"} \
+            ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"}
 
       # Preview only: capture the generated changes as a unified diff so
       # preview_diff_report can render them (mirrors validate-sdks.yml's capture).
