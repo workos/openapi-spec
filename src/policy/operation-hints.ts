@@ -126,6 +126,9 @@ export const operationHints: Record<string, OperationHint> = {
   'DELETE /authorization/organization_memberships/{organization_membership_id}/role_assignments/{role_assignment_id}': {
     name: 'remove_role_assignment',
   },
+  'PATCH /authorization/groups/{group_id}/role_assignments': {
+    name: 'patch_group_role_assignments',
+  },
   'POST /authorization/organizations/{organizationId}/roles': {
     name: 'create_organization_role',
   },
