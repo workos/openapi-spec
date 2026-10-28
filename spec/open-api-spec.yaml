@@ -11539,7 +11539,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
@@ -11780,7 +11780,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
@@ -12217,7 +12217,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
@@ -12473,7 +12473,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
@@ -16707,7 +16707,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
@@ -16974,7 +16974,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
               example:
                 object: connected_account
                 id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
@@ -25838,7 +25838,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
         '401':
           description: The request is missing a valid API key.
         '404':
@@ -26079,7 +26079,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectedAccountWriteResponse'
+                $ref: '#/components/schemas/ConnectedAccount'
         '400':
           description: The connected account selector is malformed.
           content:
@@ -48113,7 +48113,7 @@ components:
           required:
             - active
             - error
-    ConnectedAccountWriteResponse:
+    ConnectedAccount:
       type: object
       properties:
         object:
@@ -48294,8 +48294,9 @@ components:
               - code
               - message
           description: >-
-            Non-blocking warnings about an explicitly supplied label, omitted
-            when no duplicate exists. Reads do not include this field.
+            Non-blocking warnings about an explicitly supplied label. Only
+            writes return it, and only when another connection already uses the
+            label; reads omit it.
       required:
         - object
         - id
@@ -48605,6 +48606,29 @@ components:
                         type: string
                         description: The timestamp when the connection was last updated.
                         example: '2024-01-16T14:20:00.000Z'
+                      warnings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              const: duplicate_account_display_name
+                            message:
+                              type: string
+                              description: >-
+                                A human-readable explanation of the non-blocking
+                                warning.
+                              example: >-
+                                Another connection for this provider and owner
+                                has the same label.
+                          required:
+                            - code
+                            - message
+                        description: >-
+                          Non-blocking warnings about an explicitly supplied
+                          label. Only writes return it, and only when another
+                          connection already uses the label; reads omit it.
                       userlandUserId:
                         type:
                           - string
@@ -48811,6 +48835,29 @@ components:
                       type: string
                       description: The timestamp when the connection was last updated.
                       example: '2024-01-16T14:20:00.000Z'
+                    warnings:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          code:
+                            type: string
+                            const: duplicate_account_display_name
+                          message:
+                            type: string
+                            description: >-
+                              A human-readable explanation of the non-blocking
+                              warning.
+                            example: >-
+                              Another connection for this provider and owner has
+                              the same label.
+                        required:
+                          - code
+                          - message
+                      description: >-
+                        Non-blocking warnings about an explicitly supplied
+                        label. Only writes return it, and only when another
+                        connection already uses the label; reads omit it.
                     userlandUserId:
                       type:
                         - string
@@ -48878,181 +48925,6 @@ components:
       required:
         - object
         - data
-    ConnectedAccount:
-      type: object
-      properties:
-        object:
-          type: string
-          description: Distinguishes the connected account object.
-          const: connected_account
-        id:
-          type: string
-          description: The unique identifier of the connected account.
-          example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
-        connection_role:
-          type: string
-          enum:
-            - compatibility
-            - standard
-          description: >-
-            Whether this row is the compatibility connection visible to
-            undeclared clients or a standard peer for plural-aware clients. The
-            role does not indicate preference or creation order.
-          example: compatibility
-        account_identifier:
-          type:
-            - string
-            - 'null'
-          description: >-
-            A best-effort identifier for the provider account this connection
-            points at. It is correlation metadata, not the connection identifier
-            or a selector.
-          example: workspace_123
-        account_display_name:
-          type:
-            - string
-            - 'null'
-          description: >-
-            A mutable, non-unique display name for the provider account
-            connection.
-          example: Acme production
-        user_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The [User](/reference/authkit/user) identifier associated with this
-            connection.
-          example: user_01EHZNVPK3SFK441A1RGBFSHRT
-        organization_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The [Organization](/reference/organization) identifier associated
-            with this connection, or `null` if not scoped to an organization.
-          example: null
-        scopes:
-          type: array
-          items:
-            type: string
-          description: The OAuth scopes granted for this connection.
-          example:
-            - repo
-            - user:email
-        auth_method:
-          type: string
-          enum:
-            - oauth
-            - api_key
-            - client_credentials
-          description: >-
-            The authentication method used for this connection (`oauth`,
-            `api_key`, or `client_credentials`). Defaults to `oauth` if absent.
-          example: oauth
-        api_key_last_4:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The last four characters of the API key, or `null` for OAuth
-            connections.
-          example: null
-        client_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The client ID supplied for this connection. Only present when
-            `auth_method` is `client_credentials`.
-          example: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
-        client_secret_last_4:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The last four characters of the client secret supplied for this
-            connection, or `null` when it can't be read. Only present when
-            `auth_method` is `client_credentials`.
-          example: cdef
-        config:
-          type: object
-          additionalProperties:
-            type: string
-          description: >-
-            The connection-level configuration values stored for this connection
-            — the fields the provider declares at `installation` scope,
-            excluding secret and undeclared fields. Returned for every
-            authentication method; empty when no stored values can be disclosed.
-          example:
-            instance_url: https://example.my.salesforce.com
-        state:
-          type: string
-          enum:
-            - connected
-            - needs_reauthorization
-            - disconnected
-          description: >-
-            The state of the connected account:
-
-            - `connected`: The connection is active and tokens are valid.
-
-            - `needs_reauthorization`: The user needs to reauthorize the
-            connection, typically because required scopes have changed.
-            `state_reason` explains why when WorkOS invalidated the connection
-            itself.
-
-            - `disconnected`: The connection has been disconnected.
-          example: connected
-        established_by_user_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The [User](/reference/authkit/user) whose authorization established
-            this connection. `null` when the connection is developer-managed or
-            its establisher is unknown, and when the establishing member lost
-            access to the organization — in which case `state_reason` is
-            `establishing_member_membership_ended`.
-          example: user_01EHZNVPK3SFK441A1RGBFSHRT
-        state_reason:
-          description: >-
-            Why WorkOS put the connection in its current `state`, or `null` when
-            there is no WorkOS-recorded reason:
-
-            - `establishing_member_membership_ended`: The member who established
-            this organization-owned connection is no longer an active member of
-            the organization, so its credentials were cleared. An organization
-            admin must provide new credentials.
-
-
-            Additional values may be added; treat an unrecognized value as an
-            unknown reason.
-          example: null
-          oneOf:
-            - type: string
-              const: establishing_member_membership_ended
-            - type: 'null'
-        created_at:
-          type: string
-          description: The timestamp when the connection was created.
-          example: '2024-01-16T14:20:00.000Z'
-        updated_at:
-          type: string
-          description: The timestamp when the connection was last updated.
-          example: '2024-01-16T14:20:00.000Z'
-      required:
-        - object
-        - id
-        - connection_role
-        - account_identifier
-        - account_display_name
-        - user_id
-        - organization_id
-        - scopes
-        - state
-        - created_at
-        - updated_at
     PortalLinkResponse:
       type: object
       properties:
