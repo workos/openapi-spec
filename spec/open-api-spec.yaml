@@ -32166,6 +32166,8 @@ components:
             type: string
             enum:
               - widgets:users-table:manage
+              - widgets:user-api-keys:manage-self
+              - widgets:user-api-keys:manage-all
               - widgets:domain-verification:manage
               - widgets:sso:manage
               - widgets:api-keys:manage
