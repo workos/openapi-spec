@@ -6,7 +6,7 @@ LANG=""
 OUTPUT=""
 NAMESPACE=""
 SERVICES=""
-BASELINE_REF="HEAD"
+BASELINE_REF=""
 EXTRA_ARGS=()
 TMP_SURFACE=""
 TMP_SDK=""
@@ -88,13 +88,20 @@ EXTRACTABLE_LANGS=" node php python ruby go rust kotlin dotnet "
 
 # A live SDK checkout is the baseline: the surface extracted from it lets the
 # emitter keep the names and positions callers already depend on. A scratch
-# output directory has no history worth preserving and gets no surface.
+# output directory has no history worth preserving and gets no surface — and a
+# scratch directory inside this repository (`.oagen/<lang>/sdk`) is still
+# scratch: only the root of its own checkout counts as a live SDK.
+is_checkout_root() {
+  local top
+  top="$(git -C "$1" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  [[ "$top" == "$(cd "$1" && pwd -P)" ]]
+}
 is_live_sdk() {
   [[ "$EXTRACTABLE_LANGS" == *" $LANG "* ]] || return 1
   if [[ "$LANG" == "node" ]]; then
     [[ -f "$1/package.json" && -d "$1/src" ]]
   else
-    git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1
+    is_checkout_root "$1"
   fi
 }
 
@@ -109,24 +116,25 @@ ensure_ref() {
 
 # The baseline is the SDK as shipped: HEAD by default, or `--baseline-ref` when
 # HEAD is not the surface to preserve (a repair release after a broken one). An
-# explicit ref that could not be honored is an error, never a silent no-op.
-if [[ "$BASELINE_REF" != "HEAD" ]]; then
+# explicit ref that could not be honored is an error, never a silent no-op —
+# `--baseline-ref HEAD` included, since it asks for a surface just as firmly.
+if [[ -n "$BASELINE_REF" ]]; then
   if [[ "$EXTRACTABLE_LANGS" != *" $LANG "* ]]; then
     echo "sdk-generate.sh: --baseline-ref has no effect for $LANG: oagen has no extractor for it" >&2
     exit 1
   fi
-  if ! git -C "$OUTPUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    echo "sdk-generate.sh: --baseline-ref needs --output to be a git checkout" >&2
+  if ! is_checkout_root "$OUTPUT"; then
+    echo "sdk-generate.sh: --baseline-ref needs --output to be the root of an SDK checkout" >&2
     exit 1
   fi
 fi
 if is_live_sdk "$OUTPUT"; then
   TMP_SURFACE="$(mktemp "${TMPDIR:-/tmp}/oagen-${LANG}-surface.XXXXXX")"
   EXTRACT_SDK="$OUTPUT"
-  if git -C "$OUTPUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    ensure_ref "$OUTPUT" "$BASELINE_REF"
+  if is_checkout_root "$OUTPUT"; then
+    ensure_ref "$OUTPUT" "${BASELINE_REF:-HEAD}"
     TMP_SDK="$(mktemp -d "${TMPDIR:-/tmp}/oagen-${LANG}-sdk.XXXXXX")"
-    git -C "$OUTPUT" worktree add --detach "$TMP_SDK" "$BASELINE_REF" >/dev/null 2>&1
+    git -C "$OUTPUT" worktree add --detach "$TMP_SDK" "${BASELINE_REF:-HEAD}" >/dev/null 2>&1
     EXTRACT_SDK="$TMP_SDK"
 
     if [[ "$LANG" == "node" && -f "$OUTPUT/.oagen-manifest.json" ]]; then
