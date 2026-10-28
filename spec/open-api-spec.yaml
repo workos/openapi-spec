@@ -4119,7 +4119,7 @@ paths:
       summary: Check authorization
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_7
+      x-mutually-exclusive-body-groups: &ref_5
         resource_target:
           optional: false
           variants:
@@ -4858,7 +4858,7 @@ paths:
       summary: Assign a role
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_8
+      x-mutually-exclusive-body-groups: &ref_6
         resource_target:
           optional: false
           variants:
@@ -4929,7 +4929,7 @@ paths:
       summary: Remove a role assignment
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_9
+      x-mutually-exclusive-body-groups: &ref_7
         resource_target:
           optional: false
           variants:
@@ -7466,7 +7466,7 @@ paths:
       summary: Create an authorization resource
       tags:
         - authorization
-      x-mutually-exclusive-body-groups: &ref_10
+      x-mutually-exclusive-body-groups: &ref_8
         parent_resource:
           optional: true
           variants:
@@ -9710,7 +9710,7 @@ paths:
       tags:
         - connections
       x-feature-flag: connections-api-migrations-capabilities-api
-      x-mutually-exclusive-body-groups: &ref_11
+      x-mutually-exclusive-body-groups: &ref_9
         protocol_options:
           optional: false
           variants:
@@ -10952,7 +10952,7 @@ paths:
       tags:
         - connections
       x-feature-flag: connections-api-migrations-capabilities-api
-      x-mutually-exclusive-body-groups: &ref_14
+      x-mutually-exclusive-body-groups: &ref_12
         protocol_options:
           optional: true
           variants:
@@ -11702,199 +11702,78 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    account_identifier:
-                      type:
-                        - string
-                        - 'null'
-                      minLength: 1
-                      description: >-
-                        A developer-attested provider account identifier, never
-                        inferred from a label or credential. Omit to preserve an
-                        existing identifier; null clears it.
-                      example: workspace_123
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    secret:
-                      type: string
-                      minLength: 1
-                      description: The API key secret to store for this integration.
-                      example: sk-1234567890abcdef
-                  required:
-                    - user_id
-                    - secret
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    account_identifier:
-                      type:
-                        - string
-                        - 'null'
-                      minLength: 1
-                      description: >-
-                        A developer-attested provider account identifier, never
-                        inferred from a label or credential. Omit to preserve an
-                        existing identifier; null clears it.
-                      example: workspace_123
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    secret:
-                      type: string
-                      minLength: 1
-                      description: The API key secret to store for this integration.
-                      example: sk-1234567890abcdef
-                    connection_intent:
-                      type: string
-                      description: >-
-                        Reauthorize exactly the connection named by
-                        `connected_account_id`.
-                      example: reauthorize
-                      const: reauthorize
-                    connected_account_id:
-                      type: string
-                      pattern: ^data_installation_.+$
-                      description: >-
-                        The exact connected account to reauthorize. Required
-                        with `connection_intent: reauthorize`.
-                      example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
-                  required:
-                    - user_id
-                    - secret
-                    - connection_intent
-                    - connected_account_id
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    account_identifier:
-                      type:
-                        - string
-                        - 'null'
-                      minLength: 1
-                      description: >-
-                        A developer-attested provider account identifier, never
-                        inferred from a label or credential. Omit to preserve an
-                        existing identifier; null clears it.
-                      example: workspace_123
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    secret:
-                      type: string
-                      minLength: 1
-                      description: The API key secret to store for this integration.
-                      example: sk-1234567890abcdef
-                    connected_account_id:
-                      type: string
-                      pattern: ^data_installation_.+$
-                      description: >-
-                        The exact connected account to reauthorize. The
-                        reauthorize intent may be omitted for compatibility.
-                      example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
-                  required:
-                    - user_id
-                    - secret
-                    - connected_account_id
-                  additionalProperties: false
+              type: object
+              properties:
+                account_display_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    A mutable, non-unique label. Omit to preserve an existing
+                    label; null clears it. Labels are never account identifiers.
+                  maxLength: 255
+                  example: Acme production
+                account_identifier:
+                  type:
+                    - string
+                    - 'null'
+                  minLength: 1
+                  description: >-
+                    A developer-attested provider account identifier, never
+                    inferred from a label or credential. Omit to preserve an
+                    existing identifier; null clears it.
+                  example: workspace_123
+                user_id:
+                  type: string
+                  description: A [User](/reference/authkit/user) identifier.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An [Organization](/reference/organization) identifier.
+                    Optional parameter to scope the connection to a specific
+                    organization. Required when `connection_owner` is
+                    `organization`.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Whose connection to create or rotate. `user` (the default)
+                    addresses the connection owned by `user_id`. `organization`
+                    addresses the connection shared by every member of
+                    `organization_id`; `user_id` then identifies the member
+                    performing the request and must be an active member of the
+                    organization.
+                  example: user
+                secret:
+                  type: string
+                  minLength: 1
+                  description: The API key secret to store for this integration.
+                  example: sk-1234567890abcdef
+                connection_intent:
+                  type: string
+                  description: >-
+                    Send `reauthorize` with `connected_account_id` to
+                    reauthorize one exact connection. Omit it to use the
+                    compatibility connection; creating another connection lives
+                    on the POST route.
+                  example: reauthorize
+                  const: reauthorize
+                connected_account_id:
+                  type: string
+                  pattern: ^data_installation_.+$
+                  description: >-
+                    The exact connected account to reauthorize. Required with
+                    `connection_intent: reauthorize`; it may also be sent on its
+                    own to reauthorize that connection.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+              required:
+                - user_id
+                - secret
+              additionalProperties: false
       responses:
         '200':
           description: The resulting connected account after the upsert.
@@ -12019,213 +11898,84 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    user_id:
-                      type: string
-                      description: >-
-                        The ID of the user to authorize. When `connection_owner`
-                        is `organization`, this is the user authorizing on
-                        behalf of the organization; they must be an active
-                        member of the organization and do not become the owner
-                        of the resulting connected account.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An organization ID to scope the authorization to a
-                        specific organization. Required when `connection_owner`
-                        is `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Who will own the connected account. `user` (the default)
-                        connects the user's own account. `organization` connects
-                        the organization's shared account and requires
-                        `organization_id`.
-                      example: user
-                    return_to:
-                      type: string
-                      format: uri
-                      description: The URL to redirect the user to after authorization.
-                      example: https://example.com/callback
-                    config:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      description: >-
-                        Connect-time config values for the provider-declared
-                        `installation`-scope fields (e.g. a Zendesk
-                        `subdomain`), keyed by the config field. Only fields the
-                        provider declares may be supplied, and required fields
-                        must be provided unless already pinned on the
-                        integration.
-                      example: &ref_1
-                        subdomain: acme
-                  required:
-                    - user_id
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    user_id:
-                      type: string
-                      description: >-
-                        The ID of the user to authorize. When `connection_owner`
-                        is `organization`, this is the user authorizing on
-                        behalf of the organization; they must be an active
-                        member of the organization and do not become the owner
-                        of the resulting connected account.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An organization ID to scope the authorization to a
-                        specific organization. Required when `connection_owner`
-                        is `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Who will own the connected account. `user` (the default)
-                        connects the user's own account. `organization` connects
-                        the organization's shared account and requires
-                        `organization_id`.
-                      example: user
-                    return_to:
-                      type: string
-                      format: uri
-                      description: The URL to redirect the user to after authorization.
-                      example: https://example.com/callback
-                    config:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      description: >-
-                        Connect-time config values for the provider-declared
-                        `installation`-scope fields (e.g. a Zendesk
-                        `subdomain`), keyed by the config field. Only fields the
-                        provider declares may be supplied, and required fields
-                        must be provided unless already pinned on the
-                        integration.
-                      example: *ref_1
-                    connection_intent:
-                      type: string
-                      description: >-
-                        Create another connection. The first connection for an
-                        owner shape fills the compatibility slot; later
-                        connections are standard. Omit `connection_intent` to
-                        use the compatibility connection, or send `reauthorize`
-                        with `connected_account_id` to reauthorize one exact
-                        connection.
-                      example: add
-                      const: add
-                  required:
-                    - user_id
-                    - connection_intent
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    user_id:
-                      type: string
-                      description: >-
-                        The ID of the user to authorize. When `connection_owner`
-                        is `organization`, this is the user authorizing on
-                        behalf of the organization; they must be an active
-                        member of the organization and do not become the owner
-                        of the resulting connected account.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An organization ID to scope the authorization to a
-                        specific organization. Required when `connection_owner`
-                        is `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Who will own the connected account. `user` (the default)
-                        connects the user's own account. `organization` connects
-                        the organization's shared account and requires
-                        `organization_id`.
-                      example: user
-                    return_to:
-                      type: string
-                      format: uri
-                      description: The URL to redirect the user to after authorization.
-                      example: https://example.com/callback
-                    config:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      description: >-
-                        Connect-time config values for the provider-declared
-                        `installation`-scope fields (e.g. a Zendesk
-                        `subdomain`), keyed by the config field. Only fields the
-                        provider declares may be supplied, and required fields
-                        must be provided unless already pinned on the
-                        integration.
-                      example: *ref_1
-                    connection_intent:
-                      type: string
-                      description: >-
-                        Reauthorize exactly the connection named by
-                        `connected_account_id`.
-                      example: reauthorize
-                      const: reauthorize
-                    connected_account_id:
-                      type: string
-                      pattern: ^data_installation_.+$
-                      description: >-
-                        The exact connected account to reauthorize. Required
-                        with `connection_intent: reauthorize`.
-                      example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
-                  required:
-                    - user_id
-                    - connection_intent
-                    - connected_account_id
-                  additionalProperties: false
+              type: object
+              properties:
+                account_display_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    A mutable, non-unique label. Omit to preserve an existing
+                    label; null clears it. Labels are never account identifiers.
+                  maxLength: 255
+                  example: Acme production
+                user_id:
+                  type: string
+                  description: >-
+                    The ID of the user to authorize. When `connection_owner` is
+                    `organization`, this is the user authorizing on behalf of
+                    the organization; they must be an active member of the
+                    organization and do not become the owner of the resulting
+                    connected account.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An organization ID to scope the authorization to a specific
+                    organization. Required when `connection_owner` is
+                    `organization`.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Who will own the connected account. `user` (the default)
+                    connects the user's own account. `organization` connects the
+                    organization's shared account and requires
+                    `organization_id`.
+                  example: user
+                return_to:
+                  type: string
+                  format: uri
+                  description: The URL to redirect the user to after authorization.
+                  example: https://example.com/callback
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Connect-time config values for the provider-declared
+                    `installation`-scope fields (e.g. a Zendesk `subdomain`),
+                    keyed by the config field. Only fields the provider declares
+                    may be supplied, and required fields must be provided unless
+                    already pinned on the integration.
+                  example:
+                    subdomain: acme
+                connection_intent:
+                  type: string
+                  enum:
+                    - add
+                    - reauthorize
+                  description: >-
+                    Which connection the request targets. Omit it to use the
+                    compatibility connection. Send `add` to create another
+                    connection: the first connection for an owner shape fills
+                    the compatibility slot, and later connections are standard.
+                    Send `reauthorize` with `connected_account_id` to
+                    reauthorize one exact connection.
+                  example: add
+                connected_account_id:
+                  type: string
+                  pattern: ^data_installation_.+$
+                  description: >-
+                    The exact connected account to reauthorize. Required with
+                    `connection_intent: reauthorize` and not accepted otherwise.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+              required:
+                - user_id
+              additionalProperties: false
       responses:
         '200':
           description: OK
@@ -12629,245 +12379,94 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    account_identifier:
-                      type:
-                        - string
-                        - 'null'
-                      minLength: 1
-                      description: >-
-                        A developer-attested provider account identifier, never
-                        inferred from a label or credential. Omit to preserve an
-                        existing identifier; null clears it.
-                      example: workspace_123
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    client_id:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client ID to store for this integration.
-                      example: 3MVG9...
-                    client_secret:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client secret to store for this integration.
-                      example: shhh-secret
-                    config:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      description: >-
-                        Provider-specific configuration values collected for
-                        this installation, keyed by the provider's config field
-                        descriptors.
-                      example: &ref_2
-                        salesforce_host: acme.my.salesforce.com
-                  required:
-                    - user_id
-                    - client_id
-                    - client_secret
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    account_identifier:
-                      type:
-                        - string
-                        - 'null'
-                      minLength: 1
-                      description: >-
-                        A developer-attested provider account identifier, never
-                        inferred from a label or credential. Omit to preserve an
-                        existing identifier; null clears it.
-                      example: workspace_123
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    client_id:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client ID to store for this integration.
-                      example: 3MVG9...
-                    client_secret:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client secret to store for this integration.
-                      example: shhh-secret
-                    config:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      description: >-
-                        Provider-specific configuration values collected for
-                        this installation, keyed by the provider's config field
-                        descriptors.
-                      example: *ref_2
-                    connection_intent:
-                      type: string
-                      description: >-
-                        Reauthorize exactly the connection named by
-                        `connected_account_id`.
-                      example: reauthorize
-                      const: reauthorize
-                    connected_account_id:
-                      type: string
-                      pattern: ^data_installation_.+$
-                      description: >-
-                        The exact connected account to reauthorize. Required
-                        with `connection_intent: reauthorize`.
-                      example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
-                  required:
-                    - user_id
-                    - client_id
-                    - client_secret
-                    - connection_intent
-                    - connected_account_id
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    account_display_name:
-                      type:
-                        - string
-                        - 'null'
-                      description: >-
-                        A mutable, non-unique label. Omit to preserve an
-                        existing label; null clears it. Labels are never account
-                        identifiers.
-                      maxLength: 255
-                      example: Acme production
-                    account_identifier:
-                      type:
-                        - string
-                        - 'null'
-                      minLength: 1
-                      description: >-
-                        A developer-attested provider account identifier, never
-                        inferred from a label or credential. Omit to preserve an
-                        existing identifier; null clears it.
-                      example: workspace_123
-                    user_id:
-                      type: string
-                      description: A [User](/reference/authkit/user) identifier.
-                      example: user_01EHZNVPK3SFK441A1RGBFSHRT
-                    organization_id:
-                      type: string
-                      description: >-
-                        An [Organization](/reference/organization) identifier.
-                        Optional parameter to scope the connection to a specific
-                        organization. Required when `connection_owner` is
-                        `organization`.
-                      example: org_01EHZNVPK3SFK441A1RGBFSHRT
-                    connection_owner:
-                      type: string
-                      enum:
-                        - user
-                        - organization
-                      description: >-
-                        Whose connection to create or rotate. `user` (the
-                        default) addresses the connection owned by `user_id`.
-                        `organization` addresses the connection shared by every
-                        member of `organization_id`; `user_id` then identifies
-                        the member performing the request and must be an active
-                        member of the organization.
-                      example: user
-                    client_id:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client ID to store for this integration.
-                      example: 3MVG9...
-                    client_secret:
-                      type: string
-                      minLength: 1
-                      description: The OAuth client secret to store for this integration.
-                      example: shhh-secret
-                    config:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      description: >-
-                        Provider-specific configuration values collected for
-                        this installation, keyed by the provider's config field
-                        descriptors.
-                      example: *ref_2
-                    connected_account_id:
-                      type: string
-                      pattern: ^data_installation_.+$
-                      description: >-
-                        The exact connected account to reauthorize. The
-                        reauthorize intent may be omitted for compatibility.
-                      example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
-                  required:
-                    - user_id
-                    - client_id
-                    - client_secret
-                    - connected_account_id
-                  additionalProperties: false
+              type: object
+              properties:
+                account_display_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    A mutable, non-unique label. Omit to preserve an existing
+                    label; null clears it. Labels are never account identifiers.
+                  maxLength: 255
+                  example: Acme production
+                account_identifier:
+                  type:
+                    - string
+                    - 'null'
+                  minLength: 1
+                  description: >-
+                    A developer-attested provider account identifier, never
+                    inferred from a label or credential. Omit to preserve an
+                    existing identifier; null clears it.
+                  example: workspace_123
+                user_id:
+                  type: string
+                  description: A [User](/reference/authkit/user) identifier.
+                  example: user_01EHZNVPK3SFK441A1RGBFSHRT
+                organization_id:
+                  type: string
+                  description: >-
+                    An [Organization](/reference/organization) identifier.
+                    Optional parameter to scope the connection to a specific
+                    organization. Required when `connection_owner` is
+                    `organization`.
+                  example: org_01EHZNVPK3SFK441A1RGBFSHRT
+                connection_owner:
+                  type: string
+                  enum:
+                    - user
+                    - organization
+                  description: >-
+                    Whose connection to create or rotate. `user` (the default)
+                    addresses the connection owned by `user_id`. `organization`
+                    addresses the connection shared by every member of
+                    `organization_id`; `user_id` then identifies the member
+                    performing the request and must be an active member of the
+                    organization.
+                  example: user
+                client_id:
+                  type: string
+                  minLength: 1
+                  description: The OAuth client ID to store for this integration.
+                  example: 3MVG9...
+                client_secret:
+                  type: string
+                  minLength: 1
+                  description: The OAuth client secret to store for this integration.
+                  example: shhh-secret
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Provider-specific configuration values collected for this
+                    installation, keyed by the provider's config field
+                    descriptors.
+                  example:
+                    salesforce_host: acme.my.salesforce.com
+                connection_intent:
+                  type: string
+                  description: >-
+                    Send `reauthorize` with `connected_account_id` to
+                    reauthorize one exact connection. Omit it to use the
+                    compatibility connection; creating another connection lives
+                    on the POST route.
+                  example: reauthorize
+                  const: reauthorize
+                connected_account_id:
+                  type: string
+                  pattern: ^data_installation_.+$
+                  description: >-
+                    The exact connected account to reauthorize. Required with
+                    `connection_intent: reauthorize`; it may also be sent on its
+                    own to reauthorize that connection.
+                  example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+              required:
+                - user_id
+                - client_id
+                - client_secret
+              additionalProperties: false
       responses:
         '200':
           description: The resulting connected account after the upsert.
@@ -15744,7 +15343,7 @@ paths:
       summary: Set Retention
       tags:
         - audit-logs
-      x-mutually-exclusive-body-groups: &ref_6
+      x-mutually-exclusive-body-groups: &ref_4
         retention:
           optional: false
           variants:
@@ -17547,7 +17146,7 @@ paths:
                     credentialsType: oauth2
                     createdAt: '2024-01-15T10:30:00.000Z'
                     updatedAt: '2024-01-15T10:30:00.000Z'
-                    connected_account: &ref_3
+                    connected_account: &ref_1
                       object: connected_account
                       id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                       user_id: null
@@ -17574,7 +17173,7 @@ paths:
                       createdAt: '2024-01-16T14:20:00.000Z'
                       updatedAt: '2024-01-16T14:20:00.000Z'
                     connected_accounts:
-                      - *ref_3
+                      - *ref_1
         '401':
           description: The request is missing a valid API key.
         '404':
@@ -22656,7 +22255,7 @@ paths:
       summary: Create an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_20
+      x-mutually-exclusive-body-groups: &ref_18
         role:
           optional: true
           variants:
@@ -22862,7 +22461,7 @@ paths:
       summary: Update an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_21
+      x-mutually-exclusive-body-groups: &ref_19
         role:
           optional: true
           variants:
@@ -24201,7 +23800,7 @@ paths:
       summary: Create a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_22
+      x-mutually-exclusive-body-groups: &ref_20
         password:
           optional: true
           variants:
@@ -24513,7 +24112,7 @@ paths:
       summary: Update a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_26
+      x-mutually-exclusive-body-groups: &ref_24
         password:
           optional: true
           variants:
@@ -28552,7 +28151,7 @@ components:
           example: An application for managing user access
         scopes:
           description: The OAuth scopes granted to the application.
-          example: &ref_4
+          example: &ref_2
             - openid
             - profile
             - email
@@ -28626,7 +28225,7 @@ components:
           example: An application for managing user access
         scopes:
           description: The OAuth scopes granted to the application.
-          example: *ref_4
+          example: *ref_2
           type:
             - array
             - 'null'
@@ -28712,7 +28311,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: &ref_5
+          patternProperties: &ref_3
             ^[a-zA-Z0-9_-]{0,40}$:
               anyOf:
                 - type: string
@@ -28744,7 +28343,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: *ref_5
+          patternProperties: *ref_3
       required:
         - id
         - type
@@ -28791,7 +28390,7 @@ components:
             owner: user_01GBTCQ2
           maxProperties: 50
           additionalProperties: false
-          patternProperties: *ref_5
+          patternProperties: *ref_3
         version:
           type: integer
           description: What schema version the event is associated with.
@@ -28873,7 +28472,7 @@ components:
         - range_start
         - range_end
     UpdateAuditLogsRetentionDto:
-      x-mutually-exclusive-body-groups: *ref_6
+      x-mutually-exclusive-body-groups: *ref_4
       oneOf:
         - type: object
           properties:
@@ -29058,7 +28657,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - resource_id
-      x-mutually-exclusive-body-groups: *ref_7
+      x-mutually-exclusive-body-groups: *ref_5
     CreateGroupRoleAssignmentDto:
       type: object
       properties:
@@ -29226,7 +28825,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - resource_id
-      x-mutually-exclusive-body-groups: *ref_8
+      x-mutually-exclusive-body-groups: *ref_6
     RemoveRoleDto:
       allOf:
         - type: object
@@ -29285,7 +28884,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - resource_id
-      x-mutually-exclusive-body-groups: *ref_9
+      x-mutually-exclusive-body-groups: *ref_7
     SetRolePermissionsDto:
       type: object
       properties:
@@ -29635,7 +29234,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - parent_resource_id
-      x-mutually-exclusive-body-groups: *ref_10
+      x-mutually-exclusive-body-groups: *ref_8
     CreateConnectionKeyPairDto:
       type: object
       properties:
@@ -29753,7 +29352,7 @@ components:
           default: true
         token_authentication_method:
           type: string
-          enum: &ref_12
+          enum: &ref_10
             - client_secret_post
             - client_secret_basic
             - private_key_jwt
@@ -29769,7 +29368,7 @@ components:
           $ref: '#/components/schemas/CreateConnectionKeyPairDto'
         id_token_signature_algorithm:
           type: string
-          enum: &ref_13
+          enum: &ref_11
             - ES256
             - ES384
             - ES512
@@ -29925,7 +29524,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - saml_options
-      x-mutually-exclusive-body-groups: *ref_11
+      x-mutually-exclusive-body-groups: *ref_9
     PatchConnectionSamlOptionsDto:
       type: object
       properties:
@@ -30001,7 +29600,7 @@ components:
           example: true
         token_authentication_method:
           type: string
-          enum: *ref_12
+          enum: *ref_10
           description: >-
             The token-endpoint client authentication method. Moving to
             `private_key_jwt` generates a signing key pair if the connection has
@@ -30011,7 +29610,7 @@ components:
           example: client_secret_basic
         id_token_signature_algorithm:
           type: string
-          enum: *ref_13
+          enum: *ref_11
           description: The ID-token signing algorithm.
           example: RS256
         fetch_user_info:
@@ -30155,7 +29754,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - saml_options
-      x-mutually-exclusive-body-groups: *ref_14
+      x-mutually-exclusive-body-groups: *ref_12
     CreateCorsOriginDto:
       type: object
       properties:
@@ -30337,11 +29936,11 @@ components:
           type:
             - object
             - 'null'
-          additionalProperties: &ref_15
+          additionalProperties: &ref_13
             type: string
             maxLength: 600
           maxProperties: 50
-          example: &ref_16
+          example: &ref_14
             tier: diamond
           description: >-
             Object containing [metadata](/authkit/metadata) key/value pairs
@@ -30396,9 +29995,9 @@ components:
           type:
             - object
             - 'null'
-          additionalProperties: *ref_15
+          additionalProperties: *ref_13
           maxProperties: 50
-          example: *ref_16
+          example: *ref_14
           description: >-
             Object containing [metadata](/authkit/metadata) key/value pairs
             associated with the Organization.
@@ -30532,7 +30131,7 @@ components:
           example: application/x-www-form-urlencoded
         authenticate_via:
           type: string
-          enum: &ref_17
+          enum: &ref_15
             - request_body
             - basic_auth_header
           description: >-
@@ -30700,7 +30299,7 @@ components:
           example: application/x-www-form-urlencoded
         authenticate_via:
           type: string
-          enum: *ref_17
+          enum: *ref_15
           description: >-
             How client credentials are sent when exchanging authorization codes
             and refreshing tokens.
@@ -30781,7 +30380,7 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: &ref_18
+          example: &ref_16
             - repo
             - user:email
           type: array
@@ -30789,7 +30388,7 @@ components:
             type: string
         state:
           type: string
-          enum: &ref_19
+          enum: &ref_17
             - connected
             - needs_reauthorization
           description: >-
@@ -30847,13 +30446,13 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: *ref_18
+          example: *ref_16
           type: array
           items:
             type: string
         state:
           type: string
-          enum: *ref_19
+          enum: *ref_17
           description: >-
             Explicitly set the state of the connected account. When omitted, the
             state is derived from the token combination provided.
@@ -30902,13 +30501,13 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: *ref_18
+          example: *ref_16
           type: array
           items:
             type: string
         state:
           type: string
-          enum: *ref_19
+          enum: *ref_17
           description: >-
             Explicitly set the state of the connected account. When omitted, the
             state is derived from the token combination provided.
@@ -30955,13 +30554,13 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: *ref_18
+          example: *ref_16
           type: array
           items:
             type: string
         state:
           type: string
-          enum: *ref_19
+          enum: *ref_17
           description: >-
             Explicitly set the state of the connected account. When omitted, the
             state is derived from the token combination provided.
@@ -31600,9 +31199,9 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - role_slug
-      x-mutually-exclusive-body-groups: *ref_20
+      x-mutually-exclusive-body-groups: *ref_18
     UpdateUserlandUserOrganizationMembershipDto:
-      x-mutually-exclusive-body-groups: *ref_21
+      x-mutually-exclusive-body-groups: *ref_19
       oneOf:
         - type: object
           not:
@@ -31726,9 +31325,9 @@ components:
               type:
                 - object
                 - 'null'
-              additionalProperties: *ref_15
+              additionalProperties: *ref_13
               maxProperties: 50
-              example: &ref_23
+              example: &ref_21
                 timezone: America/New_York
               description: >-
                 Object containing metadata key/value pairs associated with the
@@ -31827,7 +31426,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: &ref_24
+                  enum: &ref_22
                     - bcrypt
                     - firebase-scrypt
                     - ssha
@@ -31842,7 +31441,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: &ref_25
+                  enum: &ref_23
                     - prefix
                     - suffix
                   description: >-
@@ -31863,7 +31462,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_22
+      x-mutually-exclusive-body-groups: *ref_20
     UpdateUserlandUserDto:
       allOf:
         - type: object
@@ -31893,9 +31492,9 @@ components:
               type:
                 - object
                 - 'null'
-              additionalProperties: *ref_15
+              additionalProperties: *ref_13
               maxProperties: 50
-              example: *ref_23
+              example: *ref_21
               description: >-
                 Object containing metadata key/value pairs associated with the
                 user.
@@ -31977,7 +31576,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: *ref_24
+                  enum: *ref_22
                   description: >-
                     The algorithm originally used to hash the password, used
                     when providing a `password_hash`. Required with
@@ -31985,7 +31584,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: *ref_25
+                  enum: *ref_23
                   description: >-
                     The position of the salt relative to the password when the
                     `password_hash` digest was computed: `prefix` for `hash(salt
@@ -32004,7 +31603,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_26
+      x-mutually-exclusive-body-groups: *ref_24
     SendVerificationEmailDto:
       type: object
       properties:
@@ -32410,7 +32009,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: &ref_27
+            enum: &ref_25
               - agent.blueprint.created
               - agent.blueprint.deleted
               - agent.blueprint.updated
@@ -32541,7 +32140,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: *ref_27
+            enum: *ref_25
           example:
             - user.created
             - dsync.user.created
@@ -36298,7 +35897,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_34
+          example: &ref_32
             department: Engineering
             job_title: Software Engineer
         role:
@@ -36560,7 +36159,7 @@ components:
               type: object
               additionalProperties: {}
               description: The event payload.
-              example: &ref_28
+              example: &ref_26
                 id: directory_user_01E1JG7J09H96KYP8HM9B0G5SJ
                 directory_id: directory_01ECAZ4NV9QMV47GW873HDCX74
                 organization_id: org_01EZTR6WYX1A0DSE2CYMGXQ24Y
@@ -36595,11 +36194,11 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_39
+          example: &ref_37
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
-            data: *ref_28
+            data: *ref_26
             created_at: '2021-06-25T19:07:33.155Z'
             context: {}
         - oneOf:
@@ -36799,7 +36398,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: &ref_29
+                      example: &ref_27
                         - crm:read
                         - email:send
                     invocable_by:
@@ -36812,7 +36411,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: &ref_30
+                          example: &ref_28
                             - manager
                         organization_ids:
                           type: array
@@ -36821,7 +36420,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: &ref_31
+                          example: &ref_29
                             - org_01EHWNCE74X7JSDV0X3SZ3KJNY
                       required:
                         - role_slugs
@@ -36841,7 +36440,7 @@ components:
                             Instance types that may be minted from this
                             blueprint: `delegated` (acting for a user) and/or
                             `autonomous` (acting as the agent itself).
-                          example: &ref_32
+                          example: &ref_30
                             - delegated
                             - autonomous
                       required:
@@ -37001,7 +36600,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: *ref_29
+                      example: *ref_27
                     invocable_by:
                       type: object
                       properties:
@@ -37012,7 +36611,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: *ref_30
+                          example: *ref_28
                         organization_ids:
                           type: array
                           items:
@@ -37020,7 +36619,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: *ref_31
+                          example: *ref_29
                       required:
                         - role_slugs
                         - organization_ids
@@ -37039,7 +36638,7 @@ components:
                             Instance types that may be minted from this
                             blueprint: `delegated` (acting for a user) and/or
                             `autonomous` (acting as the agent itself).
-                          example: *ref_32
+                          example: *ref_30
                       required:
                         - instance_types
                       description: How sessions may be minted from this blueprint.
@@ -38075,7 +37674,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_33
+                      example: &ref_31
                         - users:read
                         - users:write
                     created_at:
@@ -38201,7 +37800,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_33
+                      example: *ref_31
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -38325,7 +37924,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_33
+                      example: *ref_31
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -41192,7 +40791,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_34
+                      example: *ref_32
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -41382,7 +40981,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_35
+                      example: &ref_33
                         - reports
                     enabled:
                       type: boolean
@@ -41543,7 +41142,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_35
+                      example: *ref_33
                     enabled:
                       type: boolean
                       description: >-
@@ -41703,7 +41302,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_35
+                      example: *ref_33
                     enabled:
                       type: boolean
                       description: >-
@@ -41983,7 +41582,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_35
+                      example: *ref_33
                     enabled:
                       type: boolean
                       description: >-
@@ -42999,7 +42598,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_36
+                      example: &ref_34
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -43149,7 +42748,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_36
+                      example: *ref_34
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -43976,7 +43575,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_37
+                      example: &ref_35
                         - users:read
                         - users:write
                     created_at:
@@ -44060,7 +43659,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_37
+                      example: *ref_35
                     created_at:
                       format: date-time
                       type: string
@@ -44142,7 +43741,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_37
+                      example: *ref_35
                     created_at:
                       format: date-time
                       type: string
@@ -44279,7 +43878,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_36
+                      example: *ref_34
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -45479,7 +45078,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_38
+                      example: &ref_36
                         - users:read
                         - users:write
                     created_at:
@@ -45545,7 +45144,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_38
+                      example: *ref_36
                     created_at:
                       format: date-time
                       type: string
@@ -45609,7 +45208,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_38
+                      example: *ref_36
                     created_at:
                       format: date-time
                       type: string
@@ -46811,7 +46410,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_39
+      example: *ref_37
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -46846,7 +46445,7 @@ components:
       example:
         object: list
         data:
-          - *ref_39
+          - *ref_37
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -48341,7 +47940,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: &ref_40
+              example: &ref_38
                 account: myorg-myaccount
           required:
             - object
@@ -48386,7 +47985,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: *ref_40
+              example: *ref_38
           required:
             - object
             - auth_method
@@ -48463,7 +48062,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: *ref_40
+              example: *ref_38
           required:
             - object
             - auth_method
@@ -48894,7 +48493,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_41
+                        example: &ref_39
                           - repo
                           - user:email
                       auth_method:
@@ -48944,7 +48543,7 @@ components:
                           `installation` scope, excluding secret and undeclared
                           fields. Returned for every authentication method;
                           empty when no stored values can be disclosed.
-                        example: &ref_42
+                        example: &ref_40
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -49106,7 +48705,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_41
+                      example: *ref_39
                     auth_method:
                       type: string
                       enum:
@@ -49153,7 +48752,7 @@ components:
                         `installation` scope, excluding secret and undeclared
                         fields. Returned for every authentication method; empty
                         when no stored values can be disclosed.
-                      example: *ref_42
+                      example: *ref_40
                     state:
                       type: string
                       enum:
