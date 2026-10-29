@@ -222,4 +222,9 @@ fi
 # handler `$?` == 0 for this particular fatal, so even `cleanup() { local s=$?;
 # …; exit $s; }` still exits 0. Ordinary command failures are unaffected — they
 # propagate through the trap correctly. Avoiding the error is the only fix.
-exec npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" --output "$OUTPUT" "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
+#
+# Not `exec`: replacing the shell would skip the EXIT trap, and the baseline
+# worktrees and surface files above would outlive every successful run. Under
+# `set -e` a failing generate still exits the script with its own status, and
+# the trap runs either way.
+npx oagen generate --lang "$LANG" --spec "$SPEC" --namespace "$NAMESPACE" --output "$OUTPUT" "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"

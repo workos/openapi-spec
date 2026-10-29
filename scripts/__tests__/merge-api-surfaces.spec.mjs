@@ -93,16 +93,28 @@ test('a method HEAD lost parameters on takes the repair signature and is reporte
 
 test('a method or class only the repair ref has is added and reported as missing', () => {
   const extra = surface({
-    SSO: cls('SSO', { getProfile: ['options?'] }),
+    SSO: cls('SSO', { getProfile: ['options?'], ping: [] }),
     Portal: cls('Portal', { generateLink: ['organization', 'options?'] }),
   });
   const { surface: merged, repaired } = mergeApiSurfaces(head, extra);
   assert.deepEqual(names(merged, 'SSO', 'getProfile'), ['options']);
+  // A zero-argument method HEAD lacks is still a missing method.
+  assert.deepEqual(names(merged, 'SSO', 'ping'), []);
   assert.deepEqual(names(merged, 'Portal', 'generateLink'), ['organization', 'options']);
   assert.deepEqual(repaired, [
     { className: 'SSO', method: 'getProfile', missing: [] },
+    { className: 'SSO', method: 'ping', missing: [] },
     { className: 'Portal', method: 'generateLink', missing: [] },
   ]);
+  assert.match(summarize(repaired, 'v9.4.0'), /SSO\.ping \(missing from HEAD\)/);
+});
+
+test('a zero-argument method both surfaces have, and an empty repair overload list, change nothing', () => {
+  const both = surface({ SSO: cls('SSO', { ping: [] }) });
+  const emptyOverloads = surface({ SSO: { ...cls('SSO', {}), methods: { ping: [] } } });
+  assert.deepEqual(mergeApiSurfaces(both, both).repaired, []);
+  assert.deepEqual(mergeApiSurfaces(both, emptyOverloads).repaired, []);
+  assert.deepEqual(names(mergeApiSurfaces(both, emptyOverloads).surface, 'SSO', 'ping'), []);
 });
 
 test('constructor parameters follow the same rule', () => {

@@ -85,11 +85,19 @@ export function mergeApiSurfaces(head, repair) {
 
     headClass.methods ??= {};
     for (const [method, repairOverloads] of Object.entries(repairClass.methods ?? {})) {
+      if (repairOverloads.length === 0) continue;
       const headOverloads = headClass.methods[method];
+      // A method HEAD does not have at all is a regression whatever its
+      // arity — a zero-argument method has no parameter to be missing.
+      if (!headOverloads || headOverloads.length === 0) {
+        headClass.methods[method] = structuredClone(repairOverloads);
+        repaired.push({ className, method, missing: [] });
+        continue;
+      }
       const missing = missingParameters(headOverloads, repairOverloads);
       if (missing.length === 0) continue;
       headClass.methods[method] = structuredClone(repairOverloads);
-      repaired.push({ className, method, missing: headOverloads?.length ? missing : [] });
+      repaired.push({ className, method, missing });
     }
 
     const repairCtor = repairClass.constructorParams ?? [];
