@@ -11261,6 +11261,131 @@ paths:
       summary: List data integrations
       tags:
         - pipes
+  /data-integrations/finish:
+    post:
+      description: >-
+        Saves a connection that was started with `code_challenge`. After the
+        user authorizes, WorkOS redirects them to `return_to` with a
+        `connect_code` and `state`. Call this endpoint from your server with
+        that `connect_code` and the `code_verifier` behind the challenge to save
+        the connected account.
+      operationId: DataIntegrationsController_finishConnection
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connect_code:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{43}$
+                  description: >-
+                    The `connect_code` WorkOS added to `return_to` when the user
+                    finished authorizing. It can be used once and expires 90
+                    seconds after the redirect.
+                  example: Q3n0bWh2b0tqZ1VtV2ZsYkJ3cE9aV0J6T1hGb1lYaGo
+                code_verifier:
+                  type: string
+                  pattern: ^[A-Za-z0-9._~-]{43,128}$
+                  description: >-
+                    The code verifier `code_challenge` was derived from: 43 to
+                    128 characters from `A-Z`, `a-z`, `0-9`, `-`, `.`, `_` and
+                    `~`. A wrong verifier uses up the `connect_code`, and the
+                    user has to connect again.
+                  example: dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+                state:
+                  type: string
+                  description: >-
+                    The `state` WorkOS added to `return_to` alongside
+                    `connect_code`. Optional; it is only used to correlate the
+                    request in logs.
+                  example: q2czJKmVAraSBg8xFpT7M9uR
+              required:
+                - connect_code
+                - code_verifier
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIntegrationFinishConnectionResponse'
+        '400':
+          description: >-
+            The connection could not be completed, and the user must connect
+            again. `invalid_connect_code` when the `connect_code` is unknown,
+            expired, already used, or from another environment, or the
+            `code_verifier` does not match the `code_challenge`. Other codes
+            report why saving the connection failed, such as `target_deleted`
+            when the connected account being reauthorized was deleted in the
+            meantime. A malformed request body returns validation messages
+            instead.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - invalid_connect_code
+                          - authorization_code_exchange_error
+                          - authorization_state_expired
+                          - auth_method_mismatch
+                          - concurrent_request
+                          - connected_account_limit_reached
+                          - connected_account_not_found
+                          - installation_failed
+                          - invalid_authorization_url
+                          - invalid_client_id
+                          - invalid_data_integration
+                          - missing_access_token
+                          - missing_code
+                          - multiple_connections_unavailable
+                          - provider_error
+                          - reauthorization_needed
+                          - target_deleted
+                          - unexpected_response_format
+                        description: The error code identifying the type of error.
+                        example: invalid_connect_code
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        oneOf:
+                          - type: string
+                          - type: array
+                            items:
+                              type: string
+                    required:
+                      - message
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: A human-readable description of the error.
+                    example: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
+                required:
+                  - message
+      summary: Finish connection
+      tags:
+        - pipes
   /data-integrations/{slug}:
     get:
       description: Retrieves the user-owned data integration by its slug.
@@ -11939,8 +12064,34 @@ paths:
                 return_to:
                   type: string
                   format: uri
-                  description: The URL to redirect the user to after authorization.
+                  description: >-
+                    The URL to redirect the user to after authorization.
+                    Required with `code_challenge`, and must then exactly match
+                    a redirect URI registered on one of the environment's
+                    applications. Loopback URLs match on any port; wildcard
+                    redirect URIs are not honored, and a `return_to` with a
+                    query string or fragment never matches.
                   example: https://example.com/callback
+                code_challenge:
+                  type: string
+                  pattern: ^[A-Za-z0-9_-]{43}$
+                  description: >-
+                    A PKCE-style code challenge: the base64url-encoded SHA-256
+                    of a `code_verifier` your app keeps. When set, the
+                    connection isn't saved when the user finishes authorizing.
+                    Instead, the user is redirected to `return_to` with a
+                    `connect_code` and `state`, and your app must call [Finish
+                    connection](/reference/pipes/connected-account/finish-connection)
+                    with the `connect_code` and `code_verifier` within 90
+                    seconds to save it.
+                  example: E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+                code_challenge_method:
+                  type: string
+                  description: >-
+                    The method used to derive `code_challenge`. Only `S256` is
+                    supported, and it is the default. Requires `code_challenge`.
+                  example: S256
+                  const: S256
                 config:
                   type: object
                   additionalProperties:
@@ -11984,20 +12135,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/DataIntegrationAuthorizeUrlResponse'
         '400':
-          description: Bad Request
+          description: >-
+            The request was invalid. With `code_challenge`: `invalid_return_to`
+            when `return_to` is missing or does not exactly match a registered
+            redirect URI, `return_to_requires_exact_match` when only a wildcard
+            redirect URI matches it, and `connect_finish_unavailable` when
+            `code_challenge` is not available for the environment.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    oneOf:
-                      - type: string
-                      - type: array
-                        items:
-                          type: string
-                required:
-                  - message
+                anyOf:
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - invalid_return_to
+                          - return_to_requires_exact_match
+                          - connect_finish_unavailable
+                        description: The error code identifying the type of error.
+                        example: invalid_return_to
+                      message:
+                        type: string
+                        description: A human-readable description of the error.
+                        example: Request could not be processed.
+                    required:
+                      - code
+                      - message
+                  - type: object
+                    properties:
+                      message:
+                        oneOf:
+                          - type: string
+                          - type: array
+                            items:
+                              type: string
+                    required:
+                      - message
         '401':
           description: Unauthorized
         '403':
@@ -16497,10 +16671,7 @@ paths:
                   - user:email
                 auth_method: oauth
                 api_key_last_4: null
-                client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
-                client_secret_last_4: cdef
-                config:
-                  instance_url: https://example.my.salesforce.com
+                config: {}
                 state: connected
                 established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                 state_reason: null
@@ -16722,10 +16893,7 @@ paths:
                   - user:email
                 auth_method: oauth
                 api_key_last_4: null
-                client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
-                client_secret_last_4: cdef
-                config:
-                  instance_url: https://example.my.salesforce.com
+                config: {}
                 state: connected
                 established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                 state_reason: null
@@ -16989,10 +17157,7 @@ paths:
                   - user:email
                 auth_method: oauth
                 api_key_last_4: null
-                client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
-                client_secret_last_4: cdef
-                config:
-                  instance_url: https://example.my.salesforce.com
+                config: {}
                 state: connected
                 established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                 state_reason: null
@@ -17160,10 +17325,7 @@ paths:
                         - user:email
                       auth_method: oauth
                       api_key_last_4: null
-                      client_id: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
-                      client_secret_last_4: cdef
-                      config:
-                        instance_url: https://example.my.salesforce.com
+                      config: {}
                       state: connected
                       established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
                       state_reason: null
@@ -47745,6 +47907,229 @@ components:
         - object
         - data
         - list_metadata
+    ConnectedAccount:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the connected account object.
+          const: connected_account
+        id:
+          type: string
+          description: The unique identifier of the connected account.
+          example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+        connection_role:
+          type: string
+          enum:
+            - compatibility
+            - standard
+          description: >-
+            Whether this row is the compatibility connection visible to
+            undeclared clients or a standard peer for plural-aware clients. The
+            role does not indicate preference or creation order.
+          example: compatibility
+        account_identifier:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A best-effort identifier for the provider account this connection
+            points at. It is correlation metadata, not the connection identifier
+            or a selector.
+          example: workspace_123
+        account_display_name:
+          type:
+            - string
+            - 'null'
+          description: >-
+            A mutable, non-unique display name for the provider account
+            connection.
+          example: Acme production
+        user_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The [User](/reference/authkit/user) identifier associated with this
+            connection.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        organization_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The [Organization](/reference/organization) identifier associated
+            with this connection, or `null` if not scoped to an organization.
+          example: null
+        scopes:
+          type: array
+          items:
+            type: string
+          description: The OAuth scopes granted for this connection.
+          example:
+            - repo
+            - user:email
+        auth_method:
+          type: string
+          enum:
+            - oauth
+            - api_key
+            - client_credentials
+          description: >-
+            The authentication method used for this connection (`oauth`,
+            `api_key`, or `client_credentials`). Defaults to `oauth` if absent.
+          example: oauth
+        api_key_last_4:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The last four characters of the API key, or `null` for OAuth
+            connections.
+          example: null
+        client_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The client ID supplied for this connection. Only present when
+            `auth_method` is `client_credentials`.
+          example: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
+        client_secret_last_4:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The last four characters of the client secret supplied for this
+            connection, or `null` when it can't be read. Only present when
+            `auth_method` is `client_credentials`.
+          example: cdef
+        config:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            The connection-level configuration values stored for this connection
+            — the fields the provider declares at `installation` scope,
+            excluding secret and undeclared fields. Returned for every
+            authentication method; empty when no stored values can be disclosed.
+          example:
+            instance_url: https://example.my.salesforce.com
+        state:
+          type: string
+          enum:
+            - connected
+            - needs_reauthorization
+            - disconnected
+          description: >-
+            The state of the connected account:
+
+            - `connected`: The connection is active and tokens are valid.
+
+            - `needs_reauthorization`: The user needs to reauthorize the
+            connection, typically because required scopes have changed.
+            `state_reason` explains why when WorkOS invalidated the connection
+            itself.
+
+            - `disconnected`: The connection has been disconnected.
+          example: connected
+        established_by_user_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            The [User](/reference/authkit/user) whose authorization established
+            this connection. `null` when the connection is developer-managed or
+            its establisher is unknown, and when the establishing member lost
+            access to the organization — in which case `state_reason` is
+            `establishing_member_membership_ended`.
+          example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        state_reason:
+          description: >-
+            Why WorkOS put the connection in its current `state`, or `null` when
+            there is no WorkOS-recorded reason:
+
+            - `establishing_member_membership_ended`: The member who established
+            this organization-owned connection is no longer an active member of
+            the organization, so its credentials were cleared. An organization
+            admin must provide new credentials.
+
+
+            Additional values may be added; treat an unrecognized value as an
+            unknown reason.
+          example: null
+          oneOf:
+            - type: string
+              const: establishing_member_membership_ended
+            - type: 'null'
+        created_at:
+          type: string
+          description: The timestamp when the connection was created.
+          example: '2024-01-16T14:20:00.000Z'
+        updated_at:
+          type: string
+          description: The timestamp when the connection was last updated.
+          example: '2024-01-16T14:20:00.000Z'
+        warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                const: duplicate_account_display_name
+              message:
+                type: string
+                description: A human-readable explanation of the non-blocking warning.
+                example: >-
+                  Another connection for this provider and owner has the same
+                  label.
+            required:
+              - code
+              - message
+          description: >-
+            Non-blocking warnings about an explicitly supplied label. Only
+            writes return it, and only when another connection already uses the
+            label; reads omit it.
+      required:
+        - object
+        - id
+        - connection_role
+        - account_identifier
+        - account_display_name
+        - user_id
+        - organization_id
+        - scopes
+        - state
+        - created_at
+        - updated_at
+      example:
+        object: connected_account
+        id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+        connection_role: compatibility
+        account_identifier: workspace_123
+        account_display_name: Acme production
+        user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+        organization_id: null
+        scopes:
+          - repo
+          - user:email
+        auth_method: oauth
+        api_key_last_4: null
+        config: {}
+        state: connected
+        established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+        state_reason: null
+        created_at: '2024-01-16T14:20:00.000Z'
+        updated_at: '2024-01-16T14:20:00.000Z'
+    DataIntegrationFinishConnectionResponse:
+      type: object
+      properties:
+        connected_account:
+          $ref: '#/components/schemas/ConnectedAccount'
+          description: The connected account that was saved.
+      required:
+        - connected_account
     DataIntegrationAuthorizeUrlResponse:
       type: object
       properties:
@@ -47753,6 +48138,15 @@ components:
           description: The OAuth authorization URL to redirect the user to.
           example: >-
             https://api.workos.com/data-integrations/q2czJKmVAraSBg8xFpT7M9uR/authorize-redirect
+        completion:
+          type: string
+          description: >-
+            `finish_required` when the request included `code_challenge`: the
+            connection will be held until your app finishes it. Omitted
+            otherwise. If you sent `code_challenge` and this is missing, don't
+            redirect the user.
+          example: finish_required
+          const: finish_required
       required:
         - url
     AuthMethodMismatchError:
@@ -48131,202 +48525,6 @@ components:
           required:
             - active
             - error
-    ConnectedAccount:
-      type: object
-      properties:
-        object:
-          type: string
-          description: Distinguishes the connected account object.
-          const: connected_account
-        id:
-          type: string
-          description: The unique identifier of the connected account.
-          example: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
-        connection_role:
-          type: string
-          enum:
-            - compatibility
-            - standard
-          description: >-
-            Whether this row is the compatibility connection visible to
-            undeclared clients or a standard peer for plural-aware clients. The
-            role does not indicate preference or creation order.
-          example: compatibility
-        account_identifier:
-          type:
-            - string
-            - 'null'
-          description: >-
-            A best-effort identifier for the provider account this connection
-            points at. It is correlation metadata, not the connection identifier
-            or a selector.
-          example: workspace_123
-        account_display_name:
-          type:
-            - string
-            - 'null'
-          description: >-
-            A mutable, non-unique display name for the provider account
-            connection.
-          example: Acme production
-        user_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The [User](/reference/authkit/user) identifier associated with this
-            connection.
-          example: user_01EHZNVPK3SFK441A1RGBFSHRT
-        organization_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The [Organization](/reference/organization) identifier associated
-            with this connection, or `null` if not scoped to an organization.
-          example: null
-        scopes:
-          type: array
-          items:
-            type: string
-          description: The OAuth scopes granted for this connection.
-          example:
-            - repo
-            - user:email
-        auth_method:
-          type: string
-          enum:
-            - oauth
-            - api_key
-            - client_credentials
-          description: >-
-            The authentication method used for this connection (`oauth`,
-            `api_key`, or `client_credentials`). Defaults to `oauth` if absent.
-          example: oauth
-        api_key_last_4:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The last four characters of the API key, or `null` for OAuth
-            connections.
-          example: null
-        client_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The client ID supplied for this connection. Only present when
-            `auth_method` is `client_credentials`.
-          example: 3MVG9dZJodJWxft2VoStSCVwPFsx0eDcpVc
-        client_secret_last_4:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The last four characters of the client secret supplied for this
-            connection, or `null` when it can't be read. Only present when
-            `auth_method` is `client_credentials`.
-          example: cdef
-        config:
-          type: object
-          additionalProperties:
-            type: string
-          description: >-
-            The connection-level configuration values stored for this connection
-            — the fields the provider declares at `installation` scope,
-            excluding secret and undeclared fields. Returned for every
-            authentication method; empty when no stored values can be disclosed.
-          example:
-            instance_url: https://example.my.salesforce.com
-        state:
-          type: string
-          enum:
-            - connected
-            - needs_reauthorization
-            - disconnected
-          description: >-
-            The state of the connected account:
-
-            - `connected`: The connection is active and tokens are valid.
-
-            - `needs_reauthorization`: The user needs to reauthorize the
-            connection, typically because required scopes have changed.
-            `state_reason` explains why when WorkOS invalidated the connection
-            itself.
-
-            - `disconnected`: The connection has been disconnected.
-          example: connected
-        established_by_user_id:
-          type:
-            - string
-            - 'null'
-          description: >-
-            The [User](/reference/authkit/user) whose authorization established
-            this connection. `null` when the connection is developer-managed or
-            its establisher is unknown, and when the establishing member lost
-            access to the organization — in which case `state_reason` is
-            `establishing_member_membership_ended`.
-          example: user_01EHZNVPK3SFK441A1RGBFSHRT
-        state_reason:
-          description: >-
-            Why WorkOS put the connection in its current `state`, or `null` when
-            there is no WorkOS-recorded reason:
-
-            - `establishing_member_membership_ended`: The member who established
-            this organization-owned connection is no longer an active member of
-            the organization, so its credentials were cleared. An organization
-            admin must provide new credentials.
-
-
-            Additional values may be added; treat an unrecognized value as an
-            unknown reason.
-          example: null
-          oneOf:
-            - type: string
-              const: establishing_member_membership_ended
-            - type: 'null'
-        created_at:
-          type: string
-          description: The timestamp when the connection was created.
-          example: '2024-01-16T14:20:00.000Z'
-        updated_at:
-          type: string
-          description: The timestamp when the connection was last updated.
-          example: '2024-01-16T14:20:00.000Z'
-        warnings:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-                const: duplicate_account_display_name
-              message:
-                type: string
-                description: A human-readable explanation of the non-blocking warning.
-                example: >-
-                  Another connection for this provider and owner has the same
-                  label.
-            required:
-              - code
-              - message
-          description: >-
-            Non-blocking warnings about an explicitly supplied label. Only
-            writes return it, and only when another connection already uses the
-            label; reads omit it.
-      required:
-        - object
-        - id
-        - connection_role
-        - account_identifier
-        - account_display_name
-        - user_id
-        - organization_id
-        - scopes
-        - state
-        - created_at
-        - updated_at
     DataIntegrationsListResponse:
       type: object
       properties:
@@ -48446,6 +48644,29 @@ components:
                 deprecated: true
                 description: Use updated_at instead.
               connected_account:
+                example: &ref_42
+                  object: connected_account
+                  id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
+                  connection_role: compatibility
+                  account_identifier: workspace_123
+                  account_display_name: Acme production
+                  user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                  organization_id: null
+                  scopes:
+                    - repo
+                    - user:email
+                  auth_method: oauth
+                  api_key_last_4: null
+                  config: {}
+                  state: connected
+                  established_by_user_id: user_01EHZNVPK3SFK441A1RGBFSHRT
+                  state_reason: null
+                  created_at: '2024-01-16T14:20:00.000Z'
+                  updated_at: '2024-01-16T14:20:00.000Z'
+                  userlandUserId: user_01EHZNVPK3SFK441A1RGBFSHRT
+                  organizationId: null
+                  createdAt: '2024-01-16T14:20:00.000Z'
+                  updatedAt: '2024-01-16T14:20:00.000Z'
                 description: >-
                   The user's compatibility [connected
                   account](/reference/pipes/connected-account) for this
@@ -48912,6 +49133,7 @@ components:
                     - organizationId
                     - createdAt
                     - updatedAt
+                  example: *ref_42
                 description: >-
                   The user's connected accounts for this provider in the
                   requested ownership context. This contains only the
