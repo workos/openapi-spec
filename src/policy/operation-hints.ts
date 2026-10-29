@@ -15,6 +15,8 @@ export const operationHints: Record<string, OperationHint> = {
   // NB: `transformSpec` renames this endpoint's path param `slug` -> `provider`,
   // so the key here uses `{provider}` to match the post-transform path.
   'POST /data-integrations/{provider}/token': { name: 'get_access_token' },
+  // The verb heuristic would derive `create_finish`; name it after the action.
+  'POST /data-integrations/finish': { name: 'finish_connection' },
 
   // -- SSO ----------------------------------------------------------------------
   'GET /sso/authorize': {
