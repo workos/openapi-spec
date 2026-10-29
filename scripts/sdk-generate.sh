@@ -10,6 +10,8 @@ BASELINE_REF=""
 EXTRA_ARGS=()
 TMP_SURFACE=""
 TMP_SDK=""
+TMP_HEAD_SURFACE=""
+TMP_HEAD_SDK=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -70,15 +72,21 @@ if [[ -z "$NAMESPACE" ]]; then
 fi
 
 cleanup() {
-  if [[ -n "$TMP_SDK" ]]; then
-    if git -C "$OUTPUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      git -C "$OUTPUT" worktree remove --force "$TMP_SDK" >/dev/null 2>&1 || true
+  local worktree
+  for worktree in "$TMP_SDK" "$TMP_HEAD_SDK"; do
+    if [[ -n "$worktree" ]]; then
+      if git -C "$OUTPUT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        git -C "$OUTPUT" worktree remove --force "$worktree" >/dev/null 2>&1 || true
+      fi
+      rm -rf "$worktree"
     fi
-    rm -rf "$TMP_SDK"
-  fi
-  if [[ -n "$TMP_SURFACE" && -f "$TMP_SURFACE" ]]; then
-    rm -f "$TMP_SURFACE"
-  fi
+  done
+  local surface
+  for surface in "$TMP_SURFACE" "$TMP_HEAD_SURFACE"; do
+    if [[ -n "$surface" && -f "$surface" ]]; then
+      rm -f "$surface"
+    fi
+  done
 }
 trap cleanup EXIT
 
@@ -114,10 +122,18 @@ ensure_ref() {
     || { echo "sdk-generate.sh: baseline ref '$2' not found in $1" >&2; exit 1; }
 }
 
-# The baseline is the SDK as shipped: HEAD by default, or `--baseline-ref` when
-# HEAD is not the surface to preserve (a repair release after a broken one). An
-# explicit ref that could not be honored is an error, never a silent no-op —
-# `--baseline-ref HEAD` included, since it asks for a surface just as firmly.
+# The baseline is the SDK as shipped — HEAD — because that is what callers
+# compile against today. `--baseline-ref` names an older tag whose signatures
+# must be honored where HEAD's cannot be (a repair release after a broken one):
+# it is overlaid onto HEAD's surface, method by method, only where HEAD regressed
+# from it (`merge-api-surfaces.mjs`). Handing the emitter the tag alone would
+# replace HEAD's whole surface, and every parameter shipped between the tag and
+# HEAD at its spec position would read as new and move after the options
+# argument — workos-php#460 moved `SSO::getProfileAndToken`'s `$codeVerifier`
+# behind `$options` that way while v9.4.0 repaired the Pipes upserts
+# (oagen-emitters#292). An explicit ref that could not be honored is an error,
+# never a silent no-op — `--baseline-ref HEAD` included, since it asks for a
+# surface just as firmly.
 if [[ -n "$BASELINE_REF" ]]; then
   if [[ "$EXTRACTABLE_LANGS" != *" $LANG "* ]]; then
     echo "sdk-generate.sh: --baseline-ref has no effect for $LANG: oagen has no extractor for it" >&2
@@ -178,6 +194,20 @@ PY
     fi
   fi
   npx oagen extract --sdk-path "$EXTRACT_SDK" --lang "$LANG" --output "$TMP_SURFACE" >/dev/null
+  # A repair ref that is not HEAD itself overlays HEAD's surface rather than
+  # replacing it: extract HEAD from its own clean worktree too, then keep the
+  # tag's signature only for the methods HEAD regressed on. The merge prints
+  # the overlaid methods, so the generation log says which signatures the
+  # repair ref still governs.
+  if [[ -n "$BASELINE_REF" ]] \
+    && [[ "$(git -C "$OUTPUT" rev-parse "$BASELINE_REF^{commit}")" != "$(git -C "$OUTPUT" rev-parse "HEAD^{commit}")" ]]; then
+    TMP_HEAD_SDK="$(mktemp -d "${TMPDIR:-/tmp}/oagen-${LANG}-head-sdk.XXXXXX")"
+    git -C "$OUTPUT" worktree add --detach "$TMP_HEAD_SDK" HEAD >/dev/null 2>&1
+    TMP_HEAD_SURFACE="$(mktemp "${TMPDIR:-/tmp}/oagen-${LANG}-head-surface.XXXXXX")"
+    npx oagen extract --sdk-path "$TMP_HEAD_SDK" --lang "$LANG" --output "$TMP_HEAD_SURFACE" >/dev/null
+    node "$(dirname "$0")/merge-api-surfaces.mjs" \
+      --head "$TMP_HEAD_SURFACE" --repair "$TMP_SURFACE" --repair-label "$BASELINE_REF" --output "$TMP_SURFACE"
+  fi
   EXTRA_ARGS+=(--api-surface "$TMP_SURFACE")
 fi
 

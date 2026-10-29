@@ -164,7 +164,8 @@ jobs:
         env:
           SERVICES_INPUT: ${{ inputs.services }}
           # Set per language in sdk-matrix.json while a repair release must
-          # baseline on the last compatible tag instead of the SDK's HEAD.
+          # honor the last compatible tag's signatures: sdk-generate.sh overlays
+          # that tag onto the SDK's HEAD surface where HEAD regressed from it.
           BASELINE_REF: ${{ matrix.baseline_ref || '' }}
         run: |
           # Strip any spaces from the CSV so "Vault, SSO" threads as a single
