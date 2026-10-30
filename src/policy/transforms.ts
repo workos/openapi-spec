@@ -47,6 +47,24 @@ export function schemaNameTransform(name: string): string {
     .replace(/^Urn(?:IetfParams|Workos)O[Aa]uthGrantType/, '');
 }
 
+interface QueryParameter {
+  name?: string;
+  in?: string;
+  description?: string;
+  schema?: Record<string, unknown>;
+}
+
+/** The named query parameter of one operation, as written in the document. */
+function findQueryParameter(
+  paths: Record<string, Record<string, unknown>>,
+  path: string,
+  method: string,
+  name: string,
+): QueryParameter | undefined {
+  const op = paths[path]?.[method] as { parameters?: QueryParameter[] } | undefined;
+  return op?.parameters?.find((param) => param.in === 'query' && param.name === name);
+}
+
 /**
  * Pre-IR spec overlay — patch around upstream spec quirks that would otherwise
  * emit breaking SDK changes. See docs/breaking-change-playbook.md and the
@@ -356,6 +374,23 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
     paginationOrder['default'] = 'desc';
   }
 
+  // -- GET /events: no client-side `order` default ---------------------------
+  // The events endpoint does not read `order`: it always returns ascending
+  // creation order and paginates with `after` only (workos/workos
+  // events.controller.ts hardcodes `PaginationOrder.Asc`). The pinned `desc`
+  // default above therefore makes every SDK send a value the server ignores,
+  // and it is the one obstacle to the server honoring the parameter later:
+  // every SDK caller would silently flip from oldest-first to newest-first,
+  // and `after` would start paging backwards. Wrap the `$ref` in `allOf` so
+  // the parameter keeps the `PaginationOrder` type but stops inheriting the
+  // component default — oagen reads `default` from the parameter schema
+  // itself or from a direct `$ref` target, never through `allOf`.
+  const eventsOrderParam = findQueryParameter(paths, '/events', 'get', 'order');
+  const eventsOrderRef = eventsOrderParam?.schema?.['$ref'];
+  if (eventsOrderParam && typeof eventsOrderRef === 'string') {
+    eventsOrderParam.schema = { allOf: [{ $ref: eventsOrderRef }] };
+  }
+
   // The same upstream change also appended a per-endpoint "Defaults to `…`."
   // sentence to every `order` parameter description (`normal` on most,
   // `desc` on a handful). That documents the *server* default, which callers
@@ -365,11 +400,15 @@ export function transformSpec(spec: OpenApiDocument): OpenApiDocument {
   // one doc comment (contradictory ones wherever upstream says `normal`).
   // Strip the spec's sentence and let the emitter-rendered default stand, as
   // it did before this change.
+  // The events `order` parameter is exempt: with no client-side default the
+  // emitters append nothing, so the spec's server-default sentence is the
+  // only one and it is accurate.
   for (const pathItem of Object.values(paths)) {
     for (const op of Object.values(pathItem)) {
       const params = (op as { parameters?: Array<{ name?: string; description?: string }> }).parameters;
       if (!Array.isArray(params)) continue;
       for (const param of params) {
+        if (param === eventsOrderParam) continue;
         if (param.name !== 'order' || typeof param.description !== 'string') continue;
         param.description = param.description.replace(/\s*Defaults to `[^`]+`\.\s*$/, '');
       }
