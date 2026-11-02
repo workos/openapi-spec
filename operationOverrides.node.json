@@ -118,5 +118,17 @@
       "DataKey"
     ],
     "returnExpression": "({ key: result.dataKey, id: result.id })"
+  },
+  "GET /data-integrations/{slug}/organization": {
+    "methodName": "get_organization_data_integration",
+    "optionsType": "GetOrganizationDataIntegrationOptions"
+  },
+  "PUT /data-integrations/{slug}/organization": {
+    "methodName": "update_organization_data_integration",
+    "optionsType": "UpdateOrganizationDataIntegrationOptions"
+  },
+  "DELETE /data-integrations/{slug}/organization": {
+    "methodName": "delete_organization_data_integration",
+    "optionsType": "DeleteOrganizationDataIntegrationOptions"
   }
 }
