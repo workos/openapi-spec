@@ -165,8 +165,10 @@ jobs:
           SERVICES_INPUT: ${{ inputs.services }}
           # Set per language in sdk-matrix.json while a repair release must
           # honor the last compatible tag's signatures: sdk-generate.sh overlays
-          # that tag onto the SDK's HEAD surface where HEAD regressed from it.
+          # that tag onto the SDK's HEAD surface where HEAD regressed from it,
+          # or, with baseline_mode "restore", wherever the tag has the method.
           BASELINE_REF: ${{ matrix.baseline_ref || '' }}
+          BASELINE_MODE: ${{ matrix.baseline_mode || '' }}
         run: |
           # Strip any spaces from the CSV so "Vault, SSO" threads as a single
           # quoted --services value instead of word-splitting into a bogus "SSO"
@@ -176,7 +178,8 @@ jobs:
             --lang ${{ matrix.language }} \
             --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
             ${SERVICES:+--services "$SERVICES"} \
-            ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"}
+            ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"} \
+            ${BASELINE_MODE:+--baseline-mode "$BASELINE_MODE"}
 
       # Preview only: capture the generated changes as a unified diff so
       # preview_diff_report can render them (mirrors validate-sdks.yml's capture).
