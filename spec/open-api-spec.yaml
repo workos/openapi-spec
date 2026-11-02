@@ -9520,21 +9520,11 @@ paths:
         - directory-users
   /events:
     get:
-      description: List events for the current environment.
+      description: >-
+        List events for the current environment. Events are returned oldest
+        first; use `after` to page forward.
       operationId: EventsController_list
       parameters:
-        - name: before
-          required: false
-          in: query
-          description: >-
-            An object ID that defines your place in the list. When the ID is not
-            present, you are at the end of the list. For example, if you make a
-            list request and receive 100 objects, ending with `"obj_123"`, your
-            subsequent call can include `before="obj_123"` to fetch a new batch
-            of objects before `"obj_123"`.
-          schema:
-            example: xxx_01HXYZ123456789ABCDEFGHIJ
-            type: string
         - name: after
           required: false
           in: query
@@ -9559,16 +9549,6 @@ paths:
             default: 10
             example: 10
             type: integer
-        - name: order
-          required: false
-          in: query
-          description: >-
-            Order the results by the creation time. Supported values are `"asc"`
-            (ascending), `"desc"` (descending), and `"normal"` (descending with
-            reversed cursor semantics where `before` fetches older records and
-            `after` fetches newer records). Defaults to `normal`.
-          schema:
-            $ref: '#/components/schemas/PaginationOrder'
         - name: events
           required: true
           in: query
@@ -23839,7 +23819,6 @@ components:
         - role_not_invocable
         - role_slug_conflict
         - saml_options_required
-        - saml_request_binding_unsupported_for_signing
         - session_expired
         - session_revoked
         - session_settings_not_found
