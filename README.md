@@ -38,11 +38,11 @@ npm run sdk:resolve
 # public API surface is extracted and handed to the emitter so names and
 # positions callers depend on survive; --baseline-ref picks an older tag when
 # HEAD is not the surface to preserve (a repair release after a broken one),
-# and --baseline-mode replace makes that tag the whole baseline when the broken
-# release also reordered parameters.
+# and --baseline-mode restore lets that tag win every method it has when the
+# broken release also reordered parameters.
 npm run sdk:generate -- --lang python --output ~/workos/sdks/backend/python
 npm run sdk:generate -- --lang php --output ~/workos/sdks/backend/workos-php --baseline-ref v9.4.0
-npm run sdk:generate -- --lang kotlin --output ~/workos/workos-kotlin --baseline-ref v7.4.0 --baseline-mode replace
+npm run sdk:generate -- --lang kotlin --output ~/workos/workos-kotlin --baseline-ref v7.4.0 --baseline-mode restore
 
 # Diff the current spec against the last-generated snapshot
 npm run sdk:diff -- --lang python

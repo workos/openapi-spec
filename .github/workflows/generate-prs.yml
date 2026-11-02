@@ -166,7 +166,7 @@ jobs:
           # Set per language in sdk-matrix.json while a repair release must
           # honor the last compatible tag's signatures: sdk-generate.sh overlays
           # that tag onto the SDK's HEAD surface where HEAD regressed from it,
-          # or, with baseline_mode "replace", uses the tag's surface alone.
+          # or, with baseline_mode "restore", wherever the tag has the method.
           BASELINE_REF: ${{ matrix.baseline_ref || '' }}
           BASELINE_MODE: ${{ matrix.baseline_mode || '' }}
         run: |
