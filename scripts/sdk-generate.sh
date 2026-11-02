@@ -7,6 +7,7 @@ OUTPUT=""
 NAMESPACE=""
 SERVICES=""
 BASELINE_REF=""
+BASELINE_MODE="overlay"
 EXTRA_ARGS=()
 TMP_SURFACE=""
 TMP_SDK=""
@@ -20,6 +21,7 @@ while [[ $# -gt 0 ]]; do
     --namespace) NAMESPACE="$2"; shift 2 ;;
     --services)  SERVICES="$2";  shift 2 ;;
     --baseline-ref) BASELINE_REF="$2"; shift 2 ;;
+    --baseline-mode) BASELINE_MODE="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -49,7 +51,7 @@ if [[ -n "$SERVICES" ]]; then
 fi
 
 if [[ -z "$LANG" ]]; then
-  echo "Usage: sdk-generate.sh --lang <language> --output <path> [--namespace <ns>] [--services <list>] [--baseline-ref <git-ref>]" >&2
+  echo "Usage: sdk-generate.sh --lang <language> --output <path> [--namespace <ns>] [--services <list>] [--baseline-ref <git-ref>] [--baseline-mode overlay|restore]" >&2
   exit 1
 fi
 
@@ -124,16 +126,37 @@ ensure_ref() {
 
 # The baseline is the SDK as shipped — HEAD — because that is what callers
 # compile against today. `--baseline-ref` names an older tag whose signatures
-# must be honored where HEAD's cannot be (a repair release after a broken one):
-# it is overlaid onto HEAD's surface, method by method, only where HEAD regressed
-# from it (`merge-api-surfaces.mjs`). Handing the emitter the tag alone would
-# replace HEAD's whole surface, and every parameter shipped between the tag and
-# HEAD at its spec position would read as new and move after the options
-# argument — workos-php#460 moved `SSO::getProfileAndToken`'s `$codeVerifier`
-# behind `$options` that way while v9.4.0 repaired the Pipes upserts
-# (oagen-emitters#292). An explicit ref that could not be honored is an error,
-# never a silent no-op — `--baseline-ref HEAD` included, since it asks for a
-# surface just as firmly.
+# must be honored where HEAD's cannot be (a repair release after a broken one).
+# How far the tag reaches is `--baseline-mode`:
+#
+#   overlay (default): the tag's signature wins only where HEAD regressed from
+#     it, a parameter the tag had that HEAD lost (`merge-api-surfaces.mjs`).
+#     Everything HEAD only added or reordered keeps HEAD's positions. That is
+#     the repair for a release whose later signatures callers already compile
+#     against: restoring every tag signature would move every parameter
+#     shipped since it after the options argument, which is how workos-php#460
+#     moved `SSO::getProfileAndToken`'s `$codeVerifier` behind `$options` while
+#     v9.4.0 repaired the Pipes upserts (oagen-emitters#292).
+#   restore: the tag's signature wins for every method the tag has, reordered
+#     or regressed. Every parameter shipped since the tag moves after the
+#     options argument, so a positional call written against the tag keeps its
+#     meaning everywhere, at the cost of positional calls written against the
+#     releases in between. Methods the tag lacks keep HEAD's positions. That is
+#     the repair for a release whose own positional order was the break
+#     (workos-kotlin v7.5.0 inserted parameters ahead of v7.4.0's,
+#     oagen-emitters#297), and a one-release setting: once the repair ships,
+#     its HEAD is the surface to preserve and the ref comes back out.
+#
+# An explicit ref that could not be honored is an error, never a silent no-op —
+# `--baseline-ref HEAD` included, since it asks for a surface just as firmly.
+case "$BASELINE_MODE" in
+  overlay|restore) ;;
+  *) echo "sdk-generate.sh: --baseline-mode must be overlay or restore, got '$BASELINE_MODE'" >&2; exit 1 ;;
+esac
+if [[ "$BASELINE_MODE" == "restore" && -z "$BASELINE_REF" ]]; then
+  echo "sdk-generate.sh: --baseline-mode restore needs --baseline-ref" >&2
+  exit 1
+fi
 if [[ -n "$BASELINE_REF" ]]; then
   if [[ "$EXTRACTABLE_LANGS" != *" $LANG "* ]]; then
     echo "sdk-generate.sh: --baseline-ref has no effect for $LANG: oagen has no extractor for it" >&2
@@ -194,11 +217,12 @@ PY
     fi
   fi
   npx oagen extract --sdk-path "$EXTRACT_SDK" --lang "$LANG" --output "$TMP_SURFACE" >/dev/null
-  # A repair ref that is not HEAD itself overlays HEAD's surface rather than
-  # replacing it: extract HEAD from its own clean worktree too, then keep the
-  # tag's signature only for the methods HEAD regressed on. The merge prints
-  # the overlaid methods, so the generation log says which signatures the
-  # repair ref still governs.
+  # A repair ref that is not HEAD itself is merged onto HEAD's surface rather
+  # than replacing it: extract HEAD from its own clean worktree too, then keep
+  # the tag's signature for the methods HEAD regressed on (overlay) or for
+  # every method the tag has (restore). The merge prints the methods it took
+  # from the tag, so the generation log says which signatures the repair ref
+  # still governs.
   if [[ -n "$BASELINE_REF" ]] \
     && [[ "$(git -C "$OUTPUT" rev-parse "$BASELINE_REF^{commit}")" != "$(git -C "$OUTPUT" rev-parse "HEAD^{commit}")" ]]; then
     TMP_HEAD_SDK="$(mktemp -d "${TMPDIR:-/tmp}/oagen-${LANG}-head-sdk.XXXXXX")"
@@ -206,7 +230,8 @@ PY
     TMP_HEAD_SURFACE="$(mktemp "${TMPDIR:-/tmp}/oagen-${LANG}-head-surface.XXXXXX")"
     npx oagen extract --sdk-path "$TMP_HEAD_SDK" --lang "$LANG" --output "$TMP_HEAD_SURFACE" >/dev/null
     node "$(dirname "$0")/merge-api-surfaces.mjs" \
-      --head "$TMP_HEAD_SURFACE" --repair "$TMP_SURFACE" --repair-label "$BASELINE_REF" --output "$TMP_SURFACE"
+      --head "$TMP_HEAD_SURFACE" --repair "$TMP_SURFACE" --repair-label "$BASELINE_REF" --output "$TMP_SURFACE" \
+      --mode "$BASELINE_MODE"
   fi
   EXTRA_ARGS+=(--api-surface "$TMP_SURFACE")
 fi

@@ -22,8 +22,17 @@
  * same rule decides a class's constructor parameters (the Rust `new()` and
  * promoted-property constructors the extractors record there).
  *
+ * That is `--mode overlay`, the default. `--mode restore` is for a release
+ * whose own positional order was the break (workos-kotlin v7.5.0 inserted
+ * parameters ahead of v7.4.0's on eight methods, oagen-emitters#297): the
+ * tag's signature wins for every method and constructor the tag has, not only
+ * where HEAD lost parameters, so every parameter shipped since the tag moves
+ * after the options argument. Methods the tag lacks, and everything that is
+ * not a signature, stay HEAD's either way, which is what handing the emitter
+ * the tag alone would lose.
+ *
  * CLI:  node scripts/merge-api-surfaces.mjs --head <head.json> --repair <tag.json>
- *           --output <merged.json> [--repair-label <text>]
+ *           --output <merged.json> [--repair-label <text>] [--mode overlay|restore]
  *       → writes the merged surface and prints one summary line to stderr
  *         naming every overlaid method, so a generation log shows exactly
  *         which signatures the repair ref still governs.
@@ -55,17 +64,33 @@ export function missingParameters(head, repair) {
   return paramNames(repair).filter((name) => !have.has(name));
 }
 
+export const MODES = ['overlay', 'restore'];
+
 /**
- * HEAD's surface with the repair ref's signature overlaid wherever HEAD
- * regressed from it. Neither input is mutated.
+ * Whether the repair signature replaces HEAD's: in overlay mode only when HEAD
+ * lacks a parameter, in restore mode whenever the parameter names or their
+ * order differ.
+ */
+function takesRepair(mode, headOverloads, repairOverloads, missing) {
+  if (missing.length > 0) return true;
+  return mode === 'restore' && paramNames(headOverloads).join(',') !== paramNames(repairOverloads).join(',');
+}
+
+/**
+ * HEAD's surface with the repair ref's signatures overlaid: wherever HEAD
+ * regressed from the repair ref (`overlay`), or wherever the repair ref has
+ * the method at all and its signature differs (`restore`). Neither input is
+ * mutated.
  * @param {any} head the surface extracted from the SDK's HEAD
  * @param {any} repair the surface extracted from the repair ref
+ * @param {{ mode?: 'overlay' | 'restore' }} [options]
  * @returns {{ surface: any, repaired: Array<{ className: string, method: string, missing: string[] }> }}
  *   `method` is the method name, or `constructor` for a class's constructor
  *   parameters; `missing` names the parameters HEAD lacked (empty when the
- *   whole method or class was missing).
+ *   whole method or class was missing, or when restore mode only reordered).
  */
-export function mergeApiSurfaces(head, repair) {
+export function mergeApiSurfaces(head, repair, { mode = 'overlay' } = {}) {
+  if (!MODES.includes(mode)) throw new Error(`merge-api-surfaces: unknown mode ${mode}`);
   const surface = structuredClone(head ?? {});
   surface.classes ??= {};
   const repaired = [];
@@ -95,15 +120,16 @@ export function mergeApiSurfaces(head, repair) {
         continue;
       }
       const missing = missingParameters(headOverloads, repairOverloads);
-      if (missing.length === 0) continue;
+      if (!takesRepair(mode, headOverloads, repairOverloads, missing)) continue;
       headClass.methods[method] = structuredClone(repairOverloads);
       repaired.push({ className, method, missing });
     }
 
     const repairCtor = repairClass.constructorParams ?? [];
     if (repairCtor.length > 0) {
-      const missing = missingParameters([{ params: headClass.constructorParams ?? [] }], [{ params: repairCtor }]);
-      if (missing.length > 0) {
+      const headCtor = [{ params: headClass.constructorParams ?? [] }];
+      const missing = missingParameters(headCtor, [{ params: repairCtor }]);
+      if (takesRepair(mode, headCtor, [{ params: repairCtor }], missing)) {
         headClass.constructorParams = structuredClone(repairCtor);
         repaired.push({ className, method: 'constructor', missing });
       }
@@ -117,33 +143,45 @@ export function mergeApiSurfaces(head, repair) {
  * The one line the generation log shows for a merge.
  * @param {Array<{ className: string, method: string, missing: string[] }>} repaired
  * @param {string} label what the repair surface was extracted from
+ * @param {'overlay' | 'restore'} [mode]
  * @returns {string}
  */
-export function summarize(repaired, label) {
+export function summarize(repaired, label, mode = 'overlay') {
+  const verb = mode === 'restore' ? 'restored from' : 'overlaid from';
   if (repaired.length === 0) {
-    return `merge-api-surfaces: baseline is HEAD's surface; ${label} overlays nothing (HEAD regressed on no signature)`;
+    return mode === 'restore'
+      ? `merge-api-surfaces: baseline is HEAD's surface; ${label} restores nothing (every signature it has matches HEAD's)`
+      : `merge-api-surfaces: baseline is HEAD's surface; ${label} overlays nothing (HEAD regressed on no signature)`;
   }
   const entries = repaired.map(({ className, method, missing }) =>
-    missing.length > 0 ? `${className}.${method} (HEAD lacks ${missing.join(', ')})` : `${className}.${method} (missing from HEAD)`,
+    missing.length > 0
+      ? `${className}.${method} (HEAD lacks ${missing.join(', ')})`
+      : mode === 'restore'
+        ? `${className}.${method} (HEAD reordered)`
+        : `${className}.${method} (missing from HEAD)`,
   );
-  return `merge-api-surfaces: baseline is HEAD's surface with ${repaired.length} signature(s) overlaid from ${label}: ${entries.join('; ')}`;
+  const scope = mode === 'restore' ? ' (restore mode: the tag wins wherever it has the method)' : '';
+  return `merge-api-surfaces: baseline is HEAD's surface with ${repaired.length} signature(s) ${verb} ${label}${scope}: ${entries.join('; ')}`;
 }
 
 function parseArgs(argv) {
-  const args = { head: '', repair: '', output: '', repairLabel: '' };
+  const args = { head: '', repair: '', output: '', repairLabel: '', mode: 'overlay' };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--head') args.head = argv[++i] ?? '';
     else if (arg === '--repair') args.repair = argv[++i] ?? '';
     else if (arg === '--output') args.output = argv[++i] ?? '';
     else if (arg === '--repair-label') args.repairLabel = argv[++i] ?? '';
+    else if (arg === '--mode') args.mode = argv[++i] ?? '';
     else {
       console.error(`merge-api-surfaces: unknown option ${arg}`);
       process.exit(2);
     }
   }
-  if (!args.head || !args.repair || !args.output) {
-    console.error('Usage: merge-api-surfaces.mjs --head <head.json> --repair <tag.json> --output <merged.json> [--repair-label <text>]');
+  if (!args.head || !args.repair || !args.output || !MODES.includes(args.mode)) {
+    console.error(
+      'Usage: merge-api-surfaces.mjs --head <head.json> --repair <tag.json> --output <merged.json> [--repair-label <text>] [--mode overlay|restore]',
+    );
     process.exit(2);
   }
   return args;
@@ -153,9 +191,9 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const head = JSON.parse(readFileSync(args.head, 'utf8'));
   const repair = JSON.parse(readFileSync(args.repair, 'utf8'));
-  const { surface, repaired } = mergeApiSurfaces(head, repair);
+  const { surface, repaired } = mergeApiSurfaces(head, repair, { mode: args.mode });
   writeFileSync(args.output, JSON.stringify(surface, null, 2));
-  console.error(summarize(repaired, args.repairLabel || args.repair));
+  console.error(summarize(repaired, args.repairLabel || args.repair, args.mode));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
