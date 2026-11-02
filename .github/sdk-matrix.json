@@ -14,7 +14,9 @@
   },
   {
     "language": "kotlin",
-    "sdk_repo": "workos/workos-kotlin"
+    "sdk_repo": "workos/workos-kotlin",
+    "baseline_ref": "v7.4.0",
+    "baseline_mode": "replace"
   },
   {
     "language": "php",

@@ -118,11 +118,13 @@ jobs:
           # The same per-language baseline the release path passes, so
           # validation exercises the signatures that will actually ship.
           BASELINE_REF: ${{ matrix.baseline_ref || '' }}
+          BASELINE_MODE: ${{ matrix.baseline_mode || '' }}
         run: |
           npm run sdk:generate -- \
             --lang ${{ matrix.language }} \
             --output "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}" \
-            ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"}
+            ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"} \
+            ${BASELINE_MODE:+--baseline-mode "$BASELINE_MODE"}
 
       - name: Run SDK CI
         working-directory: ${{ env.SDK_CHECKOUT_PATH }}

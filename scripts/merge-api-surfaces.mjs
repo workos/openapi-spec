@@ -22,6 +22,10 @@
  * same rule decides a class's constructor parameters (the Rust `new()` and
  * promoted-property constructors the extractors record there).
  *
+ * `sdk-generate.sh --baseline-mode replace` skips this merge and hands the
+ * emitter the tag's surface alone, for a release whose own positional order
+ * was the break (workos-kotlin v7.5.0, oagen-emitters#297).
+ *
  * CLI:  node scripts/merge-api-surfaces.mjs --head <head.json> --repair <tag.json>
  *           --output <merged.json> [--repair-label <text>]
  *       → writes the merged surface and prints one summary line to stderr
