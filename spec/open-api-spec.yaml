@@ -23819,7 +23819,6 @@ components:
         - role_not_invocable
         - role_slug_conflict
         - saml_options_required
-        - saml_request_binding_unsupported_for_signing
         - session_expired
         - session_revoked
         - session_settings_not_found
