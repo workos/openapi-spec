@@ -162,3 +162,80 @@ test('the summary names every overlaid signature and what HEAD lacked', () => {
   );
   assert.match(summarize([], 'v9.4.0'), /overlays nothing/);
 });
+
+// workos-kotlin: v7.5.0 (HEAD) inserted codeVerifier ahead of v7.4.0's slots, added
+// finishConnection, and emptied the Pipes upsert; v7.4.0 is the repair ref.
+const kotlinHead = surface({
+  SSO: cls('SSO', {
+    getProfileAndToken: ['code?', 'codeVerifier?', 'subjectToken?', 'subjectTokenType?', 'organizationId?', 'requestOptions?'],
+  }),
+  Pipes: cls('Pipes', {
+    finishConnection: ['connectCode', 'codeVerifier', 'state?', 'requestOptions?'],
+    updateDataIntegrationApiKey: ['slug', 'requestOptions?'],
+    deleteUserConnectedAccount: ['userId', 'slug', 'requestOptions?'],
+  }),
+});
+const kotlinRepair = surface({
+  SSO: cls('SSO', {
+    getProfileAndToken: ['code?', 'subjectToken?', 'subjectTokenType?', 'organizationId?', 'requestOptions?'],
+  }),
+  Pipes: cls(
+    'Pipes',
+    {
+      updateDataIntegrationApiKey: ['slug', 'userId', 'secret', 'organizationId?', 'connectedAccountId?', 'connectionOwner?', 'requestOptions?'],
+      deleteUserConnectedAccount: ['userId', 'slug', 'requestOptions?'],
+    },
+    [{ name: 'workos', optional: false, type: 'WorkOS' }],
+  ),
+});
+
+test('overlay mode keeps a signature HEAD only reordered', () => {
+  const { surface: merged, repaired } = mergeApiSurfaces(kotlinHead, kotlinRepair);
+  assert.deepEqual(names(merged, 'SSO', 'getProfileAndToken'), ['code', 'codeVerifier', 'subjectToken', 'subjectTokenType', 'organizationId', 'requestOptions']);
+  assert.deepEqual(repaired.map((r) => `${r.className}.${r.method}`), ['Pipes.updateDataIntegrationApiKey', 'Pipes.constructor']);
+});
+
+test('restore mode takes the tag signature wherever the tag has the method and keeps the methods it lacks', () => {
+  const before = JSON.stringify([kotlinHead, kotlinRepair]);
+  const { surface: merged, repaired } = mergeApiSurfaces(kotlinHead, kotlinRepair, { mode: 'restore' });
+  // Reordered by HEAD: the tag's order comes back.
+  assert.deepEqual(names(merged, 'SSO', 'getProfileAndToken'), ['code', 'subjectToken', 'subjectTokenType', 'organizationId', 'requestOptions']);
+  // Regressed in HEAD: restored as in overlay mode.
+  assert.deepEqual(names(merged, 'Pipes', 'updateDataIntegrationApiKey'), ['slug', 'userId', 'secret', 'organizationId', 'connectedAccountId', 'connectionOwner', 'requestOptions']);
+  // Added since the tag: HEAD's signature, which handing the emitter the tag alone would drop.
+  assert.deepEqual(names(merged, 'Pipes', 'finishConnection'), ['connectCode', 'codeVerifier', 'state', 'requestOptions']);
+  // Identical in both: untouched and not reported.
+  assert.deepEqual(names(merged, 'Pipes', 'deleteUserConnectedAccount'), ['userId', 'slug', 'requestOptions']);
+  assert.deepEqual(merged.classes.Pipes.constructorParams.map((p) => p.name), ['workos']);
+  assert.deepEqual(
+    repaired.map(({ className, method, missing }) => `${className}.${method}:${missing.join(',')}`),
+    ['SSO.getProfileAndToken:', 'Pipes.updateDataIntegrationApiKey:userId,secret,organizationId,connectedAccountId,connectionOwner', 'Pipes.constructor:workos'],
+  );
+  assert.equal(JSON.stringify([kotlinHead, kotlinRepair]), before);
+});
+
+test('restore mode leaves everything that is not a signature to HEAD', () => {
+  const headRest = surface(kotlinHead.classes, { enums: { A: { members: ['x'] } }, exports: { 'a.kt': ['A'] } });
+  const repairRest = surface(kotlinRepair.classes, { enums: { B: { members: ['y'] } }, interfaces: { I: {} }, typeAliases: { T: {} } });
+  const { surface: merged } = mergeApiSurfaces(headRest, repairRest, { mode: 'restore' });
+  assert.deepEqual(merged.enums, { A: { members: ['x'] } });
+  assert.deepEqual(merged.interfaces, {});
+  assert.deepEqual(merged.typeAliases, {});
+  assert.deepEqual(merged.exports, { 'a.kt': ['A'] });
+});
+
+test('an unknown mode is rejected', () => {
+  assert.throws(() => mergeApiSurfaces(kotlinHead, kotlinRepair, { mode: 'replace' }), /unknown mode replace/);
+});
+
+test('the restore summary names reordered and regressed signatures and says the tag wins', () => {
+  const { repaired } = mergeApiSurfaces(kotlinHead, kotlinRepair, { mode: 'restore' });
+  assert.equal(
+    summarize(repaired, 'v7.4.0', 'restore'),
+    "merge-api-surfaces: baseline is HEAD's surface with 3 signature(s) restored from v7.4.0 (restore mode: the tag wins wherever it has the method): " +
+      'SSO.getProfileAndToken (HEAD reordered); ' +
+      'Pipes.updateDataIntegrationApiKey (HEAD lacks userId, secret, organizationId, connectedAccountId, connectionOwner); ' +
+      'Pipes.constructor (HEAD lacks workos)',
+  );
+  assert.match(summarize([], 'v7.4.0', 'restore'), /restores nothing/);
+});

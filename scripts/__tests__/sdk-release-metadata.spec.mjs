@@ -345,6 +345,85 @@ test('factsFromCompat resolves a generated model with no name rule (CreatePasswo
   assert.equal(facts[0].scope_source, 'compat_ir');
 });
 
+// --- Policy-resolved operation names (openapi-spec PR #253 regression) ---
+// oagen's resolution policy renames operations (`Events.list` → `list_events`)
+// and remounts some onto other services, and the emitters derive their
+// per-operation param types from THOSE names (`ListEventsParams`), not from the
+// raw operationId-derived `list` the parse-only IR carries. `oagen resolve
+// --format json` (--resolved-ops) supplies the mapping, joined to the IR by
+// method + path.
+
+const RESOLVED_OPS_FIXTURE = [
+  { service: 'Events', mountOn: 'Events', method: 'GET', path: '/events', derivedName: 'list_events' },
+  // Remounted: the raw IR service is Organizations, the SDK surface is Groups.
+  {
+    service: 'Organizations',
+    mountOn: 'Groups',
+    method: 'GET',
+    path: '/organizations/{id}/members',
+    derivedName: 'list_members',
+  },
+];
+
+const POLICY_IR_FIXTURE = {
+  models: [],
+  enums: [],
+  services: [
+    {
+      name: 'Events',
+      operations: [
+        {
+          name: 'list',
+          httpMethod: 'get',
+          path: '/events',
+          queryParams: [{ name: 'after', type: { kind: 'primitive', name: 'string' } }],
+        },
+      ],
+    },
+    {
+      name: 'Organizations',
+      operations: [
+        {
+          name: 'listMembers',
+          httpMethod: 'get',
+          path: '/organizations/{id}/members',
+          pathParams: [{ name: 'id', type: { kind: 'primitive', name: 'string' } }],
+        },
+      ],
+    },
+  ],
+};
+
+test('factsFromCompat resolves a param type named from the policy-resolved operation (ListEventsParams) via --resolved-ops', () => {
+  const indexes = buildIndexes([POLICY_IR_FIXTURE, null], { resolvedOperations: RESOLVED_OPS_FIXTURE });
+  const facts = factsFromCompat(compatBreak('ListEventsParams.before'), [], indexes);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'events');
+  assert.equal(facts[0].scope_source, 'compat_ir');
+});
+
+test('factsFromCompat still falls back to sdk for a policy-named param type without --resolved-ops', () => {
+  // Documents the gap --resolved-ops closes: the parse-only IR names the
+  // operation `list`, so only `ListParams`/`ListQuery`/... are derivable.
+  const indexes = buildIndexes([POLICY_IR_FIXTURE, null]);
+  const facts = factsFromCompat(compatBreak('ListEventsParams.before'), [], indexes);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'sdk');
+  assert.equal(facts[0].scope_source, 'compat_unresolved');
+});
+
+test('policy-resolved synthetics take the post-mount service scope without making the raw-named twin ambiguous', () => {
+  const indexes = buildIndexes([POLICY_IR_FIXTURE, null], { resolvedOperations: RESOLVED_OPS_FIXTURE });
+  // Raw `listMembers` and resolved `list_members` share the base `ListMembers`;
+  // both register under the post-mount scope, so the symbol resolves cleanly
+  // to groups rather than splitting into an organizations/groups tie.
+  const facts = factsFromCompat(compatBreak('ListMembersParams.limit'), [], indexes);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'groups');
+  assert.equal(facts[0].scope_source, 'compat_ir');
+  assert.deepEqual(facts[0].scope_candidates, ['groups']);
+});
+
 // A real IR model must win over a synthesized twin: `TokenBody` is a pipes
 // request body, and SSO's `token` operation synthesizing `TokenBody` must not
 // make it ambiguous.
