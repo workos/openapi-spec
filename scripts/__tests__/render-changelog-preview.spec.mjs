@@ -13,9 +13,10 @@ const MOUNT_RULES = {
 };
 
 // Regression: staging the post-mount ClientApi must include the `client` scope
-// the changelog entries actually use — publicScopeFromService('ClientApi') is
-// 'client_api', so without the mount-aware union a ClientApi-only preview would
-// filter out every (client-scoped) entry and render blank.
+// the changelog entries actually use. publicScopeFromService('ClientApi') used
+// to be 'client_api' (it now carries an explicit override to 'client'); the
+// mount-aware union is what keeps a preview staged on any other post-mount
+// service from filtering out its mounted-in entries and rendering blank.
 test('staged ClientApi resolves to the client scope, not just client_api', () => {
   const scopes = scopesForStaged(['ClientApi'], MOUNT_RULES);
   assert.ok(scopes.has('client'), 'includes client (from the Client -> ClientApi mount)');

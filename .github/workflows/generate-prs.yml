@@ -288,11 +288,18 @@ jobs:
               cd "$GITHUB_WORKSPACE/openapi-spec"
               npx oagen parse --spec /tmp/previous-open-api-spec.yaml > /tmp/previous-ir.json
               npx oagen parse --spec spec/open-api-spec.yaml > /tmp/current-ir.json
+              # Policy-resolved (post-mount) service + method names, so SDK
+              # param types the emitters name from them (`ListEventsParams`
+              # from `Events.list_events`) resolve to a scope instead of the
+              # `sdk` fallback. Fails open to the raw-name behavior.
+              npx oagen resolve --spec spec/open-api-spec.yaml --format json > /tmp/resolved-ops.json \
+                || { echo "::warning::oagen resolve failed; classifying without policy-resolved names"; echo '[]' > /tmp/resolved-ops.json; }
             )
           else
             echo '{"changes":[],"behaviorChanges":[],"summary":{}}' > /tmp/diff-report.json
             echo '{"models":[],"enums":[],"services":[]}' > /tmp/previous-ir.json
             echo '{"models":[],"enums":[],"services":[]}' > /tmp/current-ir.json
+            echo '[]' > /tmp/resolved-ops.json
           fi
 
           # SDK-shape compat-diff signal. The spec diff only sees operations,
@@ -367,6 +374,7 @@ jobs:
             --diff-report /tmp/diff-report.json \
             --old-ir /tmp/previous-ir.json \
             --new-ir /tmp/current-ir.json \
+            --resolved-ops /tmp/resolved-ops.json \
             --compat-report "$COMPAT_REPORT_PATH" \
             --changed-files /tmp/sdk-changed-files.txt \
             --strict-scopes \

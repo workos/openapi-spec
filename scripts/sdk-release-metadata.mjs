@@ -65,6 +65,9 @@ const SERVICE_SCOPE_OVERRIDES = new Map(
   Object.entries({
     ApplicationClientSecrets: 'connect',
     Applications: 'connect',
+    // `/client/token` remounts from the raw `Client` tag onto `ClientApi`;
+    // its snake_case (`client_api`) is not a registered scope, `client` is.
+    ClientApi: 'client',
     Connections: 'sso',
     Directories: 'directory_sync',
     DirectoryGroups: 'directory_sync',
@@ -105,6 +108,13 @@ Inputs:
   --diff-report <file>   JSON output from "oagen diff".
   --old-ir <file>        JSON output from "oagen parse" for the previous spec.
   --new-ir <file>        JSON output from "oagen parse" for the current spec.
+  --resolved-ops <file>  Optional JSON output from "oagen resolve --format json"
+                         for the current spec: each operation's policy-resolved
+                         (post-mount) service and method name. The emitters
+                         derive per-operation param types from those names
+                         (ListEventsParams from Events.list_events), not from
+                         the raw operationId-derived names in --new-ir, so
+                         without it a break on such a type falls back to "sdk".
   --compat-report <file> Optional SDK compat report JSON. When omitted and
                          --sdk-repo is given, one is derived from the checkout
                          (baseline ref vs current tree) without regenerating.
@@ -229,11 +239,26 @@ function prepareSpecInputs(args) {
     const oldIrPath = join(tmp, 'old-ir.json');
     const newIrPath = join(tmp, 'new-ir.json');
     const diffPath = join(tmp, 'diff-report.json');
+    const resolvedOpsPath = join(tmp, 'resolved-ops.json');
 
     writeFileSync(oldSpecPath, run('git', ['-C', repo, 'show', `${previousCommit}:${specPath}`]));
     writeFileSync(newSpecPath, run('git', ['-C', repo, 'show', `${commit}:${specPath}`]));
     writeFileSync(oldIrPath, run('npx', ['oagen', 'parse', '--spec', oldSpecPath], { cwd: repo }));
     writeFileSync(newIrPath, run('npx', ['oagen', 'parse', '--spec', newSpecPath], { cwd: repo }));
+    // Policy-resolved operation names for the new spec (see --resolved-ops).
+    // Fails open: this checkout's resolution policy may reject a historical
+    // spec, and without the file the classifier only loses the policy-named
+    // synthetic param types — the behavior before --resolved-ops existed.
+    try {
+      writeFileSync(
+        resolvedOpsPath,
+        run('npx', ['oagen', 'resolve', '--spec', newSpecPath, '--format', 'json'], { cwd: repo }),
+      );
+    } catch (err) {
+      process.stderr.write(
+        `[sdk-release-metadata] oagen resolve failed; continuing without policy-resolved names: ${err.message}\n`,
+      );
+    }
     writeFileSync(
       diffPath,
       run('npx', ['oagen', 'diff', '--old', oldSpecPath, '--new', newSpecPath], {
@@ -247,6 +272,7 @@ function prepareSpecInputs(args) {
       'diff-report': args['diff-report'] ?? diffPath,
       'old-ir': args['old-ir'] ?? oldIrPath,
       'new-ir': args['new-ir'] ?? newIrPath,
+      'resolved-ops': args['resolved-ops'] ?? resolvedOpsPath,
       // Absolute path to the spec at the requested commit, so a downstream
       // compat derivation extracts against that historical spec rather than the
       // current checkout (see prepareCompatInputs).
@@ -533,7 +559,13 @@ function primaryTypeName(type) {
   return primaryTypeName(type.inner) ?? primaryTypeName(type.items) ?? null;
 }
 
-export function buildIndexes(specs) {
+// `resolvedOperations` is the JSON array from `oagen resolve --format json`
+// (see --resolved-ops): per operation, the policy-resolved post-mount service
+// (`mountOn`, else `service`) and method name (`derivedName`). It is keyed here
+// by HTTP method + path so it joins the IR without depending on either side's
+// naming. Optional; without it only the raw operationId-derived names are
+// available for synthesized param types.
+export function buildIndexes(specs, { resolvedOperations = [] } = {}) {
   const modelByName = new Map();
   const enumByName = new Map();
   const enumWireValues = new Map();
@@ -587,6 +619,16 @@ export function buildIndexes(specs) {
     set.add(scope);
     syntheticSymbolScopes.set(name, set);
   };
+
+  const routeKey = (method, path) => `${String(method ?? '').toUpperCase()} ${path ?? ''}`;
+  const resolvedByRoute = new Map();
+  for (const op of Array.isArray(resolvedOperations) ? resolvedOperations : []) {
+    if (!op?.path || !op.method) continue;
+    resolvedByRoute.set(routeKey(op.method, op.path), {
+      name: op.derivedName,
+      service: op.mountOn || op.service,
+    });
+  }
 
   const collectTypeRefs = (type, out) => {
     if (!type || typeof type !== 'object') return;
@@ -642,9 +684,20 @@ export function buildIndexes(specs) {
           (operation.pathParams?.length ?? 0) > 0 ||
           Boolean(operation.requestBody);
         if (hasParams) {
-          const base = pascalCase(operation.name);
-          for (const suffix of ['Query', 'Body', 'Params', 'Options']) {
-            addSyntheticScope(`${base}${suffix}`, scope);
+          // The resolution policy may rename the operation (`list` →
+          // `list_events`) and remount it on another service; the emitters
+          // name the param type from the resolved name and file it under the
+          // post-mount service. When that mapping is available it owns every
+          // synthesized name for the operation — the raw-named twin included,
+          // so a rename that keeps the same base never splits into two scopes.
+          const resolved = resolvedByRoute.get(routeKey(operation.httpMethod, operation.path));
+          const syntheticScope = resolved?.service ? publicScopeFromService(resolved.service) : scope;
+          const bases = new Set([pascalCase(operation.name)]);
+          if (resolved?.name) bases.add(pascalCase(resolved.name));
+          for (const base of bases) {
+            for (const suffix of ['Query', 'Body', 'Params', 'Options']) {
+              addSyntheticScope(`${base}${suffix}`, syntheticScope);
+            }
           }
         }
       }
@@ -1280,7 +1333,9 @@ function compatChangeIsBreaking(change, indexes, forgivenReorders) {
 // snake_case is a registered scope (`AdminPortal` → `admin_portal`), then name
 // rules, then IR ownership — first real models/enums, then the synthesized
 // per-operation parameter names buildIndexes derives (`TokenQuery` from
-// `SSO.token`). Only symbols invisible to all of those fall back to `sdk`.
+// `SSO.token`; `ListEventsParams` from the policy-resolved `Events.list_events`
+// when --resolved-ops is supplied). Only symbols invisible to all of those fall
+// back to `sdk`.
 function resolveCompatScope(root, indexes) {
   const serviceScope = resolveServiceScope(root);
   if (serviceScope.scope !== toSnakeCase(root)) {
@@ -1638,9 +1693,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     const oldIr = readJson(args['old-ir'], null);
     const newIr = readJson(args['new-ir'], null);
     const compatReport = readJson(args['compat-report'], { changes: [] });
+    const resolvedOperations = readJson(args['resolved-ops'], []);
     const changedFiles = changedFilesFromArgs(args);
 
-    const indexes = buildIndexes([oldIr, newIr]);
+    const indexes = buildIndexes([oldIr, newIr], { resolvedOperations });
     const specFacts = factsFromDiff(diffReport, indexes);
     const compatFacts = factsFromCompat(compatReport, specFacts, indexes);
     // Scope the changelog to the batch's staged services (when given), so the

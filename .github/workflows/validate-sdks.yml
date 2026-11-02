@@ -317,6 +317,14 @@ jobs:
           fi
           npx oagen parse --spec /tmp/previous-open-api-spec.yaml > /tmp/previous-ir.json
           npx oagen parse --spec spec/open-api-spec.yaml > /tmp/current-ir.json
+          # Policy-resolved (post-mount) service + method names. The emitters
+          # derive per-operation param types from these (`ListEventsParams`
+          # from `Events.list_events`), not from the raw operationId-derived
+          # names `oagen parse` carries, so without them a break on such a
+          # type resolves to the `sdk` fallback. Fails open to the raw-name
+          # behavior rather than skipping the whole gate.
+          npx oagen resolve --spec spec/open-api-spec.yaml --format json > /tmp/resolved-ops.json \
+            || { echo "::warning::oagen resolve failed; scope validation runs without policy-resolved names"; echo '[]' > /tmp/resolved-ops.json; }
 
           # Merge every language's breaking compat changes into one report so a
           # single run scope-checks both spec-level changes and SDK-surface
@@ -330,6 +338,7 @@ jobs:
             --diff-report /tmp/diff-report.json \
             --old-ir /tmp/previous-ir.json \
             --new-ir /tmp/current-ir.json \
+            --resolved-ops /tmp/resolved-ops.json \
             --compat-report /tmp/merged-compat.json \
             --strict-scopes \
             --output /dev/null 2>&1) && rc=0 || rc=$?
