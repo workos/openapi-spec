@@ -40857,6 +40857,13 @@ components:
           description: The OAuth authorization URL to redirect the user to.
           example: >-
             https://api.workos.com/data-integrations/q2czJKmVAraSBg8xFpT7M9uR/authorize-redirect
+        state:
+          type: string
+          description: >-
+            Identifies this authorization. WorkOS adds it to `return_to`
+            alongside `connect_code` or `error`. Store it in the user's session
+            with the `code_verifier` and compare it when the user returns.
+          example: 01K8ZQ6Y3J4N5P7R9T2V4W6X8Z
         completion:
           type: string
           description: >-
@@ -40868,6 +40875,7 @@ components:
           const: finish_required
       required:
         - url
+        - state
     AuthMethodMismatchError:
       type: object
       properties: *ref_46
