@@ -37768,6 +37768,7 @@ components:
                         - directoryUsers
                         - scimLogs
                         - radarDetections
+                        - teamActivityLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -37819,6 +37820,7 @@ components:
                         - directoryUsers
                         - scimLogs
                         - radarDetections
+                        - teamActivityLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -37870,6 +37872,7 @@ components:
                         - directoryUsers
                         - scimLogs
                         - radarDetections
+                        - teamActivityLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
@@ -37921,6 +37924,7 @@ components:
                         - directoryUsers
                         - scimLogs
                         - radarDetections
+                        - teamActivityLogEvents
                       description: The type of resource being exported.
                       example: users
                   required:
