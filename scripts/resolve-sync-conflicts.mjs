@@ -92,6 +92,11 @@ function uploadTree(cwd, head, tree) {
     }
     entries.push({ path: fields[i + 1], mode: deleted ? oldMode : mode, type, sha: deleted ? null : sha });
   }
+  // A PR that already carries everything main merged (an older sibling landed
+  // a subset of its spec changes first) resolves to its own head tree, so there
+  // is nothing to upload, and the Trees API rejects an empty `tree` list with
+  // 422 "Invalid tree info". Reuse the head tree for the merge commit.
+  if (entries.length === 0) return tree;
   const result = api(`repos/${REPO}/git/trees`, {
     base_tree: git(cwd, ['rev-parse', `${head}^{tree}`]).trim(), tree: entries,
   });
