@@ -2002,6 +2002,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
+        '429':
+          headers:
+            Retry-After:
+              description: How many seconds to wait before verification can be retried.
+              schema:
+                type: integer
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  #/components/schemas/TooManyFailedVerificationAttemptsErrorBodyWithRetryAfter
       summary: Verify Challenge
       tags:
         - multi-factor-auth.challenges
@@ -13874,6 +13886,8 @@ paths:
               schema:
                 anyOf:
                   - $ref: '#/components/schemas/DailyQuotaExceededErrorBody'
+                  - $ref: >-
+                      #/components/schemas/TooManyFailedVerificationAttemptsErrorBodyWithRetryAfter
                   - $ref: '#/components/schemas/TooManyRequestsOAuthErrorBody'
       summary: Authenticate
       tags:
@@ -23840,6 +23854,7 @@ components:
         - sub_resource_scoped_role_not_allowed
         - team_not_found
         - token_authentication_method_not_supported
+        - too_many_failed_verification_attempts
         - too_many_sp_encryption_certs
         - unsupported_invocation_type
         - user_already_exists
@@ -24004,6 +24019,26 @@ components:
       required:
         - message
         - error
+    TooManyFailedVerificationAttemptsErrorBodyWithRetryAfter:
+      type: object
+      properties:
+        code:
+          type: string
+          const: too_many_failed_verification_attempts
+          description: The error code identifying the type of error.
+          example: too_many_failed_verification_attempts
+        message:
+          type: string
+          description: A human-readable description of the error.
+          example: Request could not be processed.
+        retry_after:
+          type: integer
+          description: How many seconds to wait before verification can be retried.
+          example: 900
+      required:
+        - code
+        - message
+        - retry_after
     RateLimitExceededErrorBodyWithRetryAfter:
       type: object
       properties:
