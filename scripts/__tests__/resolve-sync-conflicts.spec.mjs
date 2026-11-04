@@ -180,3 +180,38 @@ test('CLI dry-run and signed, non-forced publication use live main, not stale PR
   }
   assert.equal(git(cwd, 'status', '--porcelain'), '');
 });
+
+test('a PR already carrying the spec changes main merged reuses its head tree instead of uploading an empty tree', (t) => {
+  const { root, cwd, head, ancestor } = fixture(t);
+  // main caught up to the PR's spec (an older sibling landed the same changes
+  // first) but still carries its own marker: only the marker conflicts, and the
+  // resolution is the PR's own head tree.
+  git(cwd, 'checkout', head, '--', 'spec.yaml');
+  git(cwd, 'commit', '-m', 'test: main already has the head spec');
+  const base = git(cwd, 'rev-parse', 'HEAD');
+  git(cwd, 'remote', 'add', 'origin', cwd);
+  const headTree = git(cwd, 'rev-parse', `${head}^{tree}`);
+  assert.equal(resolveTree(cwd, mergeConflict(cwd, head, base).tree, head), headTree);
+  const bin = mockGitHub(root);
+  const log = join(root, 'api.jsonl');
+  writeFileSync(log, '');
+  const script = fileURLToPath(new URL('../resolve-sync-conflicts.mjs', import.meta.url));
+  const result = spawnSync(process.execPath, [script, '--pr', '184', '--write'], {
+    cwd, encoding: 'utf8',
+    env: {
+      ...process.env, PATH: `${bin}:${process.env.PATH}`, API_LOG: log, TREE: '', BASE: base,
+      PR: JSON.stringify({ ...pr, number: 184, head: { ...pr.head, sha: head }, base: { ...pr.base, sha: ancestor } }),
+    },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const calls = readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse);
+  // The Trees API rejects an empty `tree` list with 422 "Invalid tree info", so
+  // nothing may be uploaded when there is nothing to change.
+  assert.equal(calls.filter(call => /\/git\/(trees|blobs)$/.test(call.endpoint)).length, 0);
+  const commit = calls.find(call => call.endpoint.endsWith('/git/commits')).data;
+  assert.equal(commit.tree, headTree);
+  assert.deepEqual(commit.parents, [head, base]);
+  const updates = calls.filter(call => call.endpoint.includes('/git/refs/heads/'));
+  assert.deepEqual(updates.map(call => call.data), [{ sha: 'e'.repeat(40), force: false }]);
+  assert.equal(git(cwd, 'status', '--porcelain'), '');
+});
