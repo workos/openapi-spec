@@ -23512,6 +23512,14 @@ components:
               - flag.deleted
               - flag.updated
               - flag.rule_updated
+              - feature_flags.flag.created
+              - feature_flags.flag.updated
+              - feature_flags.flag.deleted
+              - feature_flags.flag_rule.created
+              - feature_flags.flag_rule.updated
+              - feature_flags.flag_target.created
+              - feature_flags.flag_rule.deleted
+              - feature_flags.flag_target.deleted
               - invitation.accepted
               - invitation.created
               - invitation.resent
@@ -24177,7 +24185,7 @@ components:
         - message
     AuthMethodMismatchErrorBody:
       type: object
-      properties: &ref_46
+      properties: &ref_47
         code:
           type: string
           const: auth_method_mismatch
@@ -24191,13 +24199,13 @@ components:
           example: >-
             This installation uses oauth authentication. Use the POST
             /:slug/token endpoint instead.
-      required: &ref_47
+      required: &ref_48
         - code
         - message
       x-component-name: AuthMethodMismatchError
     AccountSelectionRequiredErrorBody:
       type: object
-      properties: &ref_48
+      properties: &ref_49
         code:
           type: string
           const: account_selection_required
@@ -24211,7 +24219,7 @@ components:
           example: >-
             Several connected accounts match this user for this provider. Name
             one with a connected account id.
-      required: &ref_49
+      required: &ref_50
         - code
         - message
       x-component-name: AccountSelectionRequiredError
@@ -28859,6 +28867,197 @@ components:
         - custom_attributes
         - created_at
         - updated_at
+    FlagRule:
+      type: object
+      properties:
+        object:
+          type: string
+          const: flag_rule
+        id:
+          type: string
+          description: Unique identifier of the Flag Rule.
+          example: flag_rule_01EHZNVPK3SFK441A1RGBFSHRT
+        flag_id:
+          type: string
+          description: The ID of the Feature Flag the rule belongs to.
+          example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+        flag_slug:
+          type: string
+          description: The slug of the Feature Flag the rule belongs to.
+          example: new-checkout
+        environment_id:
+          type: string
+          description: The ID of the environment the Flag Rule belongs to.
+          example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+        target_type:
+          type:
+            - string
+            - 'null'
+          description: The target type slug, if the rule targets a specific type.
+          example: organization
+        position:
+          type: integer
+          minimum: 0
+          description: The zero-based position of the rule in evaluation order.
+          example: 0
+        value_type:
+          type: string
+          const: boolean
+        value:
+          type: boolean
+          description: The value the Feature Flag evaluates to when the rule matches.
+          example: false
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - flag_id
+        - flag_slug
+        - environment_id
+        - target_type
+        - position
+        - value_type
+        - value
+        - created_at
+        - updated_at
+    FlagTarget:
+      oneOf:
+        - type: object
+          properties:
+            object:
+              type: string
+              description: Distinguishes the Flag Target object.
+              const: flag_target
+            id:
+              type: string
+              description: Unique identifier of the Flag Target.
+              example: flag_target_01EHZNVPK3SFK441A1RGBFSHRT
+            flag_id:
+              type: string
+              description: The ID of the Feature Flag the target belongs to.
+              example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+            flag_slug:
+              type: string
+              description: >-
+                The slug of the Feature Flag the target belongs to, which is how
+                the Feature Flag endpoints address it.
+              example: new-checkout
+            environment_id:
+              type: string
+              description: The ID of the environment the Flag Target belongs to.
+              example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+            target_type:
+              type: string
+              description: >-
+                The type of the target: `organization`, `user`, or a custom
+                target type slug.
+              example: organization
+            target_id:
+              type: string
+              description: The ID of the targeted entity.
+              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+            created_at:
+              format: date-time
+              type: string
+              description: An ISO 8601 timestamp.
+              example: '2026-01-15T12:00:00.000Z'
+            updated_at:
+              format: date-time
+              type: string
+              description: An ISO 8601 timestamp.
+              example: '2026-01-15T12:00:00.000Z'
+            rule_id:
+              type: string
+              description: The ID of the rule this target belongs to.
+              example: flag_rule_01EHZNVPK3SFK441A1RGBFSHRT
+          required:
+            - object
+            - id
+            - flag_id
+            - flag_slug
+            - environment_id
+            - target_type
+            - target_id
+            - created_at
+            - updated_at
+            - rule_id
+        - type: object
+          properties:
+            object:
+              type: string
+              description: Distinguishes the Flag Target object.
+              const: flag_target
+            id:
+              type: string
+              description: Unique identifier of the Flag Target.
+              example: flag_target_01EHZNVPK3SFK441A1RGBFSHRT
+            flag_id:
+              type: string
+              description: The ID of the Feature Flag the target belongs to.
+              example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+            flag_slug:
+              type: string
+              description: >-
+                The slug of the Feature Flag the target belongs to, which is how
+                the Feature Flag endpoints address it.
+              example: new-checkout
+            environment_id:
+              type: string
+              description: The ID of the environment the Flag Target belongs to.
+              example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+            target_type:
+              type: string
+              description: >-
+                The type of the target: `organization`, `user`, or a custom
+                target type slug.
+              example: organization
+            target_id:
+              type: string
+              description: The ID of the targeted entity.
+              example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+            value_type:
+              type: string
+              description: >-
+                The type of `value`. Only `boolean` is supported today;
+                additional types are reserved for future multivariate Feature
+                Flags.
+              example: boolean
+              const: boolean
+            value:
+              type: boolean
+              description: The value the Feature Flag evaluates to for this target.
+              example: true
+            created_at:
+              format: date-time
+              type: string
+              description: An ISO 8601 timestamp.
+              example: '2026-01-15T12:00:00.000Z'
+            updated_at:
+              format: date-time
+              type: string
+              description: An ISO 8601 timestamp.
+              example: '2026-01-15T12:00:00.000Z'
+          required:
+            - object
+            - id
+            - flag_id
+            - flag_slug
+            - environment_id
+            - target_type
+            - target_id
+            - value_type
+            - value
+            - created_at
+            - updated_at
     PipesConnectedAccount:
       type: object
       properties:
@@ -29124,7 +29323,7 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_45
+          example: &ref_46
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
@@ -33849,7 +34048,7 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
-                  const: flag.created
+                  const: feature_flags.flag.created
                 data:
                   type: object
                   properties:
@@ -33913,6 +34112,752 @@ components:
                         filtering.
                       example: &ref_41
                         - reports
+                    enabled:
+                      type: boolean
+                      description: >-
+                        Specifies whether the Feature Flag is active for the
+                        current environment.
+                      example: true
+                    default_value:
+                      type: boolean
+                      description: >-
+                        The value returned for users and organizations who don't
+                        match any configured targeting rules.
+                      example: false
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - environment_id
+                    - slug
+                    - name
+                    - description
+                    - owner
+                    - tags
+                    - enabled
+                    - default_value
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag.deleted
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      const: feature_flag
+                    id:
+                      type: string
+                      description: Unique identifier of the Feature Flag.
+                      example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+                    environment_id:
+                      type: string
+                      description: The ID of the environment the Feature Flag belongs to.
+                      example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    slug:
+                      type: string
+                      description: A unique key to reference the Feature Flag.
+                      example: advanced-analytics
+                    name:
+                      type: string
+                      description: A descriptive name for the Feature Flag.
+                      example: Advanced Analytics
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: A description for the Feature Flag.
+                      example: Enable advanced analytics dashboard feature
+                    owner:
+                      description: The owner of the Feature Flag.
+                      oneOf:
+                        - type: object
+                          properties:
+                            email:
+                              type: string
+                              description: The email address of the flag owner.
+                              example: jane@example.com
+                            first_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The first name of the flag owner.
+                              example: Jane
+                            last_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The last name of the flag owner.
+                              example: Doe
+                          required:
+                            - email
+                            - first_name
+                            - last_name
+                        - type: 'null'
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Labels assigned to the Feature Flag for categorizing and
+                        filtering.
+                      example: *ref_41
+                    enabled:
+                      type: boolean
+                      description: >-
+                        Specifies whether the Feature Flag is active for the
+                        current environment.
+                      example: true
+                    default_value:
+                      type: boolean
+                      description: >-
+                        The value returned for users and organizations who don't
+                        match any configured targeting rules.
+                      example: false
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - environment_id
+                    - slug
+                    - name
+                    - description
+                    - owner
+                    - tags
+                    - enabled
+                    - default_value
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag_rule.created
+                data:
+                  $ref: '#/components/schemas/FlagRule'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag_rule.deleted
+                data:
+                  $ref: '#/components/schemas/FlagRule'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag_rule.updated
+                data:
+                  $ref: '#/components/schemas/FlagRule'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                    previous_attributes:
+                      type: object
+                      properties:
+                        data:
+                          type: object
+                          properties:
+                            value:
+                              type: boolean
+                              description: The value the rule served before the update.
+                              example: true
+                          description: The previous data attributes of the flag rule.
+                      description: Attributes that changed from their previous values.
+                  required:
+                    - client_id
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag.updated
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      const: feature_flag
+                    id:
+                      type: string
+                      description: Unique identifier of the Feature Flag.
+                      example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+                    environment_id:
+                      type: string
+                      description: The ID of the environment the Feature Flag belongs to.
+                      example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    slug:
+                      type: string
+                      description: A unique key to reference the Feature Flag.
+                      example: advanced-analytics
+                    name:
+                      type: string
+                      description: A descriptive name for the Feature Flag.
+                      example: Advanced Analytics
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: A description for the Feature Flag.
+                      example: Enable advanced analytics dashboard feature
+                    owner:
+                      description: The owner of the Feature Flag.
+                      oneOf:
+                        - type: object
+                          properties:
+                            email:
+                              type: string
+                              description: The email address of the flag owner.
+                              example: jane@example.com
+                            first_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The first name of the flag owner.
+                              example: Jane
+                            last_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The last name of the flag owner.
+                              example: Doe
+                          required:
+                            - email
+                            - first_name
+                            - last_name
+                        - type: 'null'
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Labels assigned to the Feature Flag for categorizing and
+                        filtering.
+                      example: *ref_41
+                    enabled:
+                      type: boolean
+                      description: >-
+                        Specifies whether the Feature Flag is active for the
+                        current environment.
+                      example: true
+                    default_value:
+                      type: boolean
+                      description: >-
+                        The value returned for users and organizations who don't
+                        match any configured targeting rules.
+                      example: false
+                    created_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                    updated_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - object
+                    - id
+                    - environment_id
+                    - slug
+                    - name
+                    - description
+                    - owner
+                    - tags
+                    - enabled
+                    - default_value
+                    - created_at
+                    - updated_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                    previous_attributes:
+                      type: object
+                      properties:
+                        data:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              description: The previous name of the flag.
+                              example: My Feature Flag
+                            description:
+                              type:
+                                - string
+                                - 'null'
+                              description: The previous description of the flag.
+                              example: Enables the new feature.
+                            tags:
+                              type: array
+                              items:
+                                type: string
+                              description: The previous tags of the flag.
+                              example: &ref_42
+                                - beta
+                                - release
+                            owner:
+                              description: >-
+                                The previous owner of the flag, or `null` if it
+                                had none.
+                              oneOf:
+                                - type: object
+                                  properties:
+                                    email:
+                                      type: string
+                                      description: The email address of the flag owner.
+                                      example: jane@example.com
+                                    first_name:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      description: The first name of the flag owner.
+                                      example: Jane
+                                    last_name:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      description: The last name of the flag owner.
+                                      example: Doe
+                                  required:
+                                    - email
+                                    - first_name
+                                    - last_name
+                                - type: 'null'
+                            enabled:
+                              type: boolean
+                              description: Whether the flag was previously enabled.
+                              example: true
+                            default_value:
+                              type: boolean
+                              description: The previous default value of the flag.
+                              example: false
+                          description: The previous data attributes of the flag.
+                      description: Attributes that changed from their previous values.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: flag.created
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      const: feature_flag
+                    id:
+                      type: string
+                      description: Unique identifier of the Feature Flag.
+                      example: flag_01EHZNVPK3SFK441A1RGBFSHRT
+                    environment_id:
+                      type: string
+                      description: The ID of the environment the Feature Flag belongs to.
+                      example: environment_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    slug:
+                      type: string
+                      description: A unique key to reference the Feature Flag.
+                      example: advanced-analytics
+                    name:
+                      type: string
+                      description: A descriptive name for the Feature Flag.
+                      example: Advanced Analytics
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                      description: A description for the Feature Flag.
+                      example: Enable advanced analytics dashboard feature
+                    owner:
+                      description: The owner of the Feature Flag.
+                      oneOf:
+                        - type: object
+                          properties:
+                            email:
+                              type: string
+                              description: The email address of the flag owner.
+                              example: jane@example.com
+                            first_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The first name of the flag owner.
+                              example: Jane
+                            last_name:
+                              type:
+                                - string
+                                - 'null'
+                              description: The last name of the flag owner.
+                              example: Doe
+                          required:
+                            - email
+                            - first_name
+                            - last_name
+                        - type: 'null'
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: >-
+                        Labels assigned to the Feature Flag for categorizing and
+                        filtering.
+                      example: *ref_41
                     enabled:
                       type: boolean
                       description: >-
@@ -34450,6 +35395,136 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: feature_flags.flag_target.created
+                data:
+                  $ref: '#/components/schemas/FlagTarget'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: feature_flags.flag_target.deleted
+                data:
+                  $ref: '#/components/schemas/FlagTarget'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  type: object
+                  properties:
+                    client_id:
+                      type: string
+                      description: The client ID associated with the flag event.
+                      example: client_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    actor:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the actor.
+                          example: user_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        source:
+                          type: string
+                          enum:
+                            - api
+                            - dashboard
+                            - admin_portal
+                            - system
+                          description: The source of the actor that performed the action.
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: The name of the actor.
+                          example: Jane Doe
+                      required:
+                        - id
+                        - source
+                        - name
+                      description: The actor who performed the action.
+                  required:
+                    - client_id
+                    - actor
+                  description: Additional context about the event.
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - context
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: flag.updated
                 data:
                   type: object
@@ -34608,9 +35683,7 @@ components:
                               items:
                                 type: string
                               description: The previous tags of the flag.
-                              example:
-                                - beta
-                                - release
+                              example: *ref_42
                             owner:
                               description: >-
                                 The previous owner of the flag, or `null` if it
@@ -35528,7 +36601,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_42
+                      example: &ref_43
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -35678,7 +36751,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_42
+                      example: *ref_43
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -36505,7 +37578,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_43
+                      example: &ref_44
                         - users:read
                         - users:write
                     created_at:
@@ -36589,7 +37662,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_43
+                      example: *ref_44
                     created_at:
                       format: date-time
                       type: string
@@ -36671,7 +37744,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_43
+                      example: *ref_44
                     created_at:
                       format: date-time
                       type: string
@@ -36808,7 +37881,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_42
+                      example: *ref_43
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -38012,7 +39085,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_44
+                      example: &ref_45
                         - users:read
                         - users:write
                     created_at:
@@ -38078,7 +39151,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_44
+                      example: *ref_45
                     created_at:
                       format: date-time
                       type: string
@@ -38142,7 +39215,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_44
+                      example: *ref_45
                     created_at:
                       format: date-time
                       type: string
@@ -39344,7 +40417,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_45
+      example: *ref_46
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -39379,7 +40452,7 @@ components:
       example:
         object: list
         data:
-          - *ref_45
+          - *ref_46
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -40928,8 +42001,8 @@ components:
         - state
     AuthMethodMismatchError:
       type: object
-      properties: *ref_46
-      required: *ref_47
+      properties: *ref_47
+      required: *ref_48
     DataIntegrationAccessTokenResponse:
       oneOf:
         - type: object
@@ -41012,8 +42085,8 @@ components:
             - error
     AccountSelectionRequiredError:
       type: object
-      properties: *ref_48
-      required: *ref_49
+      properties: *ref_49
+      required: *ref_50
     DataIntegrationVendedCredential:
       discriminator:
         propertyName: auth_method
@@ -41080,7 +42153,7 @@ components:
                 each `client_credentials` mint. A field a later OAuth refresh
                 omits keeps its stored value. Present for `oauth` and
                 `client_credentials` credentials; absent for `api_key`.
-              example: &ref_51
+              example: &ref_52
                 instance_url: https://acme.my.salesforce.com
             config:
               type: object
@@ -41096,7 +42169,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: &ref_50
+              example: &ref_51
                 account: myorg-myaccount
           required:
             - object
@@ -41142,7 +42215,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: *ref_50
+              example: *ref_51
           required:
             - object
             - auth_method
@@ -41206,7 +42279,7 @@ components:
                 each `client_credentials` mint. A field a later OAuth refresh
                 omits keeps its stored value. Present for `oauth` and
                 `client_credentials` credentials; absent for `api_key`.
-              example: *ref_51
+              example: *ref_52
             config:
               type: object
               additionalProperties:
@@ -41221,7 +42294,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: *ref_50
+              example: *ref_51
           required:
             - object
             - auth_method
@@ -41391,7 +42464,7 @@ components:
                 deprecated: true
                 description: Use updated_at instead.
               connected_account:
-                example: &ref_54
+                example: &ref_55
                   object: connected_account
                   id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                   connection_role: compatibility
@@ -41480,7 +42553,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_52
+                        example: &ref_53
                           - repo
                           - user:email
                       auth_method:
@@ -41530,7 +42603,7 @@ components:
                           `installation` scope, excluding secret and undeclared
                           fields. Returned for every authentication method;
                           empty when no stored values can be disclosed.
-                        example: &ref_53
+                        example: &ref_54
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -41715,7 +42788,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_52
+                      example: *ref_53
                     auth_method:
                       type: string
                       enum:
@@ -41762,7 +42835,7 @@ components:
                         `installation` scope, excluding secret and undeclared
                         fields. Returned for every authentication method; empty
                         when no stored values can be disclosed.
-                      example: *ref_53
+                      example: *ref_54
                     state:
                       type: string
                       enum:
@@ -41880,7 +42953,7 @@ components:
                     - organizationId
                     - createdAt
                     - updatedAt
-                  example: *ref_54
+                  example: *ref_55
                 description: >-
                   The user's connected accounts for this provider in the
                   requested ownership context. This contains only the
