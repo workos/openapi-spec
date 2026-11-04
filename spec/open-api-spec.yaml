@@ -1767,17 +1767,11 @@ paths:
         Create an Audit Log Event.
 
 
-        This API supports idempotency which guarantees that performing the same
-        operation multiple times will have the same result as if the operation
-        were performed only once. This is handy in situations where you may need
-        to retry a request due to a failure or prevent accidental duplicate
-        requests from creating more than one resource.
-
-
-        To achieve idempotency, you can add `Idempotency-Key` request header to
-        a Create Event request with a unique string as the value. Each
-        subsequent request matching this unique string will return the same
-        response. We suggest using [v4
+        Send an `Idempotency-Key` header to make retries use the original event
+        identity. Keys are scoped to the organization. Reusing a key with
+        different caller-provided event data returns `409
+        idempotency_key_conflict`. Requests without a key create a new event
+        each time. We suggest using [v4
         UUIDs](https://en.wikipedia.org/wiki/Universally_unique_identifier) for
         idempotency keys to avoid collisions.
       operationId: AuditLogEventsController_create
@@ -1785,9 +1779,9 @@ paths:
         - name: idempotency-key
           in: header
           description: >-
-            A unique string to prevent duplicate requests. Each subsequent
-            request matching this unique string will return the same response.
-            We suggest using v4 UUIDs.
+            A key scoped to the organization. Matching retries use the original
+            event identity; different caller-provided event data returns 409
+            idempotency_key_conflict. We suggest using v4 UUIDs.
           required: false
           schema:
             type: string
@@ -1834,6 +1828,17 @@ paths:
               example:
                 message: 'Organization not found: ''org_01EHQMYV6MBK39QC5PZXHY59C3''.'
           description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCode'
+              example:
+                code: idempotency_key_conflict
+                message: >-
+                  This Idempotency-Key was already used for a different Audit
+                  Log event. Send a new key.
+          description: ''
         '422':
           content:
             application/json:
@@ -23755,6 +23760,7 @@ components:
         - group_membership_update_overlap
         - group_role_assignment_update_overlap
         - id_token_signature_algorithm_not_supported
+        - idempotency_key_conflict
         - idp_metadata_fetch_failed
         - incomplete_saml_options
         - invalid_agent_access_token
