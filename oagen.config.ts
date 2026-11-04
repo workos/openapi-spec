@@ -25,6 +25,11 @@ const nodeOperationOverrides = require('./operationOverrides.node.json') as Reco
   }
 >;
 
+// Keep the model's shipped required-field positions while occurred_at becomes optional.
+const modelRequiredFieldOrder = {
+  AuditLogEvent: ['action', 'occurred_at', 'actor', 'targets', 'context'],
+};
+
 const config: OagenConfig = {
   ...workosEmittersPlugin,
   docUrl: 'https://workos.com/docs',
@@ -34,6 +39,16 @@ const config: OagenConfig = {
   mountRules,
   modelHints,
   emitterOptions: {
+    go: { modelRequiredFieldOrder },
+    rust: { modelRequiredFieldOrder },
+    ios: { modelRequiredFieldOrder },
+    kotlin: { modelRequiredFieldOrder },
+    php: {
+      modelRequiredFieldOrder,
+      modelDateTimeFormats: { AuditLogEvent: { occurred_at: 'rfc3339-extended' } },
+    },
+    python: { modelRequiredFieldOrder },
+    ruby: { modelRequiredFieldOrder },
     node: {
       // Existing workos-node services remain hand-maintained unless their
       // files were already oagen-managed. Missing generated surfaces are
