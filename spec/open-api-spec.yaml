@@ -11873,8 +11873,8 @@ paths:
     put:
       description: >-
         Updates an organization's [connected
-        account](/reference/pipes/connected-account) tokens, scopes, or state
-        for a specific provider.
+        account](/reference/pipes/connected-account) tokens, scopes, state, or
+        provider configuration for a specific provider.
       operationId: >-
         DataIntegrationsOrganizationController_updateOrganizationDataInstallation
       parameters:
@@ -15424,7 +15424,7 @@ paths:
       summary: Create an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_18
+      x-mutually-exclusive-body-groups: &ref_21
         role:
           optional: true
           variants:
@@ -15535,7 +15535,7 @@ paths:
       summary: Update an organization membership
       tags:
         - user-management.organization-membership
-      x-mutually-exclusive-body-groups: &ref_19
+      x-mutually-exclusive-body-groups: &ref_22
         role:
           optional: true
           variants:
@@ -16426,7 +16426,7 @@ paths:
       summary: Create a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_20
+      x-mutually-exclusive-body-groups: &ref_23
         password:
           optional: true
           variants:
@@ -16533,7 +16533,7 @@ paths:
       summary: Update a user
       tags:
         - user-management.users
-      x-mutually-exclusive-body-groups: &ref_24
+      x-mutually-exclusive-body-groups: &ref_27
         password:
           optional: true
           variants:
@@ -17819,7 +17819,8 @@ paths:
     put:
       description: >-
         Updates a user's [connected account](/reference/pipes/connected-account)
-        tokens, scopes, or state for a specific provider.
+        tokens, scopes, state, or provider configuration for a specific
+        provider.
       operationId: DataIntegrationsUserManagementController_updateUserDataInstallation
       parameters:
         - name: user_id
@@ -21800,6 +21801,30 @@ components:
             - 'null'
           description: A developer-attested account identifier; null clears it.
           example: workspace_123
+        config:
+          type: object
+          description: >-
+            Installation-scoped provider configuration for this connection, such
+            as Salesforce salesforce_host. Imports apply supplied values over
+            installation-scoped integration pins and inherit other config from
+            the credential source. Credential-bearing imports must satisfy
+            required configuration even when config is omitted or {}. On update,
+            a supplied object replaces installation-scoped values; omitted
+            config preserves the stored snapshot. Stored integration-scoped
+            values remain bound to the OAuth client and cannot be overridden or
+            replaced with current integration pins. Replacements must satisfy
+            required configuration; {} and empty-string values clear
+            installation-scoped values only when the result is valid. Provider
+            defaults count toward completeness but are resolved at read time,
+            not stored. Only tokenless needs_reauthorization placeholders may
+            remain incomplete; attaching their first tokens validates
+            configuration even when config is omitted. Unrelated updates do not
+            revalidate unchanged configuration. Clearing salesforce_host falls
+            back to login.salesforce.com, which may not work for sandbox or My
+            Domain-only connections.
+          additionalProperties: &ref_16
+            type: string
+          example: &ref_17 {}
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -21817,7 +21842,7 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: &ref_16
+          example: &ref_18
             - repo
             - user:email
           type: array
@@ -21825,7 +21850,7 @@ components:
             type: string
         state:
           type: string
-          enum: &ref_17
+          enum: &ref_19
             - connected
             - needs_reauthorization
           description: >-
@@ -21839,6 +21864,16 @@ components:
             member on whose behalf the connected account is being imported or
             updated. The user must be an active member of the organization.
           example: user_01EHZNVPK3SFK441A1RGBFSHRT
+        metadata:
+          type: object
+          description: >-
+            Provider token-response metadata to preserve during import, such as
+            Salesforce instance_url. Only allowlisted, non-sensitive scalar
+            fields from this provider are accepted, including nested fields.
+            Provider refresh responses can update these values. Not accepted on
+            update.
+          additionalProperties: true
+          example: &ref_20 {}
         connection_intent:
           type: string
           description: >-
@@ -21866,6 +21901,29 @@ components:
             - 'null'
           description: A developer-attested account identifier; null clears it.
           example: workspace_123
+        config:
+          type: object
+          description: >-
+            Installation-scoped provider configuration for this connection, such
+            as Salesforce salesforce_host. Imports apply supplied values over
+            installation-scoped integration pins and inherit other config from
+            the credential source. Credential-bearing imports must satisfy
+            required configuration even when config is omitted or {}. On update,
+            a supplied object replaces installation-scoped values; omitted
+            config preserves the stored snapshot. Stored integration-scoped
+            values remain bound to the OAuth client and cannot be overridden or
+            replaced with current integration pins. Replacements must satisfy
+            required configuration; {} and empty-string values clear
+            installation-scoped values only when the result is valid. Provider
+            defaults count toward completeness but are resolved at read time,
+            not stored. Only tokenless needs_reauthorization placeholders may
+            remain incomplete; attaching their first tokens validates
+            configuration even when config is omitted. Unrelated updates do not
+            revalidate unchanged configuration. Clearing salesforce_host falls
+            back to login.salesforce.com, which may not work for sandbox or My
+            Domain-only connections.
+          additionalProperties: *ref_16
+          example: *ref_17
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -21883,13 +21941,13 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: *ref_16
+          example: *ref_18
           type: array
           items:
             type: string
         state:
           type: string
-          enum: *ref_17
+          enum: *ref_19
           description: >-
             Explicitly set the state of the connected account. When omitted, the
             state is derived from the token combination provided.
@@ -21921,6 +21979,29 @@ components:
             - 'null'
           description: A developer-attested account identifier; null clears it.
           example: workspace_123
+        config:
+          type: object
+          description: >-
+            Installation-scoped provider configuration for this connection, such
+            as Salesforce salesforce_host. Imports apply supplied values over
+            installation-scoped integration pins and inherit other config from
+            the credential source. Credential-bearing imports must satisfy
+            required configuration even when config is omitted or {}. On update,
+            a supplied object replaces installation-scoped values; omitted
+            config preserves the stored snapshot. Stored integration-scoped
+            values remain bound to the OAuth client and cannot be overridden or
+            replaced with current integration pins. Replacements must satisfy
+            required configuration; {} and empty-string values clear
+            installation-scoped values only when the result is valid. Provider
+            defaults count toward completeness but are resolved at read time,
+            not stored. Only tokenless needs_reauthorization placeholders may
+            remain incomplete; attaching their first tokens validates
+            configuration even when config is omitted. Unrelated updates do not
+            revalidate unchanged configuration. Clearing salesforce_host falls
+            back to login.salesforce.com, which may not work for sandbox or My
+            Domain-only connections.
+          additionalProperties: *ref_16
+          example: *ref_17
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -21938,17 +22019,27 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: *ref_16
+          example: *ref_18
           type: array
           items:
             type: string
         state:
           type: string
-          enum: *ref_17
+          enum: *ref_19
           description: >-
             Explicitly set the state of the connected account. When omitted, the
             state is derived from the token combination provided.
           example: connected
+        metadata:
+          type: object
+          description: >-
+            Provider token-response metadata to preserve during import, such as
+            Salesforce instance_url. Only allowlisted, non-sensitive scalar
+            fields from this provider are accepted, including nested fields.
+            Provider refresh responses can update these values. Not accepted on
+            update.
+          additionalProperties: true
+          example: *ref_20
         connection_intent:
           type: string
           description: >-
@@ -21974,6 +22065,29 @@ components:
             - 'null'
           description: A developer-attested account identifier; null clears it.
           example: workspace_123
+        config:
+          type: object
+          description: >-
+            Installation-scoped provider configuration for this connection, such
+            as Salesforce salesforce_host. Imports apply supplied values over
+            installation-scoped integration pins and inherit other config from
+            the credential source. Credential-bearing imports must satisfy
+            required configuration even when config is omitted or {}. On update,
+            a supplied object replaces installation-scoped values; omitted
+            config preserves the stored snapshot. Stored integration-scoped
+            values remain bound to the OAuth client and cannot be overridden or
+            replaced with current integration pins. Replacements must satisfy
+            required configuration; {} and empty-string values clear
+            installation-scoped values only when the result is valid. Provider
+            defaults count toward completeness but are resolved at read time,
+            not stored. Only tokenless needs_reauthorization placeholders may
+            remain incomplete; attaching their first tokens validates
+            configuration even when config is omitted. Unrelated updates do not
+            revalidate unchanged configuration. Clearing salesforce_host falls
+            back to login.salesforce.com, which may not work for sandbox or My
+            Domain-only connections.
+          additionalProperties: *ref_16
+          example: *ref_17
         access_token:
           type: string
           description: The OAuth access token for the connected account.
@@ -21991,13 +22105,13 @@ components:
           format: date-time
         scopes:
           description: The OAuth scopes granted for this connection.
-          example: *ref_16
+          example: *ref_18
           type: array
           items:
             type: string
         state:
           type: string
-          enum: *ref_17
+          enum: *ref_19
           description: >-
             Explicitly set the state of the connected account. When omitted, the
             state is derived from the token combination provided.
@@ -22638,9 +22752,9 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - role_slug
-      x-mutually-exclusive-body-groups: *ref_18
+      x-mutually-exclusive-body-groups: *ref_21
     UpdateUserlandUserOrganizationMembershipDto:
-      x-mutually-exclusive-body-groups: *ref_19
+      x-mutually-exclusive-body-groups: *ref_22
       oneOf:
         - type: object
           not:
@@ -22766,7 +22880,7 @@ components:
                 - 'null'
               additionalProperties: *ref_13
               maxProperties: 50
-              example: &ref_21
+              example: &ref_24
                 timezone: America/New_York
               description: >-
                 Object containing metadata key/value pairs associated with the
@@ -22867,7 +22981,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: &ref_22
+                  enum: &ref_25
                     - bcrypt
                     - firebase-scrypt
                     - ssha
@@ -22882,7 +22996,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: &ref_23
+                  enum: &ref_26
                     - prefix
                     - suffix
                   description: >-
@@ -22903,7 +23017,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_20
+      x-mutually-exclusive-body-groups: *ref_23
     UpdateUserlandUserDto:
       allOf:
         - type: object
@@ -22935,7 +23049,7 @@ components:
                 - 'null'
               additionalProperties: *ref_13
               maxProperties: 50
-              example: *ref_21
+              example: *ref_24
               description: >-
                 Object containing metadata key/value pairs associated with the
                 user.
@@ -23017,7 +23131,7 @@ components:
                   example: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
                 password_hash_type:
                   type: string
-                  enum: *ref_22
+                  enum: *ref_25
                   description: >-
                     The algorithm originally used to hash the password, used
                     when providing a `password_hash`. Required with
@@ -23025,7 +23139,7 @@ components:
                   example: bcrypt
                 password_salt_position:
                   type: string
-                  enum: *ref_23
+                  enum: *ref_26
                   description: >-
                     The position of the salt relative to the password when the
                     `password_hash` digest was computed: `prefix` for `hash(salt
@@ -23044,7 +23158,7 @@ components:
                         x-exclude-from-lint: true
                     required:
                       - password
-      x-mutually-exclusive-body-groups: *ref_24
+      x-mutually-exclusive-body-groups: *ref_27
     SendVerificationEmailDto:
       type: object
       properties:
@@ -23450,7 +23564,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: &ref_25
+            enum: &ref_28
               - agent.blueprint.created
               - agent.blueprint.deleted
               - agent.blueprint.updated
@@ -23589,7 +23703,7 @@ components:
           description: The events that the Webhook Endpoint is subscribed to.
           items:
             type: string
-            enum: *ref_25
+            enum: *ref_28
           example:
             - user.created
             - dsync.user.created
@@ -23882,11 +23996,11 @@ components:
           type: string
           description: The error code identifying the type of error.
           example: action_denied
-        message: &ref_26
+        message: &ref_29
           type: string
           description: A human-readable description of the error.
           example: Request could not be processed.
-      required: &ref_27
+      required: &ref_30
         - code
         - message
     ErrorBodyWithError:
@@ -23910,7 +24024,7 @@ components:
           type: string
           description: A human-readable description of the error.
           example: Request could not be processed.
-      required: &ref_33
+      required: &ref_36
         - message
     OrganizationSelectionRequiredErrorBodyWithOrganizations:
       type: object
@@ -24185,7 +24299,7 @@ components:
         - message
     AuthMethodMismatchErrorBody:
       type: object
-      properties: &ref_47
+      properties: &ref_50
         code:
           type: string
           const: auth_method_mismatch
@@ -24199,13 +24313,13 @@ components:
           example: >-
             This installation uses oauth authentication. Use the POST
             /:slug/token endpoint instead.
-      required: &ref_48
+      required: &ref_51
         - code
         - message
       x-component-name: AuthMethodMismatchError
     AccountSelectionRequiredErrorBody:
       type: object
-      properties: &ref_49
+      properties: &ref_52
         code:
           type: string
           const: account_selection_required
@@ -24219,7 +24333,7 @@ components:
           example: >-
             Several connected accounts match this user for this provider. Name
             one with a connected account id.
-      required: &ref_50
+      required: &ref_53
         - code
         - message
       x-component-name: AccountSelectionRequiredError
@@ -24262,16 +24376,16 @@ components:
       properties:
         code:
           $ref: '#/components/schemas/ErrorBodyCode'
-        message: &ref_28
+        message: &ref_31
           type: string
           description: A human-readable description of the error.
           example: Validation failed.
-        errors: &ref_29
+        errors: &ref_32
           type: array
           items:
             $ref: '#/components/schemas/ErrorBodyWithCode'
           description: The list of validation errors.
-      required: &ref_30
+      required: &ref_33
         - code
         - message
         - errors
@@ -24319,11 +24433,11 @@ components:
           type: string
           description: The OAuth error code.
           example: access_denied
-        error_description: &ref_31
+        error_description: &ref_34
           type: string
           description: A human-readable description of the error.
           example: 'The request failed due to: invitation_invalid.'
-      required: &ref_32
+      required: &ref_35
         - error
         - error_description
     SubResourceScopedRoleNotAllowedErrorBodyWithRoleSlug:
@@ -24384,8 +24498,8 @@ components:
           description: The error code identifying the type of error.
           example: external_auth_session_already_completed
           const: external_auth_session_already_completed
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     UserConsentOptionsNotSupportedErrorBody:
       type: object
       properties:
@@ -24394,8 +24508,8 @@ components:
           description: The error code identifying the type of error.
           example: user_consent_options_not_supported
           const: user_consent_options_not_supported
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     EmailChangeNotAllowedErrorBody:
       type: object
       properties:
@@ -24404,8 +24518,8 @@ components:
           description: The error code identifying the type of error.
           example: email_change_not_allowed
           const: email_change_not_allowed
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     EmailNotAvailableErrorBody:
       type: object
       properties:
@@ -24414,8 +24528,8 @@ components:
           description: The error code identifying the type of error.
           example: email_not_available
           const: email_not_available
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidEmailErrorBody:
       type: object
       properties:
@@ -24424,8 +24538,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_email
           const: invalid_email
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     EmailAlreadyInUseErrorBody:
       type: object
       properties:
@@ -24434,8 +24548,8 @@ components:
           description: The error code identifying the type of error.
           example: email_already_in_use
           const: email_already_in_use
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     AlreadyClaimedErrorBody:
       type: object
       properties:
@@ -24444,8 +24558,8 @@ components:
           description: The error code identifying the type of error.
           example: already_claimed
           const: already_claimed
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     SmsChallengeRateLimitedErrorBody:
       type: object
       properties:
@@ -24454,8 +24568,8 @@ components:
           description: The error code identifying the type of error.
           example: sms_challenge_rate_limited
           const: sms_challenge_rate_limited
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     SmsChallengeQuotaReachedErrorBody:
       type: object
       properties:
@@ -24464,8 +24578,8 @@ components:
           description: The error code identifying the type of error.
           example: sms_challenge_quota_reached
           const: sms_challenge_quota_reached
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     IdpMetadataFetchFailedErrorBody:
       type: object
       properties:
@@ -24474,8 +24588,8 @@ components:
           description: The error code identifying the type of error.
           example: idp_metadata_fetch_failed
           const: idp_metadata_fetch_failed
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     ConnectionCouldNotBeVerifiedErrorBody:
       type: object
       properties:
@@ -24484,8 +24598,8 @@ components:
           description: The error code identifying the type of error.
           example: connection_could_not_be_verified
           const: connection_could_not_be_verified
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidIdpSsoUrlErrorBody:
       type: object
       properties:
@@ -24494,8 +24608,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_idp_sso_url
           const: invalid_idp_sso_url
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     ConnectionTypeNotUpdatableErrorBody:
       type: object
       properties:
@@ -24504,8 +24618,8 @@ components:
           description: The error code identifying the type of error.
           example: connection_type_not_updatable
           const: connection_type_not_updatable
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     ConnectedAccountLimitReachedErrorBody:
       type: object
       properties:
@@ -24514,8 +24628,8 @@ components:
           description: The error code identifying the type of error.
           example: connected_account_limit_reached
           const: connected_account_limit_reached
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     EntityNotFoundErrorBody:
       type: object
       properties:
@@ -24524,8 +24638,8 @@ components:
           description: The error code identifying the type of error.
           example: entity_not_found
           const: entity_not_found
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidRequestParametersErrorBodyWithErrors:
       type: object
       properties:
@@ -24534,9 +24648,9 @@ components:
           description: The error code identifying the type of error.
           example: invalid_request_parameters
           const: invalid_request_parameters
-        message: *ref_28
-        errors: *ref_29
-      required: *ref_30
+        message: *ref_31
+        errors: *ref_32
+      required: *ref_33
     InvalidRefreshTokenErrorBody:
       type: object
       properties:
@@ -24545,8 +24659,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_refresh_token
           const: invalid_refresh_token
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvitationInvalidOAuthErrorBody:
       type: object
       properties:
@@ -24555,8 +24669,8 @@ components:
           description: The OAuth error code.
           example: invitation_invalid
           const: invitation_invalid
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     AuthenticationMethodNotAllowedOAuthErrorBody:
       type: object
       properties:
@@ -24565,8 +24679,8 @@ components:
           description: The OAuth error code.
           example: authentication_method_not_allowed
           const: authentication_method_not_allowed
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     SignUpNotAllowedOAuthErrorBody:
       type: object
       properties:
@@ -24575,8 +24689,8 @@ components:
           description: The OAuth error code.
           example: sign_up_not_allowed
           const: sign_up_not_allowed
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     EmailDomainNotDeliverableErrorBody:
       type: object
       properties:
@@ -24585,8 +24699,8 @@ components:
           description: The error code identifying the type of error.
           example: email_domain_not_deliverable
           const: email_domain_not_deliverable
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidRequestParametersErrorBody:
       type: object
       properties:
@@ -24595,8 +24709,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_request_parameters
           const: invalid_request_parameters
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidRoleErrorBody:
       type: object
       properties:
@@ -24605,8 +24719,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_role
           const: invalid_role
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     MultipleRolesNotEnabledErrorBody:
       type: object
       properties:
@@ -24615,8 +24729,8 @@ components:
           description: The error code identifying the type of error.
           example: multiple_roles_not_enabled
           const: multiple_roles_not_enabled
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     PasswordStrengthErrorErrorBodyWithErrors:
       type: object
       properties:
@@ -24625,9 +24739,9 @@ components:
           description: The error code identifying the type of error.
           example: password_strength_error
           const: password_strength_error
-        message: *ref_28
-        errors: *ref_29
-      required: *ref_30
+        message: *ref_31
+        errors: *ref_32
+      required: *ref_33
     UserCreationErrorErrorBodyWithErrors:
       type: object
       properties:
@@ -24636,9 +24750,9 @@ components:
           description: The error code identifying the type of error.
           example: user_creation_error
           const: user_creation_error
-        message: *ref_28
-        errors: *ref_29
-      required: *ref_30
+        message: *ref_31
+        errors: *ref_32
+      required: *ref_33
     InvalidPasswordHashErrorBody:
       type: object
       properties:
@@ -24647,8 +24761,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_password_hash
           const: invalid_password_hash
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     PasswordAndPasswordHashProvidedErrorBody:
       type: object
       properties:
@@ -24657,8 +24771,8 @@ components:
           description: The error code identifying the type of error.
           example: password_and_password_hash_provided
           const: password_and_password_hash_provided
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     PasswordAndPasswordHashTypeProvidedErrorBody:
       type: object
       properties:
@@ -24667,8 +24781,8 @@ components:
           description: The error code identifying the type of error.
           example: password_and_password_hash_type_provided
           const: password_and_password_hash_type_provided
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     PasswordSaltPositionRequiresPasswordHashErrorBody:
       type: object
       properties:
@@ -24677,8 +24791,8 @@ components:
           description: The error code identifying the type of error.
           example: password_salt_position_requires_password_hash
           const: password_salt_position_requires_password_hash
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidMetadataErrorBody:
       type: object
       properties:
@@ -24687,8 +24801,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_metadata
           const: invalid_metadata
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     EmailAlreadyVerifiedErrorBody:
       type: object
       properties:
@@ -24697,8 +24811,8 @@ components:
           description: The error code identifying the type of error.
           example: email_already_verified
           const: email_already_verified
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     ExternalIdAlreadyUsedErrorBody:
       type: object
       properties:
@@ -24707,8 +24821,8 @@ components:
           description: The error code identifying the type of error.
           example: external_id_already_used
           const: external_id_already_used
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidLocaleErrorBody:
       type: object
       properties:
@@ -24717,8 +24831,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_locale
           const: invalid_locale
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidOrganizationIdErrorBody:
       type: object
       properties:
@@ -24727,8 +24841,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_organization_id
           const: invalid_organization_id
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     CodeChallengeNotFoundErrorBody:
       type: object
       properties:
@@ -24737,8 +24851,8 @@ components:
           description: The error code identifying the type of error.
           example: code_challenge_not_found
           const: code_challenge_not_found
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidCredentialsErrorBody:
       type: object
       properties:
@@ -24747,8 +24861,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_credentials
           const: invalid_credentials
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidOneTimeCodeErrorBody:
       type: object
       properties:
@@ -24757,8 +24871,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_one_time_code
           const: invalid_one_time_code
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     OneTimeCodePreviouslyUsedErrorBody:
       type: object
       properties:
@@ -24767,8 +24881,8 @@ components:
           description: The error code identifying the type of error.
           example: one_time_code_previously_used
           const: one_time_code_previously_used
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     OneTimeCodeExpiredErrorBody:
       type: object
       properties:
@@ -24777,8 +24891,8 @@ components:
           description: The error code identifying the type of error.
           example: one_time_code_expired
           const: one_time_code_expired
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     OneTimeCodeTooManyAttemptsErrorBody:
       type: object
       properties:
@@ -24787,8 +24901,8 @@ components:
           description: The error code identifying the type of error.
           example: one_time_code_too_many_attempts
           const: one_time_code_too_many_attempts
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidPendingAuthenticationTokenErrorBody:
       type: object
       properties:
@@ -24797,8 +24911,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_pending_authentication_token
           const: invalid_pending_authentication_token
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     UserMismatchErrorBody:
       type: object
       properties:
@@ -24807,8 +24921,8 @@ components:
           description: The error code identifying the type of error.
           example: user_mismatch
           const: user_mismatch
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     PhoneNumberRequiredErrorBody:
       type: object
       properties:
@@ -24817,8 +24931,8 @@ components:
           description: The error code identifying the type of error.
           example: phone_number_required
           const: phone_number_required
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     VerificationIdRequiredErrorBody:
       type: object
       properties:
@@ -24827,8 +24941,8 @@ components:
           description: The error code identifying the type of error.
           example: verification_id_required
           const: verification_id_required
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     InvalidClientOAuthErrorBody:
       type: object
       properties:
@@ -24837,8 +24951,8 @@ components:
           description: The OAuth error code.
           example: invalid_client
           const: invalid_client
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     UnauthorizedClientOAuthErrorBody:
       type: object
       properties:
@@ -24847,8 +24961,8 @@ components:
           description: The OAuth error code.
           example: unauthorized_client
           const: unauthorized_client
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     InvalidProfileOAuthErrorBody:
       type: object
       properties:
@@ -24857,8 +24971,8 @@ components:
           description: The OAuth error code.
           example: invalid_profile
           const: invalid_profile
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     InvitationCannotBeUsedForEmailOAuthErrorBody:
       type: object
       properties:
@@ -24867,8 +24981,8 @@ components:
           description: The OAuth error code.
           example: invitation_cannot_be_used_for_email
           const: invitation_cannot_be_used_for_email
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     InvalidConnectionOAuthErrorBody:
       type: object
       properties:
@@ -24877,8 +24991,8 @@ components:
           description: The OAuth error code.
           example: invalid_connection
           const: invalid_connection
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     OrganizationAuthenticationMethodsRequiredOAuthErrorBody:
       type: object
       properties:
@@ -24887,8 +25001,8 @@ components:
           description: The OAuth error code.
           example: organization_authentication_methods_required
           const: organization_authentication_methods_required
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     InvalidLinkAuthorizationCodeOAuthErrorBody:
       type: object
       properties:
@@ -24897,8 +25011,8 @@ components:
           description: The OAuth error code.
           example: invalid_link_authorization_code
           const: invalid_link_authorization_code
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     ExtraAttributesRequiredOAuthErrorBody:
       type: object
       properties:
@@ -24907,8 +25021,8 @@ components:
           description: The OAuth error code.
           example: extra_attributes_required
           const: extra_attributes_required
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     PkceNotSupportedOAuthErrorBody:
       type: object
       properties:
@@ -24917,8 +25031,8 @@ components:
           description: The OAuth error code.
           example: pkce_not_supported
           const: pkce_not_supported
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     ExpiredTokenOAuthErrorBody:
       type: object
       properties:
@@ -24927,8 +25041,8 @@ components:
           description: The OAuth error code.
           example: expired_token
           const: expired_token
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     AuthorizationPendingOAuthErrorBody:
       type: object
       properties:
@@ -24937,8 +25051,8 @@ components:
           description: The OAuth error code.
           example: authorization_pending
           const: authorization_pending
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     AccessDeniedOAuthErrorBody:
       type: object
       properties:
@@ -24947,8 +25061,8 @@ components:
           description: The OAuth error code.
           example: access_denied
           const: access_denied
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     SlowDownOAuthErrorBody:
       type: object
       properties:
@@ -24957,15 +25071,15 @@ components:
           description: The OAuth error code.
           example: slow_down
           const: slow_down
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     MustUseSsoForSelectedOrganizationMessageErrorBody:
       type: object
       properties:
         message:
           type: string
           const: Must use SSO for selected organization
-      required: *ref_33
+      required: *ref_36
     InvalidGrantOAuthErrorBody:
       type: object
       properties:
@@ -24974,8 +25088,8 @@ components:
           description: The OAuth error code.
           example: invalid_grant
           const: invalid_grant
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     InvalidRequestOAuthErrorBody:
       type: object
       properties:
@@ -24984,8 +25098,8 @@ components:
           description: The OAuth error code.
           example: invalid_request
           const: invalid_request
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     OrganizationNotFoundOAuthErrorBody:
       type: object
       properties:
@@ -24994,8 +25108,8 @@ components:
           description: The OAuth error code.
           example: organization_not_found
           const: organization_not_found
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     OrganizationMembershipNotFoundOAuthErrorBody:
       type: object
       properties:
@@ -25004,8 +25118,8 @@ components:
           description: The OAuth error code.
           example: organization_membership_not_found
           const: organization_membership_not_found
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     MfaEnrollmentOAuthErrorBody:
       type: object
       properties:
@@ -25014,8 +25128,8 @@ components:
           description: The OAuth error code.
           example: mfa_enrollment
           const: mfa_enrollment
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     TokenTooBigOAuthErrorBody:
       type: object
       properties:
@@ -25024,8 +25138,8 @@ components:
           description: The OAuth error code.
           example: token_too_big
           const: token_too_big
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     MfaEnrollmentErrorBody:
       type: object
       properties:
@@ -25034,8 +25148,8 @@ components:
           description: The error code identifying the type of error.
           example: mfa_enrollment
           const: mfa_enrollment
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     MfaChallengeErrorBody:
       type: object
       properties:
@@ -25044,8 +25158,8 @@ components:
           description: The error code identifying the type of error.
           example: mfa_challenge
           const: mfa_challenge
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     AuthenticationMethodNotAllowedErrorBody:
       type: object
       properties:
@@ -25054,8 +25168,8 @@ components:
           description: The error code identifying the type of error.
           example: authentication_method_not_allowed
           const: authentication_method_not_allowed
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     EmailVerificationRequiredErrorBody:
       type: object
       properties:
@@ -25064,8 +25178,8 @@ components:
           description: The error code identifying the type of error.
           example: email_verification_required
           const: email_verification_required
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     EmailPasswordAuthDisabledErrorBody:
       type: object
       properties:
@@ -25074,8 +25188,8 @@ components:
           description: The error code identifying the type of error.
           example: email_password_auth_disabled
           const: email_password_auth_disabled
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     OrganizationSelectionRequiredErrorBody:
       type: object
       properties:
@@ -25084,8 +25198,8 @@ components:
           description: The error code identifying the type of error.
           example: organization_selection_required
           const: organization_selection_required
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     PasskeyProgressiveEnrollmentErrorBody:
       type: object
       properties:
@@ -25094,8 +25208,8 @@ components:
           description: The error code identifying the type of error.
           example: passkey_progressive_enrollment
           const: passkey_progressive_enrollment
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     RadarChallengeErrorBody:
       type: object
       properties:
@@ -25104,8 +25218,8 @@ components:
           description: The error code identifying the type of error.
           example: radar_challenge
           const: radar_challenge
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     RadarSignUpChallengeErrorBody:
       type: object
       properties:
@@ -25114,8 +25228,8 @@ components:
           description: The error code identifying the type of error.
           example: radar_sign_up_challenge
           const: radar_sign_up_challenge
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     RadarSmsSignInChallengeErrorBody:
       type: object
       properties:
@@ -25124,8 +25238,8 @@ components:
           description: The error code identifying the type of error.
           example: radar_sms_sign_in_challenge
           const: radar_sms_sign_in_challenge
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     ApplicationConsentRequiredErrorBody:
       type: object
       properties:
@@ -25134,8 +25248,8 @@ components:
           description: The error code identifying the type of error.
           example: application_consent_required
           const: application_consent_required
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     PolicyDeniedErrorBody:
       type: object
       properties:
@@ -25144,8 +25258,8 @@ components:
           description: The error code identifying the type of error.
           example: policy_denied
           const: policy_denied
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     ActionDeniedErrorBody:
       type: object
       properties:
@@ -25154,8 +25268,8 @@ components:
           description: The error code identifying the type of error.
           example: action_denied
           const: action_denied
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     DailyQuotaExceededErrorBody:
       type: object
       properties:
@@ -25164,8 +25278,8 @@ components:
           description: The error code identifying the type of error.
           example: daily_quota_exceeded
           const: daily_quota_exceeded
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     TooManyRequestsOAuthErrorBody:
       type: object
       properties:
@@ -25174,8 +25288,8 @@ components:
           description: The OAuth error code.
           example: too_many_requests
           const: too_many_requests
-        error_description: *ref_31
-      required: *ref_32
+        error_description: *ref_34
+      required: *ref_35
     InvalidUrlErrorBody:
       type: object
       properties:
@@ -25184,8 +25298,8 @@ components:
           description: The error code identifying the type of error.
           example: invalid_url
           const: invalid_url
-        message: *ref_26
-      required: *ref_27
+        message: *ref_29
+      required: *ref_30
     Actor:
       description: The user or API key that performed an action.
       properties:
@@ -28835,7 +28949,7 @@ components:
           description: >-
             An object containing the custom attribute mapping for the Directory
             Provider.
-          example: &ref_40
+          example: &ref_43
             department: Engineering
             job_title: Software Engineer
         role:
@@ -29288,7 +29402,7 @@ components:
               type: object
               additionalProperties: {}
               description: The event payload.
-              example: &ref_34
+              example: &ref_37
                 id: directory_user_01E1JG7J09H96KYP8HM9B0G5SJ
                 directory_id: directory_01ECAZ4NV9QMV47GW873HDCX74
                 organization_id: org_01EZTR6WYX1A0DSE2CYMGXQ24Y
@@ -29323,11 +29437,11 @@ components:
             - data
             - created_at
           description: An event emitted by WorkOS.
-          example: &ref_46
+          example: &ref_49
             object: event
             id: event_01EHZNVPK3SFK441A1RGBFSHRT
             event: dsync.user.created
-            data: *ref_34
+            data: *ref_37
             created_at: '2021-06-25T19:07:33.155Z'
             context: {}
         - oneOf:
@@ -29527,7 +29641,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: &ref_35
+                      example: &ref_38
                         - crm:read
                         - email:send
                     invocable_by:
@@ -29540,7 +29654,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: &ref_36
+                          example: &ref_39
                             - manager
                         organization_ids:
                           type: array
@@ -29549,7 +29663,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: &ref_37
+                          example: &ref_40
                             - org_01EHWNCE74X7JSDV0X3SZ3KJNY
                       required:
                         - role_slugs
@@ -29569,7 +29683,7 @@ components:
                             Instance types that may be minted from this
                             blueprint: `delegated` (acting for a user) and/or
                             `autonomous` (acting as the agent itself).
-                          example: &ref_38
+                          example: &ref_41
                             - delegated
                             - autonomous
                       required:
@@ -29729,7 +29843,7 @@ components:
                       description: >-
                         Permission slugs forming the ceiling on what sessions
                         minted from this blueprint may do.
-                      example: *ref_35
+                      example: *ref_38
                     invocable_by:
                       type: object
                       properties:
@@ -29740,7 +29854,7 @@ components:
                           description: >-
                             Role slugs whose members may mint user-delegated
                             sessions from this blueprint.
-                          example: *ref_36
+                          example: *ref_39
                         organization_ids:
                           type: array
                           items:
@@ -29748,7 +29862,7 @@ components:
                           description: >-
                             Organizations in which autonomous sessions may be
                             minted from this blueprint.
-                          example: *ref_37
+                          example: *ref_40
                       required:
                         - role_slugs
                         - organization_ids
@@ -29767,7 +29881,7 @@ components:
                             Instance types that may be minted from this
                             blueprint: `delegated` (acting for a user) and/or
                             `autonomous` (acting as the agent itself).
-                          example: *ref_38
+                          example: *ref_41
                       required:
                         - instance_types
                       description: How sessions may be minted from this blueprint.
@@ -30803,7 +30917,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: &ref_39
+                      example: &ref_42
                         - users:read
                         - users:write
                     created_at:
@@ -30929,7 +31043,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_39
+                      example: *ref_42
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -31053,7 +31167,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted to the API key.
-                      example: *ref_39
+                      example: *ref_42
                     created_at:
                       type: string
                       description: The timestamp when the API key was created.
@@ -33920,7 +34034,7 @@ components:
                       description: >-
                         An object containing the custom attribute mapping for
                         the Directory Provider.
-                      example: *ref_40
+                      example: *ref_43
                     role:
                       $ref: '#/components/schemas/SlimRole'
                     roles:
@@ -34110,7 +34224,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: &ref_41
+                      example: &ref_44
                         - reports
                     enabled:
                       type: boolean
@@ -34271,7 +34385,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_41
+                      example: *ref_44
                     enabled:
                       type: boolean
                       description: >-
@@ -34635,7 +34749,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_41
+                      example: *ref_44
                     enabled:
                       type: boolean
                       description: >-
@@ -34731,7 +34845,7 @@ components:
                               items:
                                 type: string
                               description: The previous tags of the flag.
-                              example: &ref_42
+                              example: &ref_45
                                 - beta
                                 - release
                             owner:
@@ -34857,7 +34971,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_41
+                      example: *ref_44
                     enabled:
                       type: boolean
                       description: >-
@@ -35017,7 +35131,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_41
+                      example: *ref_44
                     enabled:
                       type: boolean
                       description: >-
@@ -35177,7 +35291,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_41
+                      example: *ref_44
                     enabled:
                       type: boolean
                       description: >-
@@ -35587,7 +35701,7 @@ components:
                       description: >-
                         Labels assigned to the Feature Flag for categorizing and
                         filtering.
-                      example: *ref_41
+                      example: *ref_44
                     enabled:
                       type: boolean
                       description: >-
@@ -35683,7 +35797,7 @@ components:
                               items:
                                 type: string
                               description: The previous tags of the flag.
-                              example: *ref_42
+                              example: *ref_45
                             owner:
                               description: >-
                                 The previous owner of the flag, or `null` if it
@@ -36601,7 +36715,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: &ref_43
+                      example: &ref_46
                         tier: diamond
                       propertyNames:
                         maxLength: 40
@@ -36751,7 +36865,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_43
+                      example: *ref_46
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -37578,7 +37692,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_44
+                      example: &ref_47
                         - users:read
                         - users:write
                     created_at:
@@ -37662,7 +37776,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_44
+                      example: *ref_47
                     created_at:
                       format: date-time
                       type: string
@@ -37744,7 +37858,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_44
+                      example: *ref_47
                     created_at:
                       format: date-time
                       type: string
@@ -37881,7 +37995,7 @@ components:
                       description: >-
                         Object containing [metadata](/authkit/metadata)
                         key/value pairs associated with the Organization.
-                      example: *ref_43
+                      example: *ref_46
                       propertyNames:
                         maxLength: 40
                       maxProperties: 50
@@ -39085,7 +39199,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: &ref_45
+                      example: &ref_48
                         - users:read
                         - users:write
                     created_at:
@@ -39151,7 +39265,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_45
+                      example: *ref_48
                     created_at:
                       format: date-time
                       type: string
@@ -39215,7 +39329,7 @@ components:
                       items:
                         type: string
                       description: The permissions granted by the role.
-                      example: *ref_45
+                      example: *ref_48
                     created_at:
                       format: date-time
                       type: string
@@ -40417,7 +40531,7 @@ components:
                 - data
                 - created_at
                 - object
-      example: *ref_46
+      example: *ref_49
       description: An event emitted by WorkOS.
     EventList:
       type: object
@@ -40452,7 +40566,7 @@ components:
       example:
         object: list
         data:
-          - *ref_46
+          - *ref_49
         list_metadata:
           after: event_01EHZNVPK3SFK441A1RGBFSHRT
     JwtTemplate:
@@ -42001,8 +42115,8 @@ components:
         - state
     AuthMethodMismatchError:
       type: object
-      properties: *ref_47
-      required: *ref_48
+      properties: *ref_50
+      required: *ref_51
     DataIntegrationAccessTokenResponse:
       oneOf:
         - type: object
@@ -42085,8 +42199,8 @@ components:
             - error
     AccountSelectionRequiredError:
       type: object
-      properties: *ref_49
-      required: *ref_50
+      properties: *ref_52
+      required: *ref_53
     DataIntegrationVendedCredential:
       discriminator:
         propertyName: auth_method
@@ -42153,7 +42267,7 @@ components:
                 each `client_credentials` mint. A field a later OAuth refresh
                 omits keeps its stored value. Present for `oauth` and
                 `client_credentials` credentials; absent for `api_key`.
-              example: &ref_52
+              example: &ref_55
                 instance_url: https://acme.my.salesforce.com
             config:
               type: object
@@ -42169,7 +42283,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: &ref_51
+              example: &ref_54
                 account: myorg-myaccount
           required:
             - object
@@ -42215,7 +42329,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: *ref_51
+              example: *ref_54
           required:
             - object
             - auth_method
@@ -42279,7 +42393,7 @@ components:
                 each `client_credentials` mint. A field a later OAuth refresh
                 omits keeps its stored value. Present for `oauth` and
                 `client_credentials` credentials; absent for `api_key`.
-              example: *ref_52
+              example: *ref_55
             config:
               type: object
               additionalProperties:
@@ -42294,7 +42408,7 @@ components:
                 integration or organization pins require reconnecting or
                 explicitly rebinding the connection. Defaults are live and can
                 differ from a cached token's audience until refresh or re-mint.
-              example: *ref_51
+              example: *ref_54
           required:
             - object
             - auth_method
@@ -42464,7 +42578,7 @@ components:
                 deprecated: true
                 description: Use updated_at instead.
               connected_account:
-                example: &ref_55
+                example: &ref_58
                   object: connected_account
                   id: data_installation_01EHZNVPK3SFK441A1RGBFSHRT
                   connection_role: compatibility
@@ -42553,7 +42667,7 @@ components:
                         items:
                           type: string
                         description: The OAuth scopes granted for this connection.
-                        example: &ref_53
+                        example: &ref_56
                           - repo
                           - user:email
                       auth_method:
@@ -42603,7 +42717,7 @@ components:
                           `installation` scope, excluding secret and undeclared
                           fields. Returned for every authentication method;
                           empty when no stored values can be disclosed.
-                        example: &ref_54
+                        example: &ref_57
                           instance_url: https://example.my.salesforce.com
                       state:
                         type: string
@@ -42788,7 +42902,7 @@ components:
                       items:
                         type: string
                       description: The OAuth scopes granted for this connection.
-                      example: *ref_53
+                      example: *ref_56
                     auth_method:
                       type: string
                       enum:
@@ -42835,7 +42949,7 @@ components:
                         `installation` scope, excluding secret and undeclared
                         fields. Returned for every authentication method; empty
                         when no stored values can be disclosed.
-                      example: *ref_54
+                      example: *ref_57
                     state:
                       type: string
                       enum:
@@ -42953,7 +43067,7 @@ components:
                     - organizationId
                     - createdAt
                     - updatedAt
-                  example: *ref_55
+                  example: *ref_58
                 description: >-
                   The user's connected accounts for this provider in the
                   requested ownership context. This contains only the
