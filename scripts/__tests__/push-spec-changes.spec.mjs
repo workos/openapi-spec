@@ -30,6 +30,11 @@ import fs from 'node:fs';
 fs.appendFileSync(process.env.CALL_LOG, JSON.stringify({command:'tailscale',args:process.argv.slice(2)})+'\\n');
 console.log(process.env.STATUS);
 `, { mode: 0o755 });
+  writeFileSync(join(dir, 'sudo'), `#!${process.execPath}
+import fs from 'node:fs';
+fs.appendFileSync(process.env.CALL_LOG, JSON.stringify({command:'sudo',args:process.argv.slice(2)})+'\\n');
+process.exit(process.env.MODE==='firewall-failed'?1:0);
+`, { mode: 0o755 });
   writeFileSync(join(dir, 'curl'), `#!${process.execPath}
 import fs from 'node:fs';
 import {spawnSync} from 'node:child_process';
@@ -53,7 +58,9 @@ else { process.stdout.write('ok\\n200'); }
   // Top-level retry delays are shortened only by a test loader, with no
   // production flag or exported implementation seam.
   const loader = join(dir, 'fast-timers.mjs');
-  writeFileSync(loader, 'globalThis.setTimeout = (fn) => { queueMicrotask(fn); return 0; };');
+  writeFileSync(loader, `import dns from 'node:dns/promises';
+dns.lookup = async () => ({address: '203.0.113.8', family: 4});
+globalThis.setTimeout = (fn) => { queueMicrotask(fn); return 0; };`);
   const r = spawnSync(process.execPath, ['--import', loader, script, configOnly ? '--check-config' : file], {
     cwd: dir, encoding: 'utf8', timeout: 10_000,
     env: {
@@ -98,6 +105,12 @@ test('HMAC covers exactly the UTF-8 file bytes, sent through explicit IPv4 SOCKS
   const r = run(t);
   assert.equal(r.status, 0, r.stderr);
   const calls = r.calls.filter(c => c.command === 'curl');
+  const firewall = r.calls.find(c => c.command === 'sudo');
+  assert.deepEqual(firewall.args, [
+    '-n', 'iptables', '-w', '5', '-I', 'OUTPUT', '1', '-p', 'tcp',
+    '-d', '203.0.113.8', '--dport', '443', '-j', 'REJECT',
+  ]);
+  assert.ok(r.calls.indexOf(firewall) < r.calls.findIndex(c => c.command === 'curl'));
   assert.equal(calls.length, 2);
   assert.equal(calls[0].args.at(-1), 'https://sdk-automation-bot.workos.tools/cdn-cgi/trace');
   const post = calls[1];
@@ -110,6 +123,7 @@ test('HMAC covers exactly the UTF-8 file bytes, sent through explicit IPv4 SOCKS
     assert.equal(call.args[call.args.indexOf('--proxy') + 1], 'socks5://127.0.0.1:1055');
     assert.equal(call.args[call.args.indexOf('--noproxy') + 1], '');
     assert.equal(call.args[call.args.indexOf('--proto') + 1], '=https');
+    assert.equal(call.args[call.args.indexOf('--resolve') + 1], 'sdk-automation-bot.workos.tools:443:203.0.113.8');
     assert.ok(call.args.includes('--ipv4'));
     assert.ok(!call.args.includes('--location'));
   }
@@ -140,6 +154,13 @@ test('wrong NAT and proxy failure stop before a signed request, with no direct f
     assert.equal(r.calls.filter(c => c.command === 'curl').length, 1);
     assert.ok(r.calls.every(c => !c.args.includes('POST')));
   }
+});
+
+test('failure to block direct origin traffic prevents every HTTP request', t => {
+  const r = run(t, { mode: 'firewall-failed' });
+  assert.equal(r.status, 1);
+  assert.equal(r.calls.filter(c => c.command === 'sudo').length, 1);
+  assert.ok(r.calls.every(c => c.command !== 'curl'));
 });
 
 test('redirects and POST errors retry only the same signed endpoint through the verified proxy', t => {

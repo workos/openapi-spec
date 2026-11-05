@@ -3,11 +3,28 @@ import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { isIPv4 } from 'node:net';
 import { spawnSync } from 'node:child_process';
+import dns from 'node:dns/promises';
 
 const BOT = 'https://sdk-automation-bot.workos.tools';
 const PROXY = 'socks5://127.0.0.1:1055';
 const TAG = 'tag:ci-sdk-spec-changes';
 const NAT_IPS = new Set(['3.151.179.114', '16.58.134.105', '16.58.183.17']);
+let destinationIPv4;
+
+async function blockDirectOrigin() {
+  const result = await dns.lookup(new URL(BOT).hostname, { family: 4 });
+  if (!isIPv4(result.address)) throw new Error('Cannot resolve SDK host to IPv4.');
+  destinationIPv4 = result.address;
+  // Tailscale UserDial can dial with the host network when no matching route
+  // exists. Pin curl to this IP and reject direct host TCP to it, including
+  // from root-owned tailscaled. Encrypted exit/DERP transport uses other
+  // destinations and is unaffected. Rule lives only on this disposable VM.
+  const rule = spawnSync('sudo', [
+    '-n', 'iptables', '-w', '5', '-I', 'OUTPUT', '1', '-p', 'tcp',
+    '-d', destinationIPv4, '--dport', '443', '-j', 'REJECT',
+  ], { encoding: 'utf8', timeout: 10_000 });
+  if (rule.status !== 0) throw new Error('Cannot install the direct-origin network deny rule.');
+}
 
 function checkConfig() {
   const e = process.env;
@@ -53,6 +70,7 @@ function curl(path, extra = [], input) {
   // destination: no exit PeerAPI DNS grant and no IPv6 destination is needed.
   const result = spawnSync('curl', [
     '--disable', '--silent', '--show-error', '--ipv4',
+    '--resolve', `${new URL(BOT).hostname}:443:${destinationIPv4}`,
     '--proxy', PROXY, '--noproxy', '', '--proto', '=https',
     '--connect-timeout', '10', '--max-time', '30',
     '--max-redirs', '0', '--write-out', '\n%{http_code}',
@@ -78,6 +96,8 @@ try {
   const manifest = readFileSync(process.argv[2]);
   if (!process.env.SPEC_CHANGES_SECRET) throw new Error('SPEC_CHANGES_SECRET is required.');
   const signature = `sha256=${createHmac('sha256', process.env.SPEC_CHANGES_SECRET).update(manifest).digest('hex')}`;
+  checkExit();
+  await blockDirectOrigin();
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     // A verified exit and same-host source-IP probe precede every signed POST.

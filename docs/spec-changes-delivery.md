@@ -15,7 +15,12 @@ new public exception or rely on held infra PR #2126.
 Delivery refuses missing identity configuration, unsupported workflow/ref/event,
 non-userspace Tailscale, a missing/offline/wrong/untagged exit, an unapproved NAT,
 proxy failures and redirects. All retries use the same fixed host/path through
-the proxy. curlrc and `NO_PROXY` cannot select a direct route. Local DNS plus
+the proxy. Before any HTTP request, delivery pins the host's resolved IPv4 with
+curl `--resolve` and installs a runner-local iptables OUTPUT reject for direct
+TCP/443 to that exact IP. This also blocks tailscaled's host-network fallback
+if its exit route disappears. Missing sudo/iptables permission stops delivery;
+the rule disappears with the hosted VM. curlrc and `NO_PROXY` cannot select a
+direct route. Local DNS plus
 `--ipv4`/`socks5://` sends a numeric IPv4 to SOCKS5 without exit DNS permission.
 Only the delivery script gets the signing secret; no npm install runs there.
 The signature travels to curl over stdin, not its command line, and response
@@ -57,6 +62,7 @@ verification; never fall back to direct public delivery on failure.
 signing, identity/config/status denial cases, proxy-only commands, NAT checks,
 redirects, retries and real curl failure with a closed loopback proxy. SDK
 validation CI runs it even when there is no spec change. Live OIDC, tailnet
-policy enforcement, actual exit/NAT/Worker access and cleanup need the human
+policy enforcement, actual exit/NAT/Worker access, Linux firewall enforcement
+and cleanup need the human
 rollout checks. The existing historical `replay-spec-changes.yml` is separate
 and receives no trust or transport change in this PR.
