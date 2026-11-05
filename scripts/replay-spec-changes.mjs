@@ -3,24 +3,23 @@
 // Rebuild one or more historical spec-change manifests with the CURRENT
 // checkout's oagen version, policy bundle, and build-spec-changes.mjs.
 //
-// Safe default (prints manifests, does not POST):
+// Safe default (prints manifests, writes nothing):
 //   node scripts/replay-spec-changes.mjs \
 //     --shas "<full-sha>,<full-sha>" \
 //     --repository workos/openapi-spec
 //
-// Posting requires both an explicit flag and confirmation. The caller must
-// provide SPEC_CHANGES_SECRET only for this mode:
+// Writing manifests for the SDK bot requires an explicit output directory and
+// confirmation. The replay workflow uploads that directory as a spec-changes-*
+// artifact, which the bot pulls on the run's workflow_run webhook:
 //   node scripts/replay-spec-changes.mjs \
 //     --shas "<full-sha>,<full-sha>" \
 //     --repository workos/openapi-spec \
-//     --bot-url https://sdk-automation-bot.workos.tools \
-//     --push --confirm REPLAY_SPEC_CHANGES
+//     --output-dir spec-changes --confirm REPLAY_SPEC_CHANGES
 //
 // The SDK bot upserts manifests by sha, so replaying the same target is
 // idempotent. No historical scripts or policy files are checked out: only the
 // old/new spec documents come from the target commit and its first parent.
 
-import { createHmac } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -35,7 +34,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const FULL_SHA = /^[0-9a-f]{40}$/i;
 const GITHUB_REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-const PUSH_CONFIRMATION = "REPLAY_SPEC_CHANGES";
+const WRITE_CONFIRMATION = "REPLAY_SPEC_CHANGES";
 const SPEC_PATH = "spec/open-api-spec.yaml";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
@@ -96,8 +95,7 @@ export function parseArgs(argv) {
   const args = {
     shas: "",
     repository: process.env.GITHUB_REPOSITORY ?? "",
-    botUrl: process.env.SDK_BOT_URL ?? "",
-    push: false,
+    outputDir: "",
     confirm: "",
   };
 
@@ -105,8 +103,7 @@ export function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--shas") args.shas = argv[++i] ?? "";
     else if (arg === "--repository") args.repository = argv[++i] ?? "";
-    else if (arg === "--bot-url") args.botUrl = argv[++i] ?? "";
-    else if (arg === "--push") args.push = true;
+    else if (arg === "--output-dir") args.outputDir = argv[++i] ?? "";
     else if (arg === "--confirm") args.confirm = argv[++i] ?? "";
     else throw new Error(`Unknown option: ${arg}`);
   }
@@ -117,20 +114,13 @@ export function parseArgs(argv) {
     throw new Error("--repository in owner/name form is required");
   }
 
-  if (args.push) {
-    if (args.confirm !== PUSH_CONFIRMATION) {
+  if (args.outputDir) {
+    if (args.confirm !== WRITE_CONFIRMATION) {
       throw new Error(
-        `Refusing to POST without --confirm ${PUSH_CONFIRMATION}`,
+        `Refusing to write manifests without --confirm ${WRITE_CONFIRMATION}`,
       );
     }
-    if (!args.botUrl) {
-      throw new Error("--bot-url (or SDK_BOT_URL) is required with --push");
-    }
-    const endpoint = new URL("/internal/spec-changes", args.botUrl);
-    if (endpoint.protocol !== "https:") {
-      throw new Error("The spec-changes endpoint must use HTTPS");
-    }
-    args.endpoint = endpoint;
+    args.outputDir = resolve(args.outputDir);
   }
 
   return args;
@@ -324,54 +314,37 @@ function buildManifest(targetSha, tempRoot, repository) {
   return { manifest, manifestText, parentSha, subject };
 }
 
-function wait(milliseconds) {
-  return new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
-}
-
-async function postManifest(endpoint, manifestText, secret, targetSha) {
-  const signature = `sha256=${createHmac("sha256", secret)
-    .update(manifestText)
-    .digest("hex")}`;
-
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    let response;
-    try {
-      response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Spec-Changes-Signature": signature,
-        },
-        body: manifestText,
-        signal: AbortSignal.timeout(30_000),
-      });
-    } catch (error) {
-      if (attempt === 3) {
-        throw new Error(
-          `POST failed for ${targetSha} after 3 attempts: ${error.message}`,
-        );
-      }
-      process.stderr.write(
-        `POST attempt ${attempt} failed for ${targetSha}; retrying\n`,
-      );
-      await wait(5000);
-      continue;
+// Write one <sha>.json per rebuilt target into outputDir for the replay
+// workflow to upload as a spec-changes artifact. Every entry is validated
+// before the first write so a malformed later target cannot leave a partial
+// set behind. Targets with no changed services are reported, not written.
+// Returns [{ targetSha, outputPath }] in input order, outputPath null when
+// nothing was written.
+export function writeManifests(outputDir, rebuilt) {
+  if (!outputDir) throw new Error("An output directory is required");
+  for (const entry of rebuilt) {
+    const { targetSha, manifest, manifestText } = entry ?? {};
+    if (!FULL_SHA.test(targetSha ?? "")) {
+      throw new Error(`Invalid target SHA "${targetSha}"`);
     }
-
-    if (response.ok) return;
-
-    const body = (await response.text()).slice(0, 1000);
-    if (attempt === 3) {
-      throw new Error(
-        `POST failed for ${targetSha} after 3 attempts (${response.status})` +
-          (body ? `: ${body}` : ""),
-      );
+    if (typeof manifestText !== "string" || !manifestText.trim()) {
+      throw new Error(`Empty manifest for ${targetSha}`);
     }
-    process.stderr.write(
-      `POST attempt ${attempt} failed for ${targetSha} (${response.status}); retrying\n`,
-    );
-    await wait(5000);
+    if (manifest?.sha?.toLowerCase() !== targetSha.toLowerCase()) {
+      throw new Error(`Manifest sha does not match target ${targetSha}`);
+    }
+    if (!Array.isArray(manifest.changedServices)) {
+      throw new Error(`Manifest for ${targetSha} has no changedServices list`);
+    }
   }
+
+  mkdirSync(outputDir, { recursive: true });
+  return rebuilt.map(({ targetSha, manifest, manifestText }) => {
+    if (manifest.changedServices.length === 0) return { targetSha, outputPath: null };
+    const outputPath = join(outputDir, `${targetSha.toLowerCase()}.json`);
+    writeFileSync(outputPath, manifestText, "utf8");
+    return { targetSha, outputPath };
+  });
 }
 
 async function main() {
@@ -386,7 +359,7 @@ async function main() {
 
   const tempRoot = mkdtempSync(join(tmpdir(), "spec-change-replay-"));
   try {
-    // Preflight every target before the first POST. A malformed later target
+    // Preflight every target before the first write. A malformed later target
     // must not leave an otherwise avoidable partial replay.
     const rebuilt = args.targetShas.map((targetSha) =>
       buildManifest(
@@ -403,26 +376,20 @@ async function main() {
         `\nManifest for ${targetSha} (${subject})\n` +
           `First parent: ${parentSha}\n${manifestText}`,
       );
-      if (!args.push) process.stdout.write("Dry run: manifest was not posted.\n");
+      if (!args.outputDir) process.stdout.write("Dry run: manifest was not written.\n");
     }
 
-    if (!args.push) return;
+    if (!args.outputDir) return;
 
-    // Read the signing secret only after push confirmation and target preflight.
-    const secret = process.env.SPEC_CHANGES_SECRET;
-    if (!secret) throw new Error("SPEC_CHANGES_SECRET is required with --push");
-
-    for (let index = 0; index < args.targetShas.length; index += 1) {
-      const targetSha = args.targetShas[index];
-      const { manifest, manifestText } = rebuilt[index];
-      if ((manifest.changedServices ?? []).length === 0) {
-        process.stdout.write("No changed services; manifest was not posted.\n");
-        continue;
-      }
-
-      await postManifest(args.endpoint, manifestText, secret, targetSha);
+    const written = writeManifests(
+      args.outputDir,
+      args.targetShas.map((targetSha, index) => ({ targetSha, ...rebuilt[index] })),
+    );
+    for (const { targetSha, outputPath } of written) {
       process.stdout.write(
-        `Posted manifest for ${targetSha}; the bot upserts this SHA idempotently.\n`,
+        outputPath
+          ? `Wrote manifest for ${targetSha} to ${outputPath}; uploaded as a spec-changes artifact, the bot upserts this SHA idempotently.\n`
+          : `No changed services for ${targetSha}; manifest was not written.\n`,
       );
     }
   } finally {

@@ -15,22 +15,19 @@ on:
         required: true
         type: string
       mode:
-        description: Preview manifests or idempotently upsert them to the SDK bot
+        description: Preview manifests, or upload them as an artifact the SDK bot pulls into its D1
         required: true
         type: choice
         default: dry-run
         options:
           - dry-run
-          - push
+          - upload
 
 concurrency:
   # Share the producer's concurrency group so a replay cannot race a normal
   # spec-change delivery. Every requested SHA is processed sequentially.
   group: spec-changes
   cancel-in-progress: false
-
-env:
-  SDK_BOT_URL: https://sdk-automation-bot.workos.tools
 
 jobs:
   replay:
@@ -72,25 +69,35 @@ jobs:
             --repository "$GITHUB_REPOSITORY"
 
       - name: Verify push runs from the default branch
-        if: inputs.mode == 'push'
+        if: inputs.mode == 'upload'
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
-            echo "::error::Push replays must run from the default branch ($DEFAULT_BRANCH)."
+            echo "::error::Upload replays must run from the default branch ($DEFAULT_BRANCH)."
             exit 1
           fi
 
-      - name: Rebuild and idempotently push manifests
-        if: inputs.mode == 'push'
+      - name: Rebuild manifests for upload
+        if: inputs.mode == 'upload'
         env:
           TARGET_SHAS: ${{ inputs.target_shas }}
-          SPEC_CHANGES_SECRET: ${{ secrets.SPEC_CHANGES_SECRET }}
         run: |
           node scripts/replay-spec-changes.mjs \
             --shas "$TARGET_SHAS" \
             --repository "$GITHUB_REPOSITORY" \
-            --bot-url "$SDK_BOT_URL" \
-            --push \
+            --output-dir spec-changes \
             --confirm REPLAY_SPEC_CHANGES
+
+      - name: Publish manifest artifact for the SDK bot
+        # The bot pulls this on the workflow_run webhook for this run and
+        # upserts each manifest by sha. Targets with no changed services write
+        # nothing, so an empty directory is not an error.
+        if: inputs.mode == 'upload'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: spec-changes-replay-${{ github.run_id }}
+          path: spec-changes/
+          if-no-files-found: ignore
+          retention-days: 14
