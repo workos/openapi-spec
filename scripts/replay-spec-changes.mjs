@@ -314,6 +314,39 @@ function buildManifest(targetSha, tempRoot, repository) {
   return { manifest, manifestText, parentSha, subject };
 }
 
+// Write one <sha>.json per rebuilt target into outputDir for the replay
+// workflow to upload as a spec-changes artifact. Every entry is validated
+// before the first write so a malformed later target cannot leave a partial
+// set behind. Targets with no changed services are reported, not written.
+// Returns [{ targetSha, outputPath }] in input order, outputPath null when
+// nothing was written.
+export function writeManifests(outputDir, rebuilt) {
+  if (!outputDir) throw new Error("An output directory is required");
+  for (const entry of rebuilt) {
+    const { targetSha, manifest, manifestText } = entry ?? {};
+    if (!FULL_SHA.test(targetSha ?? "")) {
+      throw new Error(`Invalid target SHA "${targetSha}"`);
+    }
+    if (typeof manifestText !== "string" || !manifestText.trim()) {
+      throw new Error(`Empty manifest for ${targetSha}`);
+    }
+    if (manifest?.sha?.toLowerCase() !== targetSha.toLowerCase()) {
+      throw new Error(`Manifest sha does not match target ${targetSha}`);
+    }
+    if (!Array.isArray(manifest.changedServices)) {
+      throw new Error(`Manifest for ${targetSha} has no changedServices list`);
+    }
+  }
+
+  mkdirSync(outputDir, { recursive: true });
+  return rebuilt.map(({ targetSha, manifest, manifestText }) => {
+    if (manifest.changedServices.length === 0) return { targetSha, outputPath: null };
+    const outputPath = join(outputDir, `${targetSha.toLowerCase()}.json`);
+    writeFileSync(outputPath, manifestText, "utf8");
+    return { targetSha, outputPath };
+  });
+}
+
 async function main() {
   const args = parseArgs(process.argv);
 
@@ -348,19 +381,15 @@ async function main() {
 
     if (!args.outputDir) return;
 
-    mkdirSync(args.outputDir, { recursive: true });
-    for (let index = 0; index < args.targetShas.length; index += 1) {
-      const targetSha = args.targetShas[index];
-      const { manifest, manifestText } = rebuilt[index];
-      if ((manifest.changedServices ?? []).length === 0) {
-        process.stdout.write("No changed services; manifest was not written.\n");
-        continue;
-      }
-
-      const outputPath = join(args.outputDir, `${targetSha}.json`);
-      writeFileSync(outputPath, manifestText, "utf8");
+    const written = writeManifests(
+      args.outputDir,
+      args.targetShas.map((targetSha, index) => ({ targetSha, ...rebuilt[index] })),
+    );
+    for (const { targetSha, outputPath } of written) {
       process.stdout.write(
-        `Wrote manifest for ${targetSha} to ${outputPath}; uploaded as a spec-changes artifact, the bot upserts this SHA idempotently.\n`,
+        outputPath
+          ? `Wrote manifest for ${targetSha} to ${outputPath}; uploaded as a spec-changes artifact, the bot upserts this SHA idempotently.\n`
+          : `No changed services for ${targetSha}; manifest was not written.\n`,
       );
     }
   } finally {
