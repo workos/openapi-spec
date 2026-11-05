@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import {
   firstParentFromRevList,
@@ -65,7 +66,7 @@ test("pullRequestMetadata omits absent PR metadata", () => {
   );
 });
 
-test("parseArgs makes POST mode explicit, confirmed, and HTTPS-only", () => {
+test("parseArgs makes writing explicit and confirmed, and rejects the removed push options", () => {
   const base = [
     "node",
     "replay",
@@ -73,8 +74,11 @@ test("parseArgs makes POST mode explicit, confirmed, and HTTPS-only", () => {
     SHA_A,
     "--repository",
     "workos/openapi-spec",
-    "--push",
   ];
+  assert.throws(
+    () => parseArgs([...base, "--output-dir", "spec-changes"]),
+    /Refusing to write/,
+  );
   assert.throws(
     () =>
       parseArgs([
@@ -82,30 +86,18 @@ test("parseArgs makes POST mode explicit, confirmed, and HTTPS-only", () => {
         "--bot-url",
         "https://sdk-automation-bot.workos.tools",
       ]),
-    /Refusing to POST/,
+    /Unknown option/,
   );
-  assert.throws(
-    () =>
-      parseArgs([
-        ...base,
-        "--bot-url",
-        "http://sdk-automation-bot.workos.tools",
-        "--confirm",
-        "REPLAY_SPEC_CHANGES",
-      ]),
-    /must use HTTPS/,
-  );
+  assert.throws(() => parseArgs([...base, "--push"]), /Unknown option/);
+
+  assert.equal(parseArgs(base).outputDir, "");
 
   const parsed = parseArgs([
     ...base,
-    "--bot-url",
-    "https://sdk-automation-bot.workos.tools",
+    "--output-dir",
+    "spec-changes",
     "--confirm",
     "REPLAY_SPEC_CHANGES",
   ]);
-  assert.equal(parsed.push, true);
-  assert.equal(
-    parsed.endpoint.href,
-    "https://sdk-automation-bot.workos.tools/internal/spec-changes",
-  );
+  assert.equal(parsed.outputDir, resolve("spec-changes"));
 });
