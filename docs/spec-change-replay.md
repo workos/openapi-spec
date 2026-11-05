@@ -34,8 +34,11 @@ node scripts/replay-spec-changes.mjs \
 
 After reviewing a dry run, launch the workflow again with the same explicit
 SHAs and set **mode** to **push**. Push mode is accepted only from the default
-branch. The workflow signs the exact manifest bytes and POSTs them to the
-existing SDK bot endpoint.
+branch (`main` for the configured trust). The build job prepares exact manifest
+bytes plus an ordered index as a same-run artifact, without OIDC permission or
+the signing secret. A separate delivery job uses the replay-only OIDC identity
+and the shared fail-closed Tailscale transport, signs those exact bytes and POSTs
+them to the existing SDK bot endpoint.
 
 The SDK bot upserts on the target SHA, so repeating the same replay is
 idempotent. A target that produces no changed services is shown but not POSTed.
@@ -43,4 +46,15 @@ Every target is validated and rebuilt before the first POST, and the workflow
 serializes with the normal spec-change producer to avoid delivery races.
 
 Do not put the signing secret in the SHA input or logs. The workflow exposes
-`SPEC_CHANGES_SECRET` only to the confirmed push step.
+`SPEC_CHANGES_SECRET` only to the isolated delivery step. Configure the dedicated
+`SDK_SPEC_REPLAY_CLIENT_ID` and `SDK_SPEC_REPLAY_AUDIENCE` public variables, plus
+the shared reviewed exit, after the infra trust/policy rollout described in
+[delivery setup](spec-changes-delivery.md).
+
+The script's `--prepare-delivery <new-directory> --confirm REPLAY_SPEC_CHANGES`
+mode writes delivery data without posting or reading a signing secret. The
+legacy `--push --confirm REPLAY_SPEC_CHANGES` option has no direct `fetch` path:
+it invokes the shared transport and requires the configured, confirmed main
+replay workflow context and Tailscale runner. Use the Actions workflow to push;
+local dry-run needs no such identity. No production replay was run while
+preparing this change.

@@ -29,18 +29,18 @@ concurrency:
   group: spec-changes
   cancel-in-progress: false
 
-env:
-  SDK_BOT_URL: https://sdk-automation-bot.workos.tools
-
 jobs:
   replay:
     runs-on: ubuntu-latest
+    outputs:
+      deliver: ${{ steps.prepare.outputs.deliver }}
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
@@ -82,15 +82,83 @@ jobs:
             exit 1
           fi
 
-      - name: Rebuild and idempotently push manifests
+      - name: Prepare confirmed replay delivery
+        id: prepare
         if: inputs.mode == 'push'
         env:
           TARGET_SHAS: ${{ inputs.target_shas }}
-          SPEC_CHANGES_SECRET: ${{ secrets.SPEC_CHANGES_SECRET }}
         run: |
+          set -euo pipefail
           node scripts/replay-spec-changes.mjs \
             --shas "$TARGET_SHAS" \
             --repository "$GITHUB_REPOSITORY" \
-            --bot-url "$SDK_BOT_URL" \
-            --push \
+            --prepare-delivery "$RUNNER_TEMP/replay-delivery" \
             --confirm REPLAY_SPEC_CHANGES
+          if [ "$(jq 'length' "$RUNNER_TEMP/replay-delivery/index.json")" -gt 0 ]; then
+            echo "deliver=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Hand replay data to isolated delivery job
+        if: steps.prepare.outputs.deliver == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: replay-spec-changes-manifests
+          path: ${{ runner.temp }}/replay-delivery/*.json
+          if-no-files-found: error
+          retention-days: 1
+
+  deliver:
+    needs: replay
+    if: >-
+      needs.replay.outputs.deliver == 'true' && inputs.mode == 'push' &&
+      github.repository == 'workos/openapi-spec' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REPLAY_MODE: ${{ inputs.mode }}
+      REPLAY_CONFIRMATION: REPLAY_SPEC_CHANGES
+      TAILSCALE_EXIT_NODE: ${{ vars.SDK_SPEC_CHANGES_EXIT_NODE }}
+      TAILSCALE_CLIENT_ID: ${{ vars.SDK_SPEC_REPLAY_CLIENT_ID }}
+      TAILSCALE_AUDIENCE: ${{ vars.SDK_SPEC_REPLAY_AUDIENCE }}
+    steps:
+      # The build job has no OIDC or signing secret. Delivery uses only this
+      # checked-in, dependency-free script; never execute artifact contents.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/push-spec-changes.mjs
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: replay-spec-changes-manifests
+          path: ${{ runner.temp }}/spec-changes
+
+      - name: Require exact workflow and public identity configuration
+        run: node scripts/push-spec-changes.mjs --check-config
+
+      - name: Join Tailscale as an ephemeral SDK delivery runner
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4
+        with:
+          oauth-client-id: ${{ env.TAILSCALE_CLIENT_ID }}
+          audience: ${{ env.TAILSCALE_AUDIENCE }}
+          tags: tag:ci-sdk-spec-changes
+          version: '1.104.4'
+          use-cache: 'false'
+          hostname: sdk-replay-${{ github.run_id }}-${{ github.run_attempt }}
+          tailscaled-args: --tun=userspace-networking --socks5-server=127.0.0.1:1055
+          args: --exit-node=${{ env.TAILSCALE_EXIT_NODE }} --exit-node-allow-lan-access=false --accept-routes=false --accept-dns=false
+
+      - name: Verify exit NAT and deliver exact HMAC-signed bytes
+        env:
+          SPEC_CHANGES_SECRET: ${{ secrets.SPEC_CHANGES_SECRET }}
+        run: node scripts/push-spec-changes.mjs --replay-dir "$RUNNER_TEMP/spec-changes"

@@ -9,7 +9,8 @@
 //     --repository workos/openapi-spec
 //
 // Posting requires both an explicit flag and confirmation. The caller must
-// provide SPEC_CHANGES_SECRET only for this mode:
+// provide SPEC_CHANGES_SECRET and the configured replay Tailscale context only
+// for this mode (CI uses --prepare-delivery then an isolated delivery job):
 //   node scripts/replay-spec-changes.mjs \
 //     --shas "<full-sha>,<full-sha>" \
 //     --repository workos/openapi-spec \
@@ -20,7 +21,6 @@
 // idempotent. No historical scripts or policy files are checked out: only the
 // old/new spec documents come from the target commit and its first parent.
 
-import { createHmac } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -99,6 +99,7 @@ export function parseArgs(argv) {
     botUrl: process.env.SDK_BOT_URL ?? "",
     push: false,
     confirm: "",
+    prepareDelivery: "",
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -107,6 +108,7 @@ export function parseArgs(argv) {
     else if (arg === "--repository") args.repository = argv[++i] ?? "";
     else if (arg === "--bot-url") args.botUrl = argv[++i] ?? "";
     else if (arg === "--push") args.push = true;
+    else if (arg === "--prepare-delivery") args.prepareDelivery = argv[++i] ?? "";
     else if (arg === "--confirm") args.confirm = argv[++i] ?? "";
     else throw new Error(`Unknown option: ${arg}`);
   }
@@ -117,18 +119,24 @@ export function parseArgs(argv) {
     throw new Error("--repository in owner/name form is required");
   }
 
-  if (args.push) {
+  if (args.push && args.prepareDelivery) throw new Error("Choose --push or --prepare-delivery, not both");
+  if (args.push || args.prepareDelivery) {
     if (args.confirm !== PUSH_CONFIRMATION) {
       throw new Error(
         `Refusing to POST without --confirm ${PUSH_CONFIRMATION}`,
       );
     }
+  }
+  if (args.push) {
     if (!args.botUrl) {
       throw new Error("--bot-url (or SDK_BOT_URL) is required with --push");
     }
     const endpoint = new URL("/internal/spec-changes", args.botUrl);
     if (endpoint.protocol !== "https:") {
       throw new Error("The spec-changes endpoint must use HTTPS");
+    }
+    if (endpoint.href !== "https://sdk-automation-bot.workos.tools/internal/spec-changes") {
+      throw new Error("Confirmed replay delivery supports only the fixed SDK bot endpoint");
     }
     args.endpoint = endpoint;
   }
@@ -324,54 +332,24 @@ function buildManifest(targetSha, tempRoot, repository) {
   return { manifest, manifestText, parentSha, subject };
 }
 
-function wait(milliseconds) {
-  return new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
-}
-
-async function postManifest(endpoint, manifestText, secret, targetSha) {
-  const signature = `sha256=${createHmac("sha256", secret)
-    .update(manifestText)
-    .digest("hex")}`;
-
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    let response;
-    try {
-      response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Spec-Changes-Signature": signature,
-        },
-        body: manifestText,
-        signal: AbortSignal.timeout(30_000),
-      });
-    } catch (error) {
-      if (attempt === 3) {
-        throw new Error(
-          `POST failed for ${targetSha} after 3 attempts: ${error.message}`,
-        );
-      }
-      process.stderr.write(
-        `POST attempt ${attempt} failed for ${targetSha}; retrying\n`,
-      );
-      await wait(5000);
-      continue;
-    }
-
-    if (response.ok) return;
-
-    const body = (await response.text()).slice(0, 1000);
-    if (attempt === 3) {
-      throw new Error(
-        `POST failed for ${targetSha} after 3 attempts (${response.status})` +
-          (body ? `: ${body}` : ""),
-      );
-    }
-    process.stderr.write(
-      `POST attempt ${attempt} failed for ${targetSha} (${response.status}); retrying\n`,
-    );
-    await wait(5000);
+// Export exact bytes as data for the isolated, dependency-free delivery job.
+// This function also serves --push, so replay has no direct fetch fallback.
+export function writeDelivery(directory, targetShas, rebuilt) {
+  if (existsSync(directory)) throw new Error("Delivery directory must not already exist");
+  const selected = targetShas.flatMap((sha, index) => {
+    if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error("Invalid replay delivery target SHA");
+    const entry = rebuilt[index];
+    const manifest = JSON.parse(entry.manifestText);
+    if (manifest.sha !== sha) throw new Error("Replay delivery SHA mismatch");
+    if (!Array.isArray(manifest.changedServices)) throw new Error("Invalid changed-services manifest");
+    return manifest.changedServices.length === 0 ? [] : [{ sha, text: entry.manifestText }];
+  });
+  mkdirSync(directory, { recursive: true });
+  for (const { sha, text } of selected) {
+    writeFileSync(join(directory, `${sha}.json`), text);
   }
+  writeFileSync(join(directory, "index.json"), JSON.stringify(selected.map(entry => entry.sha)));
+  return selected.length;
 }
 
 async function main() {
@@ -403,28 +381,29 @@ async function main() {
         `\nManifest for ${targetSha} (${subject})\n` +
           `First parent: ${parentSha}\n${manifestText}`,
       );
-      if (!args.push) process.stdout.write("Dry run: manifest was not posted.\n");
+      if (!args.push && !args.prepareDelivery) process.stdout.write("Dry run: manifest was not posted.\n");
     }
 
-    if (!args.push) return;
+    if (!args.push && !args.prepareDelivery) return;
 
-    // Read the signing secret only after push confirmation and target preflight.
-    const secret = process.env.SPEC_CHANGES_SECRET;
-    if (!secret) throw new Error("SPEC_CHANGES_SECRET is required with --push");
-
-    for (let index = 0; index < args.targetShas.length; index += 1) {
-      const targetSha = args.targetShas[index];
-      const { manifest, manifestText } = rebuilt[index];
-      if ((manifest.changedServices ?? []).length === 0) {
-        process.stdout.write("No changed services; manifest was not posted.\n");
-        continue;
-      }
-
-      await postManifest(args.endpoint, manifestText, secret, targetSha);
-      process.stdout.write(
-        `Posted manifest for ${targetSha}; the bot upserts this SHA idempotently.\n`,
-      );
+    const deliveryDir = args.prepareDelivery
+      ? resolve(args.prepareDelivery) : join(tempRoot, "delivery");
+    const count = writeDelivery(deliveryDir, args.targetShas, rebuilt);
+    if (args.prepareDelivery) {
+      process.stdout.write(`Prepared ${count} manifest(s) for isolated delivery; nothing was posted.\n`);
+      return;
     }
+    if (count === 0) {
+      process.stdout.write("No changed services; manifest was not posted.\n");
+      return;
+    }
+    // Legacy --push still requires explicit confirmation, but uses the same
+    // guarded Tailscale transport and workflow context as isolated CI delivery.
+    // There is no independent fetch implementation or direct retry path.
+    const delivered = run(process.execPath, [
+      join(SCRIPT_DIR, "push-spec-changes.mjs"), "--replay-dir", deliveryDir,
+    ]);
+    process.stdout.write(delivered.stdout);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { isIPv4 } from 'node:net';
 import { spawnSync } from 'node:child_process';
 import dns from 'node:dns/promises';
+import { join } from 'node:path';
 
 const BOT = 'https://sdk-automation-bot.workos.tools';
 const PROXY = 'socks5://127.0.0.1:1055';
@@ -28,11 +29,15 @@ async function blockDirectOrigin() {
 
 function checkConfig() {
   const e = process.env;
+  const producer = e.GITHUB_WORKFLOW_REF === 'workos/openapi-spec/.github/workflows/spec-changes.yml@refs/heads/main' &&
+    ['push', 'workflow_dispatch'].includes(e.GITHUB_EVENT_NAME);
+  const replay = e.GITHUB_WORKFLOW_REF === 'workos/openapi-spec/.github/workflows/replay-spec-changes.yml@refs/heads/main' &&
+    e.GITHUB_EVENT_NAME === 'workflow_dispatch' && e.REPLAY_MODE === 'push' &&
+    e.REPLAY_CONFIRMATION === 'REPLAY_SPEC_CHANGES';
   if (e.GITHUB_REPOSITORY !== 'workos/openapi-spec' ||
       e.GITHUB_REF !== 'refs/heads/main' ||
-      e.GITHUB_WORKFLOW_REF !== 'workos/openapi-spec/.github/workflows/spec-changes.yml@refs/heads/main' ||
-      !['push', 'workflow_dispatch'].includes(e.GITHUB_EVENT_NAME)) {
-    throw new Error('Delivery requires the spec-changes workflow on workos/openapi-spec main.');
+      (!producer && !replay)) {
+    throw new Error('Delivery requires an approved workflow/event on workos/openapi-spec main and explicit replay confirmation.');
   }
   const ip = e.TAILSCALE_EXIT_NODE ?? '';
   const octets = ip.split('.').map(Number);
@@ -43,6 +48,33 @@ function checkConfig() {
       e.TAILSCALE_AUDIENCE !== `api.tailscale.com/${e.TAILSCALE_CLIENT_ID}`) {
     throw new Error('Missing or invalid public per-event Tailscale identity configuration.');
   }
+  return replay;
+}
+
+function readDeliveryFiles(replay) {
+  if (!replay && process.argv.length === 3 && !process.argv[2].startsWith('--')) {
+    return [{ file: process.argv[2], bytes: readFileSync(process.argv[2]) }];
+  }
+  if (!replay || process.argv.length !== 4 || process.argv[2] !== '--replay-dir') {
+    throw new Error('Usage: producer <manifest.json> or confirmed replay --replay-dir <directory>');
+  }
+  const directory = process.argv[3];
+  const shas = JSON.parse(readFileSync(join(directory, 'index.json'), 'utf8'));
+  if (!Array.isArray(shas) || shas.length === 0 || new Set(shas).size !== shas.length ||
+      !shas.every(sha => typeof sha === 'string' && /^[0-9a-f]{40}$/.test(sha))) {
+    throw new Error('Replay index must contain distinct full lowercase target SHAs.');
+  }
+  // Load and validate every target before any network activity. Index order is
+  // the operator's explicit input order; no artifact contents are executed.
+  return shas.map(sha => {
+    const file = join(directory, `${sha}.json`);
+    const bytes = readFileSync(file);
+    const manifest = JSON.parse(bytes);
+    if (manifest.sha !== sha || !Array.isArray(manifest.changedServices) || manifest.changedServices.length === 0) {
+      throw new Error('Replay manifest must match its indexed SHA and contain changed services.');
+    }
+    return { file, bytes };
+  });
 }
 
 function checkExit() {
@@ -88,37 +120,38 @@ function curl(path, extra = [], input) {
 }
 
 try {
-  checkConfig();
+  const replay = checkConfig();
   if (process.argv.length === 3 && process.argv[2] === '--check-config') {
     process.exit(0);
   }
-  if (process.argv.length !== 3) throw new Error('Usage: node scripts/push-spec-changes.mjs <manifest.json>');
-  const manifest = readFileSync(process.argv[2]);
+  const manifests = readDeliveryFiles(replay);
   if (!process.env.SPEC_CHANGES_SECRET) throw new Error('SPEC_CHANGES_SECRET is required.');
-  const signature = `sha256=${createHmac('sha256', process.env.SPEC_CHANGES_SECRET).update(manifest).digest('hex')}`;
   checkExit();
   await blockDirectOrigin();
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    // A verified exit and same-host source-IP probe precede every signed POST.
-    // Never fall back to a direct request if the proxy/exit/config fails.
-    checkExit();
-    const trace = curl('/cdn-cgi/trace');
-    const ips = trace.split('\n').filter(line => line.startsWith('ip='));
-    if (ips.length !== 1 || !NAT_IPS.has(ips[0].slice(3))) {
-      throw new Error('SDK host did not observe an approved exit NAT IPv4 address.');
-    }
-    checkExit();
-    try {
-      curl('/internal/spec-changes', [
-        '--request', 'POST', '--header', 'Content-Type: application/json',
-        '--header', '@-', '--data-binary', `@${process.argv[2]}`,
-      ], `X-Spec-Changes-Signature: ${signature}\n`);
-      console.log('Pushed signed spec-changes manifest through the approved Tailscale exit.');
-      process.exit(0);
-    } catch {
-      if (attempt === 3) throw new Error('Signed delivery failed after three attempts.');
-      await new Promise(resolve => setTimeout(resolve, 5000));
+  for (const { file, bytes } of manifests) {
+    const signature = `sha256=${createHmac('sha256', process.env.SPEC_CHANGES_SECRET).update(bytes).digest('hex')}`;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      // A verified exit and same-host source-IP probe precede every signed POST.
+      // Never fall back to a direct request if the proxy/exit/config fails.
+      checkExit();
+      const trace = curl('/cdn-cgi/trace');
+      const ips = trace.split('\n').filter(line => line.startsWith('ip='));
+      if (ips.length !== 1 || !NAT_IPS.has(ips[0].slice(3))) {
+        throw new Error('SDK host did not observe an approved exit NAT IPv4 address.');
+      }
+      checkExit();
+      try {
+        curl('/internal/spec-changes', [
+          '--request', 'POST', '--header', 'Content-Type: application/json',
+          '--header', '@-', '--data-binary', `@${file}`,
+        ], `X-Spec-Changes-Signature: ${signature}\n`);
+        console.log('Pushed signed spec-changes manifest through the approved Tailscale exit.');
+        break;
+      } catch {
+        if (attempt === 3) throw new Error('Signed delivery failed after three attempts.');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
     }
   }
 } catch (error) {

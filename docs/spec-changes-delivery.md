@@ -1,6 +1,7 @@
 # Spec-change delivery through Tailscale
 
 `spec-changes.yml` builds a manifest without a signing secret or OIDC permission.
+Confirmed replay push mode similarly prepares an ordered manifest artifact.
 A separate delivery job downloads that same-run data artifact, obtains GitHub
 OIDC identity, joins Tailscale ephemerally as `tag:ci-sdk-spec-changes`, and signs
 the exact manifest file bytes with the existing `SPEC_CHANGES_SECRET`.
@@ -27,7 +28,7 @@ The signature travels to curl over stdin, not its command line, and response
 bodies and diagnostics are kept out of logs.
 
 Apply the reviewed `workos/infra` trust/policy PR **before** merging this one.
-Two event-specific identities require exact repository/owner numeric IDs,
+Three workflow/event-specific identities require exact repository/owner numeric IDs,
 main ref, workflow path and GitHub-hosted runner. Each has `auth_keys` only.
 Their grant permits general IPv4 Internet TCP/443 through tagged internal exits;
 it is not a hostname/path ACL. Private/tailnet/link-local/loopback destinations,
@@ -43,6 +44,8 @@ Set these nonsecret Actions repository variables from the infra output
 | `SDK_SPEC_CHANGES_PUSH_AUDIENCE` | output `["push"].audience` |
 | `SDK_SPEC_CHANGES_DISPATCH_CLIENT_ID` | output `["workflow_dispatch"].client_id` |
 | `SDK_SPEC_CHANGES_DISPATCH_AUDIENCE` | output `["workflow_dispatch"].audience` |
+| `SDK_SPEC_REPLAY_CLIENT_ID` | output `["replay"].client_id` |
+| `SDK_SPEC_REPLAY_AUDIENCE` | output `["replay"].audience` |
 | `SDK_SPEC_CHANGES_EXIT_NODE` | approved, online internal exit's Tailscale IPv4 address |
 
 Keep the existing `SPEC_CHANGES_SECRET` synchronized with the bot. No new static
@@ -58,11 +61,16 @@ spec path filter), then verify the next real spec merge independently. Confirm
 the bot's manifest row and ephemeral node removal. Preserve application HMAC
 verification; never fall back to direct public delivery on failure.
 
-`node --test scripts/__tests__/push-spec-changes.spec.mjs` checks byte-exact
+`node --test scripts/__tests__/push-spec-changes.spec.mjs scripts/__tests__/replay-spec-changes.spec.mjs` checks byte-exact
 signing, identity/config/status denial cases, proxy-only commands, NAT checks,
 redirects, retries and real curl failure with a closed loopback proxy. SDK
 validation CI runs it even when there is no spec change. Live OIDC, tailnet
 policy enforcement, actual exit/NAT/Worker access, Linux firewall enforcement
 and cleanup need the human
-rollout checks. The existing historical `replay-spec-changes.yml` is separate
-and receives no trust or transport change in this PR.
+rollout checks. The historical replay workflow has its own exact manual-dispatch
+trust and uses the same isolated transport. It preserves dry-run, main/default-branch and
+explicit replay confirmation, validates every target before posting, and sends
+changed manifests sequentially in the supplied order. See [replay instructions](spec-change-replay.md).
+
+The two Socket upstream argument-flow warnings have been traced without
+suppression; see the [pinned action review](tailscale-action-review.md).

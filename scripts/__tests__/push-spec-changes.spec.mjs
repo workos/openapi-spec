@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -19,12 +19,22 @@ const goodStatus = {
   } },
 };
 
-function run(t, { env = {}, status = goodStatus, mode = '', configOnly = false, realCurl = false } = {}) {
+const SHA_A = 'a'.repeat(40);
+const SHA_B = 'b'.repeat(40);
+
+function run(t, { env = {}, status = goodStatus, mode = '', configOnly = false, realCurl = false,
+  replay = false, index = [SHA_B, SHA_A], replayPayloads = {} } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'sdk-delivery-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const log = join(dir, 'calls.jsonl');
   const file = join(dir, 'manifest.json');
   writeFileSync(file, manifest);
+  const replayDir = join(dir, 'replay');
+  mkdirSync(replayDir);
+  writeFileSync(join(replayDir, 'index.json'), JSON.stringify(index));
+  for (const sha of [SHA_A, SHA_B]) {
+    writeFileSync(join(replayDir, `${sha}.json`), replayPayloads[sha] ?? JSON.stringify({ ...JSON.parse(manifest), sha }) + '\n');
+  }
   writeFileSync(join(dir, 'tailscale'), `#!${process.execPath}
 import fs from 'node:fs';
 fs.appendFileSync(process.env.CALL_LOG, JSON.stringify({command:'tailscale',args:process.argv.slice(2)})+'\\n');
@@ -61,7 +71,8 @@ else { process.stdout.write('ok\\n200'); }
   writeFileSync(loader, `import dns from 'node:dns/promises';
 dns.lookup = async () => ({address: '203.0.113.8', family: 4});
 globalThis.setTimeout = (fn) => { queueMicrotask(fn); return 0; };`);
-  const r = spawnSync(process.execPath, ['--import', loader, script, configOnly ? '--check-config' : file], {
+  const args = configOnly ? ['--check-config'] : replay ? ['--replay-dir', replayDir] : [file];
+  const r = spawnSync(process.execPath, ['--import', loader, script, ...args], {
     cwd: dir, encoding: 'utf8', timeout: 10_000,
     env: {
       PATH: `${dir}:${process.env.PATH}`, CALL_LOG: log, STATUS: JSON.stringify(status), MODE: mode,
@@ -71,6 +82,11 @@ globalThis.setTimeout = (fn) => { queueMicrotask(fn); return 0; };`);
       TAILSCALE_CLIENT_ID: 'fixture-client', TAILSCALE_AUDIENCE: 'api.tailscale.com/fixture-client',
       SPEC_CHANGES_SECRET: secret, NO_PROXY: '*', no_proxy: '*',
       REAL_CURL: String(realCurl), CURL_HOME: dir, ...env,
+      ...(replay ? {
+        GITHUB_WORKFLOW_REF: 'workos/openapi-spec/.github/workflows/replay-spec-changes.yml@refs/heads/main',
+        GITHUB_EVENT_NAME: 'workflow_dispatch', REPLAY_MODE: 'push', REPLAY_CONFIRMATION: 'REPLAY_SPEC_CHANGES',
+        ...env,
+      } : {}),
     },
   });
   let calls = [];
@@ -98,6 +114,33 @@ test('both exact supported events can validate config; other repo/ref/workflow/e
     const r = run(t, { env });
     assert.equal(r.status, 1, JSON.stringify(env));
     assert.deepEqual(r.calls, []);
+  }
+});
+
+test('confirmed replay delivers indexed manifests sequentially using the shared transport and exact HMAC bytes', t => {
+  const r = run(t, { replay: true });
+  assert.equal(r.status, 0, r.stderr);
+  const posts = r.calls.filter(c => c.command === 'curl' && c.args.includes('POST'));
+  assert.deepEqual(posts.map(c => JSON.parse(c.body).sha), [SHA_B, SHA_A]);
+  for (const post of posts) {
+    assert.equal(post.input, `X-Spec-Changes-Signature: sha256=${createHmac('sha256', secret).update(post.body).digest('hex')}\n`);
+    assert.equal(post.args.at(-1), 'https://sdk-automation-bot.workos.tools/internal/spec-changes');
+    assert.equal(post.args[post.args.indexOf('--proxy') + 1], 'socks5://127.0.0.1:1055');
+  }
+});
+
+test('replay requires manual push confirmation on main and validates every indexed target before networking', t => {
+  for (const options of [
+    { env: { GITHUB_EVENT_NAME: 'push' } }, { env: { GITHUB_EVENT_NAME: 'pull_request_target' } },
+    { env: { REPLAY_MODE: 'dry-run' } }, { env: { REPLAY_CONFIRMATION: '' } },
+    { env: { GITHUB_REF: 'refs/heads/topic' } }, { index: ['../manifest'] },
+    { index: [SHA_A, SHA_A] }, { index: [] },
+    { replayPayloads: { [SHA_A]: JSON.stringify({ sha: SHA_B, changedServices: [{}] }) } },
+    { replayPayloads: { [SHA_A]: JSON.stringify({ sha: SHA_A, changedServices: [] }) } },
+  ]) {
+    const r = run(t, { replay: true, ...options });
+    assert.equal(r.status, 1);
+    assert.deepEqual(r.calls, [], 'no partial replay before later target validation');
   }
 });
 
