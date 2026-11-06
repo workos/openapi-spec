@@ -485,6 +485,15 @@ function scopeFromName(name) {
   if (/^(AuthenticationFactor|AuthenticationChallenge|ChallengeAuthenticationFactor|MultiFactor|Mfa)/.test(name)) {
     return 'multi_factor_auth';
   }
+  // Inline `authentication.*_failed` / `authentication.sso_timed_out` event
+  // payload error types (`AuthenticationEmailVerificationFailedDataError`,
+  // `AuthenticationSSOTimedOutDataError`). The emitters synthesize these names
+  // for the inline `data.error` objects, so they never appear in the spec and
+  // no IR service owns them; only this rule can place them. `^Authenticate`
+  // below does not match the `Authentication…` spelling. Kept after the MFA
+  // rule so `AuthenticationFactor` / `AuthenticationChallenge` stay there, and
+  // `AuthenticationRadar*` already resolved to `radar` above.
+  if (/^Authentication/.test(name)) return 'user_management';
   if (/^(FeatureFlag|Flag)/.test(name)) return 'feature_flags';
   // Waitlist types are event-payload-only (`waitlist_user.*` events), so no IR
   // service owns them; the AuthKit waitlist lives under user management.
