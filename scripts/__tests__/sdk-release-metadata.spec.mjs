@@ -272,6 +272,15 @@ const compatSurfaceScopeCases = [
   // PR #159 regression: resource-export enums are event-payload-only
   // (`resource_export.*` events), so only the name rule can place them.
   { symbol: 'ResourceExportCompletedDataResourceType', scope: 'events' },
+  // PR #266 regression: the inline `data.error` objects on the
+  // `authentication.*_failed` / `authentication.sso_timed_out` event payloads
+  // get emitter-synthesized names that never appear in the spec, so no IR
+  // service owns them. `^Authenticate` does not match this spelling, and the
+  // MFA / SSO / MagicAuth rules are anchored, so every one of them fell to
+  // `sdk` the first time a field (`radar_detection_id`) was added to them.
+  { symbol: 'AuthenticationEmailVerificationFailedDataError', scope: 'user_management' },
+  { symbol: 'AuthenticationMfaFailedDataError', scope: 'user_management' },
+  { symbol: 'AuthenticationSSOTimedOutDataError', scope: 'user_management' },
 ];
 
 for (const { symbol, scope } of compatSurfaceScopeCases) {
