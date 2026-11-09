@@ -30373,6 +30373,10 @@ components:
                       type: string
                       description: The ID of the agent registration.
                       example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    organization_id:
+                      type: string
+                      description: The ID of the organization the registration belongs to.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
                     completed_by_attempt_id:
                       type: string
                       description: The ID of the claim attempt that completed the claim.
