@@ -6146,8 +6146,8 @@ paths:
   /client/token:
     post:
       description: >-
-        Generate a short-lived, session-bound token for the Client GraphQL API,
-        scoped to an organization and user.
+        Generate a short-lived, session-bound token for the Widgets API, scoped
+        to an organization and user.
       operationId: ClientApiTokenController_issueClientApiToken
       parameters: []
       requestBody:
@@ -6181,7 +6181,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-      summary: Generate a Client API token
+      summary: Generate a Widgets API token
       tags:
         - client
   /connect/applications:
@@ -15119,7 +15119,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorBodyWithCode'
+                $ref: '#/components/schemas/PolicyDeniedErrorBody'
         '422':
           description: Unprocessable Entity
           content:
@@ -16410,7 +16410,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorBodyWithCode'
+                $ref: '#/components/schemas/PolicyDeniedErrorBody'
         '404':
           description: Not Found
           content:
@@ -19294,7 +19294,7 @@ tags:
   - name: authorization
     description: Authorization and access control.
   - name: client
-    description: Client GraphQL API token management.
+    description: Widgets API token management.
   - name: connections
     description: Manage SSO connections.
   - name: directories
@@ -23744,11 +23744,11 @@ components:
       properties:
         organization_id:
           type: string
-          description: The ID of the organization to scope the Client API token to.
+          description: The ID of the organization to scope the Widgets API token to.
           example: org_01EHZNVPK3SFK441A1RGBFSHRT
         user_id:
           type: string
-          description: The ID of the user to issue the Client API token for.
+          description: The ID of the user to issue the Widgets API token for.
           example: user_01E4ZCR3C56J083X43JQXF3JK5
       required:
         - organization_id
@@ -23951,7 +23951,6 @@ components:
         - permission_not_found
         - permission_slug_conflict
         - phone_number_required
-        - policy_denied
         - production_feature_requires_billing
         - radar_challenge
         - radar_sign_up_challenge
@@ -24440,6 +24439,27 @@ components:
       required: &ref_35
         - error
         - error_description
+    PolicyDeniedErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+          const: policy_denied
+          description: The error code identifying the type of error.
+          example: policy_denied
+        message:
+          type: string
+          description: A human-readable description of the error.
+          example: Request could not be processed.
+        radar_detection_id:
+          type: string
+          description: >-
+            The ID of the Radar detection that blocked the request. Only set
+            when Radar blocked it.
+          example: detection_01HZBC6N1EB1ZY7KG32X
+      required:
+        - code
+        - message
     SubResourceScopedRoleNotAllowedErrorBodyWithRoleSlug:
       type: object
       properties:
@@ -25248,16 +25268,6 @@ components:
           description: The error code identifying the type of error.
           example: application_consent_required
           const: application_consent_required
-        message: *ref_29
-      required: *ref_30
-    PolicyDeniedErrorBody:
-      type: object
-      properties:
-        code:
-          type: string
-          description: The error code identifying the type of error.
-          example: policy_denied
-          const: policy_denied
         message: *ref_29
       required: *ref_30
     ActionDeniedErrorBody:
@@ -30363,6 +30373,10 @@ components:
                       type: string
                       description: The ID of the agent registration.
                       example: agent_reg_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    organization_id:
+                      type: string
+                      description: The ID of the organization the registration belongs to.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
                     completed_by_attempt_id:
                       type: string
                       description: The ID of the claim attempt that completed the claim.
@@ -44713,7 +44727,7 @@ components:
       properties:
         token:
           type: string
-          description: The Client API token.
+          description: The Widgets API token.
           example: eyJhbGciOiJSUzI1NiIsImtpZCI6InNlc3Npb24...
       required:
         - token
