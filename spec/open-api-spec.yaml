@@ -15119,7 +15119,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorBodyWithCode'
+                $ref: '#/components/schemas/PolicyDeniedErrorBody'
         '422':
           description: Unprocessable Entity
           content:
@@ -16410,7 +16410,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorBodyWithCode'
+                $ref: '#/components/schemas/PolicyDeniedErrorBody'
         '404':
           description: Not Found
           content:
@@ -23951,7 +23951,6 @@ components:
         - permission_not_found
         - permission_slug_conflict
         - phone_number_required
-        - policy_denied
         - production_feature_requires_billing
         - radar_challenge
         - radar_sign_up_challenge
@@ -24440,6 +24439,27 @@ components:
       required: &ref_35
         - error
         - error_description
+    PolicyDeniedErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+          const: policy_denied
+          description: The error code identifying the type of error.
+          example: policy_denied
+        message:
+          type: string
+          description: A human-readable description of the error.
+          example: Request could not be processed.
+        radar_detection_id:
+          type: string
+          description: >-
+            The ID of the Radar detection that blocked the request. Only set
+            when Radar blocked it.
+          example: detection_01HZBC6N1EB1ZY7KG32X
+      required:
+        - code
+        - message
     SubResourceScopedRoleNotAllowedErrorBodyWithRoleSlug:
       type: object
       properties:
@@ -25248,16 +25268,6 @@ components:
           description: The error code identifying the type of error.
           example: application_consent_required
           const: application_consent_required
-        message: *ref_29
-      required: *ref_30
-    PolicyDeniedErrorBody:
-      type: object
-      properties:
-        code:
-          type: string
-          description: The error code identifying the type of error.
-          example: policy_denied
-          const: policy_denied
         message: *ref_29
       required: *ref_30
     ActionDeniedErrorBody:
