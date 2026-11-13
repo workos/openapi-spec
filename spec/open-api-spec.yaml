@@ -6728,6 +6728,17 @@ paths:
           schema:
             example: Foo Corp
             type: string
+        - name: state
+          required: false
+          in: query
+          description: Filter Connections by their state.
+          schema:
+            example: active
+            enum:
+              - active
+              - inactive
+              - validating
+            type: string
       responses:
         '200':
           description: OK
