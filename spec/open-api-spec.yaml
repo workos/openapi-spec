@@ -11174,6 +11174,20 @@ paths:
           schema:
             example: org_01EHZNVPK3SFK441A1RGBFSHRT
             type: string
+        - name: ownership
+          required: false
+          in: query
+          description: >-
+            Select the provider configuration for `user` connections or
+            `organization` shared connections. Defaults to `user`; never falls
+            back to the other ownership.
+          schema:
+            default: user
+            example: user
+            enum:
+              - user
+              - organization
+            type: string
       responses:
         '200':
           description: A list of provider configurations for the organization.
@@ -11185,6 +11199,12 @@ paths:
           description: The request is missing a valid API key.
         '404':
           description: The organization was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: The ownership selector is invalid.
           content:
             application/json:
               schema:
@@ -11218,6 +11238,20 @@ paths:
           schema:
             example: github
             type: string
+        - name: ownership
+          required: false
+          in: query
+          description: >-
+            Select the provider configuration for `user` connections or
+            `organization` shared connections. Defaults to `user`; never falls
+            back to the other ownership.
+          schema:
+            default: user
+            example: user
+            enum:
+              - user
+              - organization
+            type: string
       requestBody:
         required: true
         content:
@@ -11248,15 +11282,15 @@ paths:
         '401':
           description: The request is missing a valid API key.
         '404':
-          description: The organization or provider was not found.
+          description: The organization or selected provider was not found.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
         '422':
           description: >-
-            One or more of the supplied `scopes` are not valid for the provider.
-            Only scopes configured on the provider may be used.
+            The ownership selector is invalid, or one or more of the supplied
+            `scopes` are not valid for the provider.
           content:
             application/json:
               schema:
