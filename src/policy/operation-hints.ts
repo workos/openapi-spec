@@ -202,6 +202,15 @@ export const operationHints: Record<string, OperationHint> = {
   'GET /directory_groups/{id}': { name: 'get_group' },
   'GET /directory_users': { name: 'list_users' },
   'GET /directory_users/{id}': { name: 'get_user' },
+  // Directory-scoped successors of the flat routes above. The noun has to
+  // follow the resource, not the verb: emitters that trim the mount noun
+  // from method names (Go, .NET, Kotlin, iOS) turn `list_directory_users`
+  // into `ListUsers`, which is the flat route's method, and the flat method
+  // is silently dropped. `ListUsersForDirectory` keeps both.
+  'GET /directories/{directoryId}/groups': { name: 'list_groups_for_directory' },
+  'GET /directories/{directoryId}/groups/{groupId}': { name: 'get_group_for_directory' },
+  'GET /directories/{directoryId}/users': { name: 'list_users_for_directory' },
+  'GET /directories/{directoryId}/users/{userId}': { name: 'get_user_for_directory' },
 
   // -- Audit Logs -- singularized names -----------------------------------------
   'POST /audit_logs/events': { name: 'create_event' },
