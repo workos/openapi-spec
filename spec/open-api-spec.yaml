@@ -3258,6 +3258,75 @@ paths:
             by_external_id:
               - resource_external_id
               - resource_type_slug
+    patch:
+      description: >-
+        Add and remove role assignments for an organization membership in a
+        single atomic operation. Each entry identifies a role and a resource,
+        either by `resource_id` or by `resource_type_slug` and
+        `resource_external_id`; to change an organization-level role, target the
+        organization resource. Additions that already exist and removals that
+        match no assignment are skipped. An assignment in both lists is
+        rejected, as is a removal of a role granted only through a group. `add`
+        and `remove` must contain between 1 and 100 entries combined.
+      operationId: AuthorizationRoleAssignmentsController_patchRoleAssignments
+      parameters:
+        - name: organization_membership_id
+          required: true
+          in: path
+          description: The ID of the organization membership.
+          schema:
+            type: string
+            example: om_01HXYZ123456789ABCDEFGHIJ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchRoleAssignmentsDto'
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/RoleAssignmentUpdateOverlapErrorBody'
+                  - $ref: '#/components/schemas/ErrorBodyWithError'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCode'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCode'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      summary: Update role assignments for an organization membership
+      tags:
+        - authorization
     delete:
       description: Remove a role assignment by role slug and resource.
       operationId: AuthorizationRoleAssignmentsController_removeRoleByCriteria
@@ -20661,6 +20730,100 @@ components:
                     required:
                       - resource_id
       x-mutually-exclusive-body-groups: *ref_6
+    PatchRoleAssignmentEntryDto:
+      allOf:
+        - type: object
+          properties:
+            role_slug:
+              type: string
+              description: The slug of the role.
+              example: editor
+          required:
+            - role_slug
+        - oneOf:
+            - type: object
+              properties:
+                resource_id:
+                  type: string
+                  description: >-
+                    The ID of the resource. Mutually exclusive with
+                    `resource_external_id` and `resource_type_slug`.
+                  example: authz_resource_01HXYZ123456789ABCDEFGH
+              required:
+                - resource_id
+              not:
+                anyOf:
+                  - properties:
+                      resource_external_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_external_id
+                  - properties:
+                      resource_type_slug:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_type_slug
+            - type: object
+              properties:
+                resource_external_id:
+                  type: string
+                  description: >-
+                    The external ID of the resource. Required with
+                    `resource_type_slug`. Mutually exclusive with `resource_id`.
+                  example: project-ext-456
+                resource_type_slug:
+                  type: string
+                  description: >-
+                    The resource type slug. Required with
+                    `resource_external_id`. Mutually exclusive with
+                    `resource_id`.
+                  example: project
+              required:
+                - resource_external_id
+                - resource_type_slug
+              not:
+                anyOf:
+                  - properties:
+                      resource_id:
+                        x-exclude-from-lint: true
+                    required:
+                      - resource_id
+      x-mutually-exclusive-body-groups:
+        resource_target:
+          optional: false
+          variants:
+            by_id:
+              - resource_id
+            by_external_id:
+              - resource_external_id
+              - resource_type_slug
+    PatchRoleAssignmentsDto:
+      type: object
+      properties:
+        add:
+          default: []
+          description: >-
+            Role assignments to add to the organization membership. Assignments
+            that already exist are skipped.
+          example:
+            - role_slug: editor
+              resource_id: authz_resource_01HXYZ123456789ABCDEFGH
+          type: array
+          items:
+            $ref: '#/components/schemas/PatchRoleAssignmentEntryDto'
+        remove:
+          default: []
+          description: >-
+            Role assignments to remove from the organization membership. Entries
+            that match no assignment are skipped. Roles granted through a group
+            cannot be removed.
+          example:
+            - role_slug: viewer
+              resource_type_slug: project
+              resource_external_id: project-ext-456
+          type: array
+          items:
+            $ref: '#/components/schemas/PatchRoleAssignmentEntryDto'
     RemoveRoleDto:
       allOf:
         - type: object
@@ -24252,6 +24415,7 @@ components:
         - cannot_deactivate_pending_organization_membership
         - cannot_delete_last_certificate
         - cannot_reactivate_pending_organization_membership
+        - cannot_remove_group_sourced_role
         - certificate_expired
         - chain_depth_exceeded
         - claim_denied
@@ -24379,6 +24543,7 @@ components:
         - resource_has_dependents
         - resource_limit_exceeded
         - resource_type_update_in_progress
+        - role_assignment_update_overlap
         - role_has_assignments
         - role_has_group_role_mappings
         - role_not_found
@@ -24432,7 +24597,7 @@ components:
         message:
           type: string
           description: A human-readable description of the error.
-          example: Claim "sub" is reserved and cannot be used.
+          example: Request could not be processed.
       required:
         - error
         - message
@@ -25018,6 +25183,16 @@ components:
           description: The error code identifying the type of error.
           example: sms_challenge_quota_reached
           const: sms_challenge_quota_reached
+        message: *ref_29
+      required: *ref_30
+    RoleAssignmentUpdateOverlapErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code identifying the type of error.
+          example: role_assignment_update_overlap
+          const: role_assignment_update_overlap
         message: *ref_29
       required: *ref_30
     IdpMetadataFetchFailedErrorBody:
