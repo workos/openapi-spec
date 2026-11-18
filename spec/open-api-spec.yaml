@@ -3183,7 +3183,10 @@ paths:
       tags:
         - authorization
     post:
-      description: Assign a role to an organization membership on a specific resource.
+      description: >-
+        Assign a role to an organization membership on a specific resource. If
+        the role is already assigned to the membership on that resource, the
+        existing role assignment is returned and no changes are made.
       operationId: AuthorizationRoleAssignmentsController_assignRole
       parameters:
         - name: organization_membership_id
