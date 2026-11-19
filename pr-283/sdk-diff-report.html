@@ -7146,7 +7146,7 @@
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-info"></td>
     <td class="d2h-info">
-        <div class="d2h-code-side-line">@@ -200,15 +200,115 @@ namespace WorkOS</div>
+        <div class="d2h-code-side-line">@@ -200,15 +200,121 @@ namespace WorkOS</div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-cntx">
@@ -8229,6 +8229,56 @@
         </div>
     </td>
 </tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
+        </div>
+    </td>
+</tr><tr>
     <td class="d2h-code-side-linenumber d2h-cntx">
       208
     </td>
@@ -8236,6 +8286,16 @@
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">&nbsp;</span>
             <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Compatibility wrapper for &lt;see cref=&quot;GetUserAsync&quot;&#x2F;&gt;.&lt;&#x2F;summary&gt;</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
+      
+    </td>
+    <td class="d2h-cntx d2h-emptyplaceholder">
+        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9254,7 +9314,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual Task&lt;WorkOSList&lt;DirectoryGroup&gt;&gt; ListGroups(DirectorySyncListGroupsOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;groups` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
@@ -9264,7 +9324,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn">        public virtual Task&lt;WorkOSList&lt;DirectoryGroup&gt;&gt; ListGroups(DirectorySyncListGroupsOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
@@ -9274,7 +9334,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return this.ListGroupsAsync(options, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
@@ -9284,7 +9344,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">            return this.ListGroupsAsync(options, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
@@ -9294,7 +9354,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">        }</span>
         </div>
     </td>
 </tr><tr>
@@ -9304,7 +9364,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Auto-paging variant of &lt;see cref=&quot;ListGroupsAsync&quot;&#x2F;&gt;. Yields individual items across all pages.&lt;&#x2F;summary&gt;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9314,7 +9374,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;options&quot;&gt;Request options.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Auto-paging variant of &lt;see cref=&quot;ListGroupsAsync&quot;&#x2F;&gt;. Yields individual items across all pages.&lt;&#x2F;summary&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9324,7 +9384,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;options&quot;&gt;Request options.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9334,7 +9394,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9344,7 +9404,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;An async sequence of &lt;see cref=&quot;DirectoryGroup&quot;&#x2F;&gt; items.&lt;&#x2F;returns&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9354,7 +9414,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual IAsyncEnumerable&lt;DirectoryGroup&gt; ListGroupsAutoPagingAsync(DirectorySyncListGroupsOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;An async sequence of &lt;see cref=&quot;DirectoryGroup&quot;&#x2F;&gt; items.&lt;&#x2F;returns&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9364,7 +9424,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;groups` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
@@ -9374,7 +9434,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return this.ListAutoPagingAsync&lt;DirectoryGroup&gt;(&quot;&#x2F;directory_groups&quot;, options, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        public virtual IAsyncEnumerable&lt;DirectoryGroup&gt; ListGroupsAutoPagingAsync(DirectorySyncListGroupsOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
@@ -9384,7 +9444,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
@@ -9394,7 +9454,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">            return this.ListAutoPagingAsync&lt;DirectoryGroup&gt;(&quot;&#x2F;directory_groups&quot;, options, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
@@ -9404,7 +9464,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Get a Directory Group&lt;&#x2F;summary&gt;</span>
+            <span class="d2h-code-line-ctn">        }</span>
         </div>
     </td>
 </tr><tr>
@@ -9414,7 +9474,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;remarks&gt;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9424,7 +9484,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; Get the details of an existing Directory Group. Deprecated: use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;groups&#x2F;{groupId}` instead.</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Get a Directory Group&lt;&#x2F;summary&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9434,7 +9494,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;&#x2F;remarks&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;remarks&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9444,7 +9504,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;id&quot;&gt;Unique identifier for the Directory Group.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; Get the details of an existing Directory Group. Deprecated: use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;groups&#x2F;{groupId}` instead.</span>
         </div>
     </td>
 </tr><tr>
@@ -9454,7 +9514,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;&#x2F;remarks&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9464,7 +9524,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;id&quot;&gt;Unique identifier for the Directory Group.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9474,7 +9534,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;The &lt;see cref=&quot;DirectoryGroup&quot;&#x2F;&gt; result.&lt;&#x2F;returns&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9484,7 +9544,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;groups&#x2F;{groupId}` instead.&quot;)]</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9494,7 +9554,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual async Task&lt;DirectoryGroup&gt; GetGroupAsync(string id, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;The &lt;see cref=&quot;DirectoryGroup&quot;&#x2F;&gt; result.&lt;&#x2F;returns&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9504,7 +9564,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;groups&#x2F;{groupId}` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
@@ -9514,7 +9574,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return await this.GetAsync&lt;DirectoryGroup&gt;($&quot;&#x2F;directory_groups&#x2F;{Uri.EscapeDataString(id)}&quot;, null, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        public virtual async Task&lt;DirectoryGroup&gt; GetGroupAsync(string id, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
@@ -9524,7 +9584,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
@@ -9534,7 +9594,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">            return await this.GetAsync&lt;DirectoryGroup&gt;($&quot;&#x2F;directory_groups&#x2F;{Uri.EscapeDataString(id)}&quot;, null, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
@@ -9544,7 +9604,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Compatibility wrapper for &lt;see cref=&quot;GetGroupAsync&quot;&#x2F;&gt;.&lt;&#x2F;summary&gt;</span>
+            <span class="d2h-code-line-ctn">        }</span>
         </div>
     </td>
 </tr><tr>
@@ -9554,7 +9614,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual Task&lt;DirectoryGroup&gt; GetGroup(string id, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9564,7 +9624,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Compatibility wrapper for &lt;see cref=&quot;GetGroupAsync&quot;&#x2F;&gt;.&lt;&#x2F;summary&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9574,7 +9634,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return this.GetGroupAsync(id, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;groups&#x2F;{groupId}` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
@@ -9584,7 +9644,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">        public virtual Task&lt;DirectoryGroup&gt; GetGroup(string id, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
@@ -9594,7 +9654,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
@@ -9604,7 +9664,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;List Directory Users&lt;&#x2F;summary&gt;</span>
+            <span class="d2h-code-line-ctn">            return this.GetGroupAsync(id, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
@@ -9614,7 +9674,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;remarks&gt;</span>
+            <span class="d2h-code-line-ctn">        }</span>
         </div>
     </td>
 </tr><tr>
@@ -9624,7 +9684,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; Get a list of all of existing Directory Users matching the criteria specified. Deprecated: use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users` instead.</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9634,7 +9694,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;&#x2F;remarks&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;List Directory Users&lt;&#x2F;summary&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9644,7 +9704,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;options&quot;&gt;Request options.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;remarks&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9654,7 +9714,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; Get a list of all of existing Directory Users matching the criteria specified. Deprecated: use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users` instead.</span>
         </div>
     </td>
 </tr><tr>
@@ -9664,7 +9724,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;&#x2F;remarks&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9674,7 +9734,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;A page of &lt;see cref=&quot;DirectoryUserWithGroups&quot;&#x2F;&gt; results.&lt;&#x2F;returns&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;options&quot;&gt;Request options.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9684,7 +9744,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users` instead.&quot;)]</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9694,7 +9754,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual async Task&lt;WorkOSList&lt;DirectoryUserWithGroups&gt;&gt; ListUsersAsync(DirectorySyncListUsersOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9704,7 +9764,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;A page of &lt;see cref=&quot;DirectoryUserWithGroups&quot;&#x2F;&gt; results.&lt;&#x2F;returns&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9714,7 +9774,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return await this.GetAsync&lt;WorkOSList&lt;DirectoryUserWithGroups&gt;&gt;(&quot;&#x2F;directory_users&quot;, options, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
@@ -9724,7 +9784,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">        public virtual async Task&lt;WorkOSList&lt;DirectoryUserWithGroups&gt;&gt; ListUsersAsync(DirectorySyncListUsersOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
@@ -9734,7 +9794,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
@@ -9744,7 +9804,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Compatibility wrapper for &lt;see cref=&quot;ListUsersAsync&quot;&#x2F;&gt;.&lt;&#x2F;summary&gt;</span>
+            <span class="d2h-code-line-ctn">            return await this.GetAsync&lt;WorkOSList&lt;DirectoryUserWithGroups&gt;&gt;(&quot;&#x2F;directory_users&quot;, options, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
@@ -9754,7 +9814,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual Task&lt;WorkOSList&lt;DirectoryUserWithGroups&gt;&gt; ListUsers(DirectorySyncListUsersOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        }</span>
         </div>
     </td>
 </tr><tr>
@@ -9764,7 +9824,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9774,7 +9834,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return this.ListUsersAsync(options, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Compatibility wrapper for &lt;see cref=&quot;ListUsersAsync&quot;&#x2F;&gt;.&lt;&#x2F;summary&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9784,7 +9844,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
@@ -9794,7 +9854,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">        public virtual Task&lt;WorkOSList&lt;DirectoryUserWithGroups&gt;&gt; ListUsers(DirectorySyncListUsersOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
@@ -9804,7 +9864,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Auto-paging variant of &lt;see cref=&quot;ListUsersAsync&quot;&#x2F;&gt;. Yields individual items across all pages.&lt;&#x2F;summary&gt;</span>
+            <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
@@ -9814,7 +9874,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;options&quot;&gt;Request options.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">            return this.ListUsersAsync(options, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
@@ -9824,7 +9884,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        }</span>
         </div>
     </td>
 </tr><tr>
@@ -9834,7 +9894,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9844,7 +9904,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;An async sequence of &lt;see cref=&quot;DirectoryUserWithGroups&quot;&#x2F;&gt; items.&lt;&#x2F;returns&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Auto-paging variant of &lt;see cref=&quot;ListUsersAsync&quot;&#x2F;&gt;. Yields individual items across all pages.&lt;&#x2F;summary&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9854,7 +9914,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual IAsyncEnumerable&lt;DirectoryUserWithGroups&gt; ListUsersAutoPagingAsync(DirectorySyncListUsersOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;options&quot;&gt;Request options.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9864,7 +9924,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9874,7 +9934,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return this.ListAutoPagingAsync&lt;DirectoryUserWithGroups&gt;(&quot;&#x2F;directory_users&quot;, options, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9884,7 +9944,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;An async sequence of &lt;see cref=&quot;DirectoryUserWithGroups&quot;&#x2F;&gt; items.&lt;&#x2F;returns&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9894,7 +9954,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
@@ -9904,7 +9964,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Get a Directory User&lt;&#x2F;summary&gt;</span>
+            <span class="d2h-code-line-ctn">        public virtual IAsyncEnumerable&lt;DirectoryUserWithGroups&gt; ListUsersAutoPagingAsync(DirectorySyncListUsersOptions? options = null, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
@@ -9914,7 +9974,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;remarks&gt;</span>
+            <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
@@ -9924,7 +9984,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; Get the details of an existing Directory User. Deprecated: use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users&#x2F;{userId}` instead.</span>
+            <span class="d2h-code-line-ctn">            return this.ListAutoPagingAsync&lt;DirectoryUserWithGroups&gt;(&quot;&#x2F;directory_users&quot;, options, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
@@ -9934,7 +9994,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;&#x2F;remarks&gt;</span>
+            <span class="d2h-code-line-ctn">        }</span>
         </div>
     </td>
 </tr><tr>
@@ -9944,7 +10004,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;id&quot;&gt;Unique identifier for the Directory User.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -9954,7 +10014,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Get a Directory User&lt;&#x2F;summary&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9964,7 +10024,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;remarks&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9974,7 +10034,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;The &lt;see cref=&quot;DirectoryUserWithGroups&quot;&#x2F;&gt; result.&lt;&#x2F;returns&gt;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; Get the details of an existing Directory User. Deprecated: use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users&#x2F;{userId}` instead.</span>
         </div>
     </td>
 </tr><tr>
@@ -9984,7 +10044,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users&#x2F;{userId}` instead.&quot;)]</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;&#x2F;remarks&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -9994,7 +10054,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual async Task&lt;DirectoryUserWithGroups&gt; GetUserAsync(string id, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;id&quot;&gt;Unique identifier for the Directory User.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -10004,7 +10064,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        {</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;requestOptions&quot;&gt;Per-request configuration overrides.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -10014,7 +10074,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return await this.GetAsync&lt;DirectoryUserWithGroups&gt;($&quot;&#x2F;directory_users&#x2F;{Uri.EscapeDataString(id)}&quot;, null, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;param name=&quot;cancellationToken&quot;&gt;Cancellation token.&lt;&#x2F;param&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -10024,7 +10084,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;returns&gt;The &lt;see cref=&quot;DirectoryUserWithGroups&quot;&#x2F;&gt; result.&lt;&#x2F;returns&gt;</span>
         </div>
     </td>
 </tr><tr>
@@ -10034,57 +10094,57 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users&#x2F;{userId}` instead.&quot;)]</span>
         </div>
     </td>
 </tr><tr>
-    <td class="d2h-code-side-linenumber d2h-cntx">
+    <td class="d2h-code-side-linenumber d2h-ins">
       308
     </td>
-    <td class="d2h-cntx">
-        <div class="d2h-code-side-line">
-            <span class="d2h-code-line-prefix">&nbsp;</span>
-            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Compatibility wrapper for &lt;see cref=&quot;GetUserAsync&quot;&#x2F;&gt;.&lt;&#x2F;summary&gt;</span>
-        </div>
-    </td>
-</tr><tr>
-    <td class="d2h-code-side-linenumber d2h-ins d2h-change">
-      309
-    </td>
-    <td class="d2h-ins d2h-change">
+    <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        public virtual Task&lt;<ins>DirectoryUserWithGroups</ins>&gt; GetUser(string <ins>id</ins>, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+            <span class="d2h-code-line-ctn">        public virtual async Task&lt;DirectoryUserWithGroups&gt; GetUserAsync(string id, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
         </div>
     </td>
 </tr><tr>
-    <td class="d2h-code-side-linenumber d2h-cntx">
-      310
+    <td class="d2h-code-side-linenumber d2h-ins">
+      309
     </td>
-    <td class="d2h-cntx">
+    <td class="d2h-ins">
         <div class="d2h-code-side-line">
-            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-prefix">+</span>
             <span class="d2h-code-line-ctn">        {</span>
         </div>
     </td>
 </tr><tr>
-    <td class="d2h-code-side-linenumber d2h-ins d2h-change">
-      311
+    <td class="d2h-code-side-linenumber d2h-ins">
+      310
     </td>
-    <td class="d2h-ins d2h-change">
+    <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            return this.GetUserAsync(<ins>id</ins>, requestOptions, cancellationToken);</span>
+            <span class="d2h-code-line-ctn">            return await this.GetAsync&lt;DirectoryUserWithGroups&gt;($&quot;&#x2F;directory_users&#x2F;{Uri.EscapeDataString(id)}&quot;, null, requestOptions, cancellationToken);</span>
         </div>
     </td>
 </tr><tr>
-    <td class="d2h-code-side-linenumber d2h-cntx">
+    <td class="d2h-code-side-linenumber d2h-ins">
+      311
+    </td>
+    <td class="d2h-ins">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">        }</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-ins">
       312
     </td>
-    <td class="d2h-cntx">
+    <td class="d2h-ins">
         <div class="d2h-code-side-line">
-            <span class="d2h-code-line-prefix">&nbsp;</span>
-            <span class="d2h-code-line-ctn">        }</span>
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -10094,12 +10154,72 @@
     <td class="d2h-cntx">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">        &#x2F;&#x2F;&#x2F; &lt;summary&gt;Compatibility wrapper for &lt;see cref=&quot;GetUserAsync&quot;&#x2F;&gt;.&lt;&#x2F;summary&gt;</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-ins">
+      314
+    </td>
+    <td class="d2h-ins">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">        [System.Obsolete(&quot;Deprecated. use `GET &#x2F;directories&#x2F;{directoryId}&#x2F;users&#x2F;{userId}` instead.&quot;)]</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-ins d2h-change">
+      315
+    </td>
+    <td class="d2h-ins d2h-change">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">        public virtual Task&lt;<ins>DirectoryUserWithGroups</ins>&gt; GetUser(string <ins>id</ins>, RequestOptions? requestOptions = null, CancellationToken cancellationToken = default)</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      316
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">        {</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-ins d2h-change">
+      317
+    </td>
+    <td class="d2h-ins d2h-change">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">+</span>
+            <span class="d2h-code-line-ctn">            return this.GetUserAsync(<ins>id</ins>, requestOptions, cancellationToken);</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      318
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
+            <span class="d2h-code-line-ctn">        }</span>
+        </div>
+    </td>
+</tr><tr>
+    <td class="d2h-code-side-linenumber d2h-cntx">
+      319
+    </td>
+    <td class="d2h-cntx">
+        <div class="d2h-code-side-line">
+            <span class="d2h-code-line-prefix">&nbsp;</span>
             <span class="d2h-code-line-ctn">    }</span>
         </div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-cntx">
-      314
+      320
     </td>
     <td class="d2h-cntx">
         <div class="d2h-code-side-line">
