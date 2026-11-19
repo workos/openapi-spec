@@ -24526,6 +24526,7 @@ components:
         - directory_sync_rate_limited
         - directory_sync_unsupported
         - discovery_endpoint_must_use_https
+        - discovery_endpoint_tenant_not_allowed
         - domain_already_exists
         - domain_already_verified
         - duplicate_endpoint
