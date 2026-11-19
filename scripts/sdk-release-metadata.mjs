@@ -823,6 +823,19 @@ function operationDetail(change, indexes, action) {
   return `${action} operation in \`${change.serviceName}\`.`;
 }
 
+// `oagen diff` reports more than server-default flips in `behaviorChanges`: the
+// array is a union discriminated by `kind`, which also carries deprecation,
+// security and extension changes. Only `param-default-changed` is a
+// service-scoped behavior break that the loop at the end of factsFromDiff
+// describes. Every other kind mirrors an entry in `changes`, the main loop's
+// input, and is keyed by whatever it describes (a model, an enum, a webhook)
+// rather than by a service and parameter. Reading one as a default flip produced
+// a breaking fact with an empty symbol in the `sdk` fallback scope, or a
+// spurious break on the service when the change sat on an operation.
+export function isParamDefaultChange(behaviorChange) {
+  return behaviorChange?.kind === 'param-default-changed';
+}
+
 export function factsFromDiff(diffReport, indexes) {
   const facts = [];
   for (const change of diffReport.changes ?? []) {
@@ -1075,6 +1088,7 @@ export function factsFromDiff(diffReport, indexes) {
     }
   }
   for (const behaviorChange of diffReport.behaviorChanges ?? []) {
+    if (!isParamDefaultChange(behaviorChange)) continue;
     const scope = resolveServiceScope(behaviorChange.serviceName);
     const symbol = [behaviorChange.serviceName, behaviorChange.operationName, behaviorChange.paramName]
       .filter(Boolean)

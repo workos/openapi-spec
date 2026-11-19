@@ -73,6 +73,92 @@ test('field-removed flagged breaking is still capped to fix', () => {
   assert.equal(fact.prefix, 'fix');
 });
 
+// ── behaviorChanges: only a server-default flip is a behavior break ──────────
+// `oagen diff` also mirrors deprecation, security and extension changes into
+// `behaviorChanges`. This is the entry it emitted when `permissions` was
+// deprecated on the agent blueprint models (workos/openapi-spec#281).
+const DEPRECATED_FIELD = {
+  kind: 'deprecated-changed',
+  node: 'field',
+  modelName: 'AgentBlueprint',
+  fieldName: 'permissions',
+  oldDeprecated: false,
+  newDeprecated: true,
+  classification: 'additive',
+};
+
+test('a server-default flip in behaviorChanges is a breaking fact on its service', () => {
+  const report = {
+    behaviorChanges: [
+      {
+        kind: 'param-default-changed',
+        serviceName: 'Organizations',
+        operationName: 'list',
+        paramName: 'order',
+        paramLocation: 'query',
+        oldDefault: 'desc',
+        newDefault: null,
+        classification: 'breaking',
+      },
+    ],
+  };
+  assert.deepEqual(
+    factsFromDiff(report, EMPTY_INDEXES).map(({ severity, scope, kind, symbols, detail }) => ({ severity, scope, kind, symbols, detail })),
+    [
+      {
+        severity: 'breaking',
+        scope: 'organizations',
+        kind: 'param-default-changed',
+        symbols: ['Organizations', 'list', 'order'],
+        detail: 'Changed server default for parameter `Organizations.list.order`.',
+      },
+    ],
+  );
+});
+
+test('a deprecation mirrored into behaviorChanges is not read as a server-default flip', () => {
+  assert.deepEqual(factsFromDiff({ behaviorChanges: [DEPRECATED_FIELD] }, EMPTY_INDEXES), []);
+});
+
+// The mirrors that sit on an operation carry a serviceName, so they resolved to
+// a real scope and surfaced as a breaking "server default" change on it.
+test('no other behaviorChanges kind on an operation is read as a server-default flip', () => {
+  const onOperation = { node: 'operation', serviceName: 'Organizations', operationName: 'list' };
+  const report = {
+    behaviorChanges: [
+      { kind: 'deprecated-changed', ...onOperation, oldDeprecated: false, newDeprecated: true, classification: 'additive' },
+      { kind: 'extensions-changed', ...onOperation, newExtensions: { 'x-internal': true }, classification: 'additive' },
+      { kind: 'security-changed', ...onOperation, oldSecurity: [], newSecurity: [{ schemeName: 'bearer', scopes: [] }], classification: 'breaking' },
+      { kind: 'security-scheme-changed', schemeName: 'bearer', newScheme: { kind: 'http', scheme: 'bearer' }, classification: 'additive' },
+    ],
+  };
+  assert.deepEqual(factsFromDiff(report, EMPTY_INDEXES), []);
+});
+
+// Regression: the deprecation is reported once, from `changes`. Its mirror used
+// to add a `feat!(sdk)` entry with no symbols, which --strict-scopes rejects.
+test('deprecating a model field yields no entry in the sdk fallback scope', () => {
+  const report = {
+    changes: [
+      {
+        kind: 'model-modified',
+        name: 'AgentBlueprint',
+        fieldChanges: [
+          { kind: 'field-deprecated-changed', fieldName: 'permissions', classification: 'additive', oldDeprecated: false, newDeprecated: true },
+        ],
+        deprecatedChanged: false,
+        classification: 'additive',
+      },
+    ],
+    behaviorChanges: [DEPRECATED_FIELD],
+  };
+  const entries = entriesFromGroups(groupFacts(factsFromDiff(report, EMPTY_INDEXES)), []);
+  assert.deepEqual(
+    entries.map(({ prefix, scope, symbols }) => ({ prefix, scope, symbols })),
+    [{ prefix: 'feat', scope: 'agents', symbols: ['AgentBlueprint', 'permissions'] }],
+  );
+});
+
 // A scoped batch's changelog must describe only the staged services, even when
 // the spec diff carries an unrelated change that drifted in between staging and
 // generation (the bug that titled a Pipes batch after an authorization change).

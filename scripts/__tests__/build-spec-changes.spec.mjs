@@ -151,13 +151,59 @@ test('a service is breaking if ANY change touching it is breaking', () => {
 test('behaviorChanges fold into their service as breaking', () => {
   const report = {
     changes: [],
-    behaviorChanges: [{ serviceName: 'UserManagementInvitations', paramName: 'order', oldDefault: 'desc', newDefault: null }],
+    behaviorChanges: [
+      { kind: 'param-default-changed', serviceName: 'UserManagementInvitations', paramName: 'order', oldDefault: 'desc', newDefault: null },
+    ],
   };
   const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
   assert.deepEqual(serviceMetadata(manifest), [
     { service: 'UserManagement', specHasBreaking: true, sdkSeverity: 'breaking', hasBreaking: true },
   ]);
   assert.equal(manifest.changedServices[0].entries[0].changes[0].kind, 'param-default-changed');
+});
+
+// `behaviorChanges` also mirrors deprecation, security and extension changes.
+// One that sits on an operation names a service, so it used to fold in as a
+// break; one on a model names none (workos/openapi-spec#281).
+test('behaviorChanges that are not default flips do not mark a service breaking', () => {
+  const report = {
+    changes: [
+      {
+        kind: 'operation-modified',
+        serviceName: 'UserManagementInvitations',
+        operationName: 'list',
+        deprecatedChanged: true,
+        oldDeprecated: false,
+        newDeprecated: true,
+        paramChanges: [],
+        classification: 'additive',
+      },
+    ],
+    behaviorChanges: [
+      {
+        kind: 'deprecated-changed',
+        node: 'operation',
+        serviceName: 'UserManagementInvitations',
+        operationName: 'list',
+        oldDeprecated: false,
+        newDeprecated: true,
+        classification: 'additive',
+      },
+      {
+        kind: 'deprecated-changed',
+        node: 'field',
+        modelName: 'AgentBlueprint',
+        fieldName: 'permissions',
+        oldDeprecated: false,
+        newDeprecated: true,
+        classification: 'additive',
+      },
+    ],
+  };
+  const { manifest } = buildSpecChanges({ report, mountRules: MOUNT_RULES });
+  assert.deepEqual(serviceMetadata(manifest), [
+    { service: 'UserManagement', specHasBreaking: false, sdkSeverity: 'fix', hasBreaking: false },
+  ]);
 });
 
 // ── buildChangedEndpoints: method/path from IR, post-mount attribution ───────
