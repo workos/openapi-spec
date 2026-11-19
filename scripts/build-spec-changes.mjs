@@ -42,6 +42,7 @@ import {
   entriesFromGroups,
   factsFromDiff,
   groupFacts,
+  isParamDefaultChange,
 } from "./sdk-release-metadata.mjs";
 
 const BREAKING = "breaking";
@@ -304,10 +305,13 @@ export function buildSpecChanges({
     for (const service of services) touch(service, specHasBreaking, facts);
   }
 
-  // Behavior changes (e.g. a removed server-side query-param default) are
-  // service-scoped and always breaking. oagen emits them as a separate
-  // top-level array; fold them into the same per-service rollup.
+  // Server-default flips (e.g. a removed query-param default) are service-scoped
+  // and always breaking. oagen emits them in a separate top-level array; fold
+  // them into the same per-service rollup. The array's other kinds (deprecation,
+  // security and extension changes) mirror entries in `changes`, which the loop
+  // above already walked, so they are skipped rather than counted as a break.
   for (const behaviorChange of report.behaviorChanges ?? []) {
+    if (!isParamDefaultChange(behaviorChange)) continue;
     const service = toPostMount(behaviorChange.serviceName, mountRules);
     if (!service) continue;
     const facts = factsFromDiff({ behaviorChanges: [behaviorChange] }, indexes);

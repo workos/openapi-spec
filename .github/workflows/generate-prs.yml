@@ -281,8 +281,11 @@ jobs:
             # Behavior changes (e.g. removed query-param defaults) are emitted as
             # a separate top-level array by oagen. They are mechanically
             # rendered below as feat(scope)!: change default lines so they don't
-            # depend on prose inference from the raw SDK diff.
-            BEHAVIOR_CHANGES=$(echo "$SPEC_DIFF" | jq -c '.behaviorChanges // []')
+            # depend on prose inference from the raw SDK diff. The array also
+            # carries deprecation, security and extension changes, which have
+            # no serviceName/paramName to render and are already reported from
+            # `changes`, so keep only the default flips.
+            BEHAVIOR_CHANGES=$(echo "$SPEC_DIFF" | jq -c '[(.behaviorChanges // [])[] | select(.kind == "param-default-changed")]')
 
             (
               cd "$GITHUB_WORKSPACE/openapi-spec"
