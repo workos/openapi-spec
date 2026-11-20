@@ -32028,6 +32028,163 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: application.token_exchange_failed
+                data:
+                  type: object
+                  properties:
+                    grant_type:
+                      type: string
+                      description: >-
+                        The OAuth grant type of the token request that presented
+                        the token to exchange.
+                      example: urn:ietf:params:oauth:grant-type:jwt-bearer
+                    client_id:
+                      type: string
+                      description: >-
+                        The client ID of the application that made the token
+                        request.
+                      example: client_01HXYZ123456789ABCDEFGHIJ
+                    issuer:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The issuer the presented token claims. It is not
+                        verified, and is `null` when the token could not be
+                        read.
+                      example: https://example.okta.com
+                    error:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          description: The OAuth error code returned to the application.
+                          example: invalid_grant
+                        message:
+                          type: string
+                          description: A human-readable description of the error.
+                          example: >-
+                            The assertion issuer is not trusted in this
+                            environment.
+                      required:
+                        - code
+                        - message
+                      description: Why the token exchange failed.
+                  required:
+                    - grant_type
+                    - client_id
+                    - issuer
+                    - error
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: application.token_exchange_succeeded
+                data:
+                  type: object
+                  properties:
+                    grant_type:
+                      type: string
+                      description: >-
+                        The OAuth grant type of the token request that presented
+                        the token to exchange.
+                      example: urn:ietf:params:oauth:grant-type:jwt-bearer
+                    client_id:
+                      type: string
+                      description: >-
+                        The client ID of the application that made the token
+                        request.
+                      example: client_01HXYZ123456789ABCDEFGHIJ
+                    user_id:
+                      type: string
+                      description: The ID of the user the access token was issued for.
+                      example: user_01E4ZCR3C56J083X43JQXF3JK5
+                    email:
+                      type: string
+                      description: The email address of the user.
+                      example: user@example.com
+                    organization_id:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The ID of the organization the access token is scoped
+                        to.
+                      example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                    issuer:
+                      type: string
+                      description: The issuer of the token that was exchanged.
+                      example: https://example.okta.com
+                    connection_id:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The ID of the SSO connection whose identity provider
+                        issued the exchanged token. `null` when the AI client
+                        issued it.
+                      example: conn_01E4ZCR3C56J083X43JQXF3JK5
+                    jti:
+                      type: string
+                      description: The `jti` claim of the access token that was issued.
+                      example: 01HXYZ123456789ABCDEFGHIJ
+                  required:
+                    - grant_type
+                    - client_id
+                    - user_id
+                    - email
+                    - organization_id
+                    - issuer
+                    - connection_id
+                    - jti
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: authentication.email_verification_failed
                 data:
                   type: object
