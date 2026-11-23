@@ -15979,7 +15979,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorBody'
+                anyOf:
+                  - $ref: '#/components/schemas/EntitiesNotFoundErrorBodyWithIdsList'
+                  - $ref: '#/components/schemas/EntityNotFoundErrorBodyWithEntityId'
         '422':
           description: Unprocessable Entity
           content:
@@ -24554,6 +24556,7 @@ components:
         - email_verification_code_incorrect
         - email_verification_code_previously_used
         - email_verification_required
+        - entities_not_found
         - entity_not_found
         - expires_in_days_too_long
         - expires_in_days_too_short
@@ -25156,6 +25159,50 @@ components:
         - message
         - code
         - role_slug
+    EntitiesNotFoundErrorBodyWithIdsList:
+      type: object
+      properties:
+        code:
+          type: string
+          const: entities_not_found
+          description: The error code identifying the type of error.
+          example: entities_not_found
+        message:
+          type: string
+          description: A human-readable description of the error.
+          example: Request could not be processed.
+        ids:
+          type: array
+          items:
+            type: string
+          description: The requested user and organization IDs, in that order.
+          example:
+            - user_01E4ZCR3C5A4QZ2Z2JQXGKZJ9E
+            - org_01E4ZCR3C56J083X43JQXF3JK5
+      required:
+        - code
+        - message
+        - ids
+    EntityNotFoundErrorBodyWithEntityId:
+      type: object
+      properties:
+        code:
+          type: string
+          const: entity_not_found
+          description: The error code identifying the type of error.
+          example: entity_not_found
+        message:
+          type: string
+          description: A human-readable description of the error.
+          example: Request could not be processed.
+        entity_id:
+          type: string
+          description: The ID of the organization that was not found.
+          example: org_01E4ZCR3C56J083X43JQXF3JK5
+      required:
+        - code
+        - message
+        - entity_id
     EmailCompletionRequiredErrorBodyWithEmailCompletionToken:
       type: object
       properties:
