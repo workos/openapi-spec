@@ -15043,6 +15043,42 @@ paths:
       summary: List CORS origins
       tags:
         - user-management.cors-origins
+  /user_management/cors_origins/{id}:
+    delete:
+      description: Deletes a CORS origin from the API key's application.
+      operationId: CorsOriginsController_delete
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The ID of the CORS origin to delete.
+          schema:
+            type: string
+            example: cors_origin_01HXYZ123456789ABCDEFGHIJ
+      responses:
+        '204':
+          description: CORS origin deleted successfully.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+              example:
+                message: Unauthorized
+        '404':
+          description: CORS origin not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+              example:
+                message: >-
+                  CORS origin not found:
+                  'cors_origin_01HXYZ123456789ABCDEFGHIJ'.
+      summary: Delete a CORS origin
+      tags:
+        - user-management.cors-origins
   /user_management/email_verification/{id}:
     get:
       description: >-
