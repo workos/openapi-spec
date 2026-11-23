@@ -14469,6 +14469,7 @@ paths:
                   - $ref: '#/components/schemas/PasskeyProgressiveEnrollmentErrorBody'
                   - $ref: '#/components/schemas/RadarChallengeErrorBody'
                   - $ref: '#/components/schemas/RadarSignUpChallengeErrorBody'
+                  - $ref: '#/components/schemas/RadarSmsChallengeErrorBody'
                   - $ref: '#/components/schemas/RadarSmsSignInChallengeErrorBody'
                   - $ref: '#/components/schemas/ApplicationConsentRequiredErrorBody'
                   - $ref: '#/components/schemas/PolicyDeniedErrorBody'
@@ -24731,6 +24732,7 @@ components:
         - production_feature_requires_billing
         - radar_challenge
         - radar_sign_up_challenge
+        - radar_sms_challenge
         - radar_sms_sign_in_challenge
         - rate_limit_exceeded
         - resource_has_dependents
@@ -26080,6 +26082,16 @@ components:
           description: The error code identifying the type of error.
           example: radar_sign_up_challenge
           const: radar_sign_up_challenge
+        message: *ref_29
+      required: *ref_30
+    RadarSmsChallengeErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code identifying the type of error.
+          example: radar_sms_challenge
+          const: radar_sms_challenge
         message: *ref_29
       required: *ref_30
     RadarSmsSignInChallengeErrorBody:
