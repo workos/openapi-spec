@@ -16975,6 +16975,7 @@ paths:
                   - $ref: >-
                       #/components/schemas/PasswordSaltPositionRequiresPasswordHashErrorBody
                   - $ref: '#/components/schemas/InvalidMetadataErrorBody'
+                  - $ref: '#/components/schemas/EmailDomainNotDeliverableErrorBody'
         '403':
           description: Forbidden
           content:
