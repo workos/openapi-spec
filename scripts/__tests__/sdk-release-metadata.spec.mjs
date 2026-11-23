@@ -986,3 +986,27 @@ test('factsFromCompat records a rename once across its Suspend variant', () => {
   assert.equal(facts[0].kind, 'sdk-surface-renamed');
   assert.deepEqual(facts[0].symbols, ['Pipes.getToken', 'Pipes.getAccessToken']);
 });
+
+// Regression: discriminated-union variants live only in the discriminator
+// mapping, not in any field, so variant models the emitters name from the
+// discriminator value (`BotDetection`, `SignUp`) had no IR owner and fell to
+// the `sdk` fallback, failing --strict-scopes on the Radar evidence spec sync.
+test('buildIndexes gives discriminator-mapped variant models their operation scope', () => {
+  const indexes = buildIndexes([
+    {
+      models: [
+        { name: 'RadarDetection', fields: [{ name: 'evidence', type: { kind: 'model', name: 'RadarDetectionEvidence' } }] },
+        { name: 'RadarDetectionEvidence', fields: [], discriminator: { property: 'control', mapping: { bot_detection: 'BotDetection' } } },
+        { name: 'BotDetection', fields: [{ name: 'details', type: { kind: 'model', name: 'RadarDetectionRestrictionDetails' } }] },
+        { name: 'RadarDetectionRestrictionDetails', fields: [], discriminator: { property: 'type', mapping: { sign_up: 'SignUp' } } },
+        { name: 'SignUp', fields: [{ name: 'trigger', type: { kind: 'enum', name: 'SmsSignInTrigger' } }] },
+      ],
+      enums: [{ name: 'SmsSignInTrigger', values: [] }],
+      services: [{ name: 'Radar', operations: [{ name: 'find', response: { kind: 'model', name: 'RadarDetection' } }] }],
+    },
+    null,
+  ]);
+  assert.deepEqual([...indexes.symbolScopes.get('model:BotDetection')], ['radar']);
+  assert.deepEqual([...indexes.symbolScopes.get('model:SignUp')], ['radar']);
+  assert.deepEqual([...indexes.symbolScopes.get('enum:SmsSignInTrigger')], ['radar']);
+});
