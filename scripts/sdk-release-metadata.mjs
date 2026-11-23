@@ -661,6 +661,13 @@ export function buildIndexes(specs, { resolvedOperations = [] } = {}) {
       for (const enumName of nested.enums) out.enums.add(enumName);
       for (const nestedModel of nested.models) collectModelClosure(nestedModel, out, seen);
     }
+    // Discriminated unions (`allOf` + `oneOf` with a mapping, the `EventSchema`
+    // shape) carry their variants only in the mapping, not as fields. Without
+    // this, variant models the emitters name from the discriminator value
+    // (`BotDetection`, `SignUp` under `RadarDetection.evidence`) have no IR owner.
+    for (const variant of Object.values(model.discriminator?.mapping ?? {})) {
+      collectModelClosure(variant, out, seen);
+    }
   };
 
   for (const spec of specs.filter(Boolean)) {
