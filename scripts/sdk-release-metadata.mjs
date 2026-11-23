@@ -655,6 +655,14 @@ export function buildIndexes(specs, { resolvedOperations = [] } = {}) {
     out.models.add(modelName);
     const model = modelByName.get(modelName);
     if (!model) return;
+    // A discriminated union's variants hang off the base model's
+    // `discriminator.mapping`, not off any field. The parser names an inline
+    // variant from its discriminator value alone (`blocked_tld` → `BlockedTld`),
+    // so no name rule catches it either; without this edge it has no owner and
+    // lands in the `sdk` fallback.
+    for (const variant of Object.values(model.discriminator?.mapping ?? {})) {
+      collectModelClosure(variant, out, seen);
+    }
     for (const field of model.fields ?? []) {
       const nested = { models: new Set(), enums: new Set() };
       collectTypeRefs(field.type, nested);

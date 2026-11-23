@@ -440,6 +440,81 @@ test('factsFromCompat resolves a generated model with no name rule (CreatePasswo
   assert.equal(facts[0].scope_source, 'compat_ir');
 });
 
+// --- Discriminated-union variants (openapi-spec PR #291 regression) ---
+// An inline `oneOf` variant is named from its discriminator value alone
+// (`blocked_tld` → `BlockedTld`) and is reachable only through the base model's
+// `discriminator.mapping`. The closure walk must follow that edge, or the
+// variant and everything under it (`SmsSignInTrigger`) has no owner.
+
+const UNION_IR_FIXTURE = {
+  models: [
+    {
+      name: 'RadarDetection',
+      fields: [{ name: 'evidence', type: { kind: 'nullable', inner: { kind: 'model', name: 'RadarDetectionEvidence' } } }],
+    },
+    {
+      name: 'RadarDetectionEvidence',
+      fields: [],
+      discriminator: { property: 'control', mapping: { restriction: 'RadarDetectionEvidenceRestriction' } },
+    },
+    {
+      name: 'RadarDetectionEvidenceRestriction',
+      fields: [{ name: 'details', type: { kind: 'model', name: 'RadarDetectionRestrictionDetails' } }],
+    },
+    {
+      // No fields at all: the mapping is the only way down.
+      name: 'RadarDetectionRestrictionDetails',
+      fields: [],
+      discriminator: { property: 'type', mapping: { blocked_tld: 'BlockedTld', sms_sign_in: 'SmsSignIn' } },
+    },
+    { name: 'BlockedTld', fields: [{ name: 'type', type: { kind: 'literal', value: 'blocked_tld' } }] },
+    { name: 'SmsSignIn', fields: [{ name: 'trigger', type: { kind: 'enum', name: 'SmsSignInTrigger' } }] },
+  ],
+  enums: [{ name: 'SmsSignInTrigger', values: [] }],
+  services: [{ name: 'Radar', operations: [{ name: 'find', response: { kind: 'model', name: 'RadarDetection' } }] }],
+};
+
+test('buildIndexes follows discriminator mappings so union variants inherit the operation scope', () => {
+  const indexes = buildIndexes([null, UNION_IR_FIXTURE]);
+  const facts = factsFromDiff({ changes: [
+    { kind: 'model-added', name: 'BlockedTld' },
+    { kind: 'model-added', name: 'SmsSignIn' },
+    { kind: 'enum-added', name: 'SmsSignInTrigger' },
+  ] }, indexes);
+  assert.equal(facts.length, 3);
+  for (const fact of facts) {
+    assert.equal(fact.scope, 'radar');
+    assert.equal(fact.scope_source, 'ir');
+    assert.deepEqual(fact.scope_candidates, ['radar']);
+  }
+  const entries = entriesFromGroups(groupFacts(facts), []);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].scope, 'radar');
+  assert.ok(entries[0].docs_url);
+});
+
+test('factsFromCompat resolves a union variant with no name rule (SmsSignIn) via IR', () => {
+  const indexes = buildIndexes([UNION_IR_FIXTURE, null]);
+  const facts = factsFromCompat(compatBreak('SmsSignIn'), [], indexes);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].scope, 'radar');
+  assert.equal(facts[0].scope_source, 'compat_ir');
+});
+
+// A mapping can point back up the union (a variant that nests its own parent);
+// the `seen` guard has to cover the mapping edge too.
+test('buildIndexes terminates on a discriminator mapping cycle', () => {
+  const indexes = buildIndexes([{
+    models: [
+      { name: 'Node', fields: [], discriminator: { property: 'kind', mapping: { leaf: 'Leaf', branch: 'Node' } } },
+      { name: 'Leaf', fields: [{ name: 'parent', type: { kind: 'model', name: 'Node' } }] },
+    ],
+    enums: [],
+    services: [{ name: 'Radar', operations: [{ name: 'find', response: { kind: 'model', name: 'Node' } }] }],
+  }, null]);
+  assert.deepEqual([...indexes.symbolScopes.get('model:Leaf')], ['radar']);
+});
+
 // --- Policy-resolved operation names (openapi-spec PR #253 regression) ---
 // oagen's resolution policy renames operations (`Events.list` → `list_events`)
 // and remounts some onto other services, and the emitters derive their
