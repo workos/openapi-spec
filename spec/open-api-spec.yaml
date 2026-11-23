@@ -19752,6 +19752,33 @@ paths:
       tags:
         - webhooks
   /webhook_endpoints/{id}:
+    get:
+      description: Get the details of an existing webhook endpoint.
+      operationId: WebhookEndpointsController_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Unique identifier of the Webhook Endpoint.
+          schema:
+            type: string
+            example: we_0123456789
+      responses:
+        '200':
+          description: Webhook endpoint retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointJson'
+        '404':
+          description: Webhook endpoint not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCode'
+      summary: Get a Webhook Endpoint
+      tags:
+        - webhooks
     patch:
       description: Update the properties of an existing webhook endpoint.
       operationId: WebhookEndpointsController_update
