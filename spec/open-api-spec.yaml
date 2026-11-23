@@ -13209,6 +13209,42 @@ paths:
       summary: Update a Radar attempt
       tags:
         - radar
+  /radar/detections/{id}:
+    get:
+      description: >-
+        Get a Radar detection from the last 30 days, including the evidence for
+        why Radar fired.
+      operationId: RadarDetectionsController_find
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: The unique ID of the Radar detection.
+          schema:
+            example: detection_01HZBC6N1EB1ZY7KG32X
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RadarDetection'
+        '402':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCode'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      summary: Get a Radar detection
+      tags:
+        - radar
   /radar/lists/{type}/{action}:
     post:
       description: Add an entry to a Radar list.
@@ -14433,6 +14469,7 @@ paths:
                   - $ref: '#/components/schemas/PasskeyProgressiveEnrollmentErrorBody'
                   - $ref: '#/components/schemas/RadarChallengeErrorBody'
                   - $ref: '#/components/schemas/RadarSignUpChallengeErrorBody'
+                  - $ref: '#/components/schemas/RadarSmsChallengeErrorBody'
                   - $ref: '#/components/schemas/RadarSmsSignInChallengeErrorBody'
                   - $ref: '#/components/schemas/ApplicationConsentRequiredErrorBody'
                   - $ref: '#/components/schemas/PolicyDeniedErrorBody'
@@ -24695,6 +24732,7 @@ components:
         - production_feature_requires_billing
         - radar_challenge
         - radar_sign_up_challenge
+        - radar_sms_challenge
         - radar_sms_sign_in_challenge
         - rate_limit_exceeded
         - resource_has_dependents
@@ -26044,6 +26082,16 @@ components:
           description: The error code identifying the type of error.
           example: radar_sign_up_challenge
           const: radar_sign_up_challenge
+        message: *ref_29
+      required: *ref_30
+    RadarSmsChallengeErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code identifying the type of error.
+          example: radar_sms_challenge
+          const: radar_sms_challenge
         message: *ref_29
       required: *ref_30
     RadarSmsSignInChallengeErrorBody:
@@ -32347,7 +32395,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -32499,7 +32550,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -32651,7 +32705,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -32803,7 +32860,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -32965,7 +33025,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -33117,7 +33180,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -33237,14 +33303,14 @@ components:
                       type:
                         - string
                         - 'null'
-                      description: The control action taken for the detected risk.
-                      example: block
+                      description: The Radar control that detected the risk.
+                      example: bot_detection
                     blocklist_type:
                       type:
                         - string
                         - 'null'
                       description: The type of blocklist that triggered the risk detection.
-                      example: ip
+                      example: ip_address
                     ip_address:
                       type:
                         - string
@@ -33269,7 +33335,8 @@ components:
                       type: string
                       description: >-
                         The ID of the Radar detection that challenged the
-                        authentication.
+                        authentication. Retrieve the detection with `GET
+                        /radar/detections/:id` to see why Radar acted.
                       example: detection_01HZBC6N1EB1ZY7KG32X
                   required:
                     - auth_method
@@ -33444,7 +33511,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -33746,7 +33816,10 @@ components:
                           type: string
                           description: >-
                             The ID of the Radar detection that blocked the
-                            authentication. Only set on `policy_denied` errors.
+                            authentication. Retrieve the detection with `GET
+                            /radar/detections/:id` to see why Radar acted. Only
+                            set on `policy_denied` errors that a Radar detection
+                            caused.
                           example: detection_01HZBC6N1EB1ZY7KG32X
                       required:
                         - code
@@ -44304,6 +44377,746 @@ components:
       required:
         - verification_id
         - phone_number
+    RadarDetectionList:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - ip_address
+            - domain
+            - email
+            - device
+            - user_agent
+            - device_fingerprint
+            - country
+          description: The type of values the list holds.
+          example: domain
+        action:
+          description: >-
+            The action the list applies to matching values. `null` for
+            WorkOS-managed lists.
+          example: block
+          oneOf:
+            - type: string
+              enum:
+                - allow
+                - block
+                - challenge
+                - log
+            - type: 'null'
+        name:
+          type:
+            - string
+            - 'null'
+          description: The name of the list.
+          example: Disposable email domains
+        workos_managed:
+          type: boolean
+          description: Whether WorkOS maintains the list.
+          example: true
+      required:
+        - type
+        - action
+        - name
+        - workos_managed
+    RadarDetectionAllowedBy:
+      type: object
+      properties:
+        list_id:
+          type: string
+          description: The ID of the matched list.
+          example: radar_list_01HZBC6N1EB1ZY7KG32X
+        list:
+          description: The list as it is now. `null` if the list has since been deleted.
+          oneOf:
+            - $ref: '#/components/schemas/RadarDetectionList'
+            - type: 'null'
+        entry:
+          type: string
+          description: The list entry that matched.
+          example: example.com
+      required:
+        - list_id
+        - list
+    RadarDetectionBotDetectionSignal:
+      type: object
+      properties:
+        signal:
+          type: string
+          enum:
+            - risky_ip
+            - anomalous_ip
+            - excessive_domain_sign_ups
+            - suspicious_browser_signals
+            - missing_device_fingerprint
+            - suspicious_email_pattern
+            - automated_client
+            - workos_risk_model
+        action:
+          type: string
+          enum:
+            - block
+            - challenge
+          description: The action this signal would take on its own.
+      required:
+        - signal
+    RadarDetectionIpSignUps:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: The number of sign-ups.
+          example: 6
+        window_minutes:
+          type: integer
+          description: The window the sign-ups were counted in.
+          example: 5
+      required:
+        - count
+        - window_minutes
+    RadarDetectionDomainSignUps:
+      type: object
+      properties:
+        root_domain:
+          type: string
+          description: The root domain of the email address.
+          example: example.com
+        count:
+          type: integer
+          description: The number of sign-ups.
+          example: 44
+      required:
+        - root_domain
+    RadarDetectionBotDetectionDetails:
+      type: object
+      properties:
+        signals:
+          type: array
+          items:
+            $ref: '#/components/schemas/RadarDetectionBotDetectionSignal'
+          description: Every bot detection signal that fired.
+        decided_by:
+          type: string
+          enum:
+            - risky_ip
+            - anomalous_ip
+            - excessive_domain_sign_ups
+            - suspicious_browser_signals
+            - missing_device_fingerprint
+            - suspicious_email_pattern
+            - automated_client
+            - workos_risk_model
+          description: The signal that determined the verdict.
+        ip_risk:
+          type: array
+          items:
+            type: string
+            enum:
+              - abuser
+              - anonymous
+              - vpn
+              - tor
+              - proxy
+          description: Why the IP address is risky.
+        email_pattern:
+          type: array
+          items:
+            type: string
+            enum:
+              - generated_looking
+              - repeated_format
+              - suspicious_domain
+          description: Why the email address looks suspicious.
+        browser_signals:
+          type: array
+          items:
+            type: string
+            enum:
+              - automation_framework
+              - headless_browser
+              - tampered_signals
+              - inconsistent_hardware
+              - missing_signals
+          description: Why the browser looks automated.
+        ip_sign_ups:
+          $ref: '#/components/schemas/RadarDetectionIpSignUps'
+          description: Recent sign-ups from this IP address.
+        domain_sign_ups:
+          $ref: '#/components/schemas/RadarDetectionDomainSignUps'
+          description: Recent sign-ups from this email domain.
+      required:
+        - signals
+    RadarDetectionBruteForceAttackDetails:
+      type: object
+      properties:
+        attempts:
+          type: integer
+          description: The number of sign-in attempts.
+          example: 11
+        window_minutes:
+          type: integer
+          description: The window the attempts were counted in.
+          example: 1
+        matched_on:
+          type: string
+          enum:
+            - device_fingerprint_and_email
+            - ip_and_email
+      required:
+        - attempts
+        - window_minutes
+        - matched_on
+    RadarDetectionDomainProtectionsDetails:
+      type: object
+      properties:
+        list_id:
+          type: string
+          description: The ID of the matched list.
+          example: radar_list_01HZBC6N1EB1ZY7KG32X
+        list:
+          description: The list as it is now. `null` if the list has since been deleted.
+          oneOf:
+            - $ref: '#/components/schemas/RadarDetectionList'
+            - type: 'null'
+        also_matched_list_ids:
+          type: array
+          items:
+            type: string
+            description: The ID of another matched list.
+            example: radar_list_01HZBC6N1EB1ZY7KG32Y
+          description: The IDs of other lists the domain is on.
+        also_matched_lists:
+          type: array
+          items:
+            description: The list as it is now. `null` if the list has since been deleted.
+            oneOf:
+              - $ref: '#/components/schemas/RadarDetectionList'
+              - type: 'null'
+          description: Other lists the domain is on.
+        matched_domain:
+          type: string
+          description: The domain that matched the list.
+          example: example.com
+      required:
+        - list_id
+        - list
+    RadarDetectionPreviousAttempt:
+      type: object
+      properties:
+        attempt_id:
+          type: string
+          description: The ID of the authentication attempt.
+          example: radar_att_01HZBC6N1EB1ZY7KG32X
+        ip_address:
+          type: string
+          description: The IP address of the earlier attempt.
+          example: 198.51.100.7
+        user_agent:
+          type:
+            - string
+            - 'null'
+          description: The user agent of the earlier attempt.
+          example: Mozilla/5.0
+        location:
+          type: object
+          properties:
+            city:
+              type:
+                - string
+                - 'null'
+              description: The city the IP address is located in.
+              example: San Francisco
+            country:
+              type:
+                - string
+                - 'null'
+              description: ISO 3166-1 alpha-2 country code.
+              example: US
+          required:
+            - city
+            - country
+          description: Where the IP address of the earlier attempt is located.
+        created_at:
+          type: string
+          description: When that earlier sign-in happened.
+          example: '2026-01-15T12:00:00.000Z'
+          format: date-time
+      required:
+        - attempt_id
+        - location
+        - created_at
+    RadarDetectionImpossibleTravelDetails:
+      type: object
+      properties:
+        previous:
+          $ref: '#/components/schemas/RadarDetectionPreviousAttempt'
+          description: The previous successful sign-in.
+        distance_km:
+          type: number
+          description: The distance from the previous sign-in, in kilometers.
+          example: 8543
+        speed_km_per_s:
+          type: number
+          description: The speed needed to travel that distance, in km per second.
+          example: 4.07
+      required:
+        - previous
+        - distance_km
+        - speed_km_per_s
+    RadarDetectionRepeatSignUpDetails:
+      allOf:
+        - type: object
+          properties: {}
+        - discriminator:
+            propertyName: matched_on
+          oneOf:
+            - type: object
+              properties:
+                matched_on:
+                  type: string
+                  const: email
+                prior_sign_ups:
+                  type: integer
+                  description: The number of earlier sign-ups.
+                  example: 8
+                window_days:
+                  type: integer
+                  description: The window the sign-ups were counted in.
+                  example: 60
+              required:
+                - matched_on
+                - prior_sign_ups
+                - window_days
+            - type: object
+              properties:
+                matched_on:
+                  type: string
+                  const: normalized_email
+                matched_user_id:
+                  type: string
+                  description: The existing user whose email this sign-up is an alias of.
+                  example: user_01E4ZCR3C56J083X43JQXF3JK5
+              required:
+                - matched_on
+                - matched_user_id
+    RadarDetectionStaleAccountDetails:
+      type: object
+      properties:
+        last_activity_at:
+          type:
+            - string
+            - 'null'
+          description: When the user was last active. `null` if unknown.
+          example: '2026-01-15T12:00:00.000Z'
+          format: date-time
+      required:
+        - last_activity_at
+    RadarDetectionUnrecognizedDeviceDetails:
+      type: object
+      properties:
+        previous_device:
+          description: The device the user last signed in from.
+          oneOf:
+            - $ref: '#/components/schemas/RadarDetectionPreviousAttempt'
+            - type: 'null'
+      required:
+        - previous_device
+    RadarDetectionRestrictionDetails:
+      allOf:
+        - type: object
+          properties: {}
+        - discriminator:
+            propertyName: type
+          oneOf:
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: list
+                list_id:
+                  type: string
+                  description: The ID of the matched list.
+                  example: radar_list_01HZBC6N1EB1ZY7KG32X
+                list:
+                  description: >-
+                    The list as it is now. `null` if the list has since been
+                    deleted.
+                  oneOf:
+                    - $ref: '#/components/schemas/RadarDetectionList'
+                    - type: 'null'
+                entry:
+                  type: string
+                  description: The list entry that matched.
+                  example: example.com
+              required:
+                - type
+                - list_id
+                - list
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: blocked_tld
+              required:
+                - type
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: sign_up
+              required:
+                - type
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: sms_sign_in
+                trigger:
+                  type: string
+                  enum:
+                    - country_mismatch
+                    - non_mobile_line
+                    - previously_selected
+                    - unknown_line_type
+                    - missing_signals
+                  description: Why SMS sign-in was restricted.
+                phone_country:
+                  type: string
+                  description: >-
+                    The country of the phone number. Only when `trigger` is
+                    `country_mismatch`.
+                  example: US
+                line_type:
+                  type: string
+                  description: >-
+                    The line type of the phone number. Only when `trigger` is
+                    `non_mobile_line`.
+                  example: voip
+                masked_phone_number:
+                  type: string
+                  description: The phone number, masked to its last four digits.
+                  example: ••••0123
+              required:
+                - type
+                - trigger
+    RadarDetectionEvidence:
+      allOf:
+        - type: object
+          properties:
+            summary:
+              type: string
+              description: A human-readable explanation of why Radar fired.
+              example: >-
+                Sign-up from a Tor exit node with an email format shared by many
+                recent sign-ups. The action was decided by the risky IP. The
+                email pattern would also have challenged.
+            allowed_by:
+              $ref: '#/components/schemas/RadarDetectionAllowedBy'
+              description: >-
+                The allowlist that overrode the verdict. Only present when an
+                allowlist allowed the attempt.
+          required:
+            - summary
+        - discriminator:
+            propertyName: control
+          oneOf:
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: bot_detection
+                details:
+                  $ref: '#/components/schemas/RadarDetectionBotDetectionDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: brute_force_attack
+                details:
+                  $ref: '#/components/schemas/RadarDetectionBruteForceAttackDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: domain_protections
+                details:
+                  $ref: '#/components/schemas/RadarDetectionDomainProtectionsDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: impossible_travel
+                details:
+                  $ref: '#/components/schemas/RadarDetectionImpossibleTravelDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: repeat_sign_up
+                details:
+                  $ref: '#/components/schemas/RadarDetectionRepeatSignUpDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: stale_account
+                details:
+                  $ref: '#/components/schemas/RadarDetectionStaleAccountDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: unrecognized_device
+                details:
+                  $ref: '#/components/schemas/RadarDetectionUnrecognizedDeviceDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+            - type: object
+              properties:
+                control:
+                  type: string
+                  description: >-
+                    The control the evidence is for. Always the same as the
+                    detection's `control`.
+                  const: restriction
+                details:
+                  $ref: '#/components/schemas/RadarDetectionRestrictionDetails'
+                  description: >-
+                    Facts specific to the control. See the [Radar detection
+                    object](/reference/radar/detections#evidence-details) for
+                    the fields each control reports.
+              required:
+                - control
+                - details
+      example:
+        control: bot_detection
+        summary: >-
+          Sign-up from a Tor exit node with an email format shared by many
+          recent sign-ups. The action was decided by the risky IP. The email
+          pattern would also have challenged.
+        details:
+          signals:
+            - signal: risky_ip
+              action: challenge
+            - signal: suspicious_email_pattern
+              action: challenge
+          decided_by: risky_ip
+          ip_risk:
+            - tor
+          email_pattern:
+            - repeated_format
+    RadarDetection:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Distinguishes the Radar detection object.
+          const: radar_detection
+        id:
+          type: string
+          description: The unique ID of the detection.
+          example: detection_01HZBC6N1EB1ZY7KG32X
+        attempt_id:
+          type: string
+          description: The ID of the authentication attempt.
+          example: radar_att_01HZBC6N1EB1ZY7KG32X
+        control:
+          type: string
+          enum:
+            - bot_detection
+            - brute_force_attack
+            - domain_protections
+            - impossible_travel
+            - repeat_sign_up
+            - stale_account
+            - unrecognized_device
+            - restriction
+          description: The Radar control that determined the verdict.
+          example: bot_detection
+        verdict:
+          type: string
+          enum:
+            - allow
+            - block
+            - challenge
+            - log
+          description: The verdict Radar reached for the attempt.
+          example: challenge
+        challenge_type:
+          description: The challenge Radar issued, if the verdict is `challenge`.
+          example: email
+          oneOf:
+            - type: string
+              enum:
+                - email
+                - sms
+            - type: 'null'
+        evidence:
+          description: >-
+            Why Radar fired. `null` for detections recorded before evidence was
+            captured.
+          oneOf:
+            - $ref: '#/components/schemas/RadarDetectionEvidence'
+            - type: 'null'
+        ip_address:
+          type: string
+          description: The IP address of the attempt.
+          example: 203.0.113.42
+        location:
+          type: object
+          properties:
+            city:
+              type:
+                - string
+                - 'null'
+              description: The city the IP address is located in.
+              example: San Francisco
+            country:
+              type:
+                - string
+                - 'null'
+              description: ISO 3166-1 alpha-2 country code.
+              example: US
+          required:
+            - city
+            - country
+          description: Where the IP address is located.
+        user_agent:
+          type: string
+          description: The user agent of the attempt.
+          example: Mozilla/5.0
+        email:
+          type: string
+          description: The email address used in the attempt.
+          example: user@example.com
+        user_id:
+          type:
+            - string
+            - 'null'
+          description: The ID of the user, if one exists.
+          example: user_01E4ZCR3C56J083X43JQXF3JK5
+        action:
+          description: >-
+            Whether the attempt was a sign-up or a sign-in, as on the
+            `authentication.radar_risk_detected` event. `null` if unknown.
+          example: signup
+          oneOf:
+            - type: string
+              enum:
+                - signup
+                - login
+            - type: 'null'
+        auth_method:
+          description: The authentication method used for the attempt.
+          example: password
+          oneOf:
+            - type: string
+              enum:
+                - password
+                - passkey
+                - magic_auth
+                - oauth
+                - sso
+                - authenticator
+                - sms_otp
+                - other
+            - type: 'null'
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - attempt_id
+        - control
+        - verdict
+        - challenge_type
+        - evidence
+        - ip_address
+        - location
+        - user_agent
+        - email
+        - user_id
+        - action
+        - auth_method
+        - created_at
+        - updated_at
     RadarStandaloneResponse:
       type: object
       properties:
