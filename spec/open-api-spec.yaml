@@ -14725,6 +14725,7 @@ paths:
                       #/components/schemas/OrganizationSelectionRequiredErrorBody
                   - $ref: '#/components/schemas/PasskeyProgressiveEnrollmentErrorBody'
                   - $ref: '#/components/schemas/RadarChallengeErrorBody'
+                  - $ref: '#/components/schemas/RadarEmailChallengeErrorBody'
                   - $ref: '#/components/schemas/RadarSignUpChallengeErrorBody'
                   - $ref: '#/components/schemas/RadarSmsChallengeErrorBody'
                   - $ref: '#/components/schemas/RadarSmsSignInChallengeErrorBody'
@@ -25001,6 +25002,7 @@ components:
         - phone_number_required
         - production_feature_requires_billing
         - radar_challenge
+        - radar_email_challenge
         - radar_sign_up_challenge
         - radar_sms_challenge
         - radar_sms_sign_in_challenge
@@ -26342,6 +26344,16 @@ components:
           description: The error code identifying the type of error.
           example: radar_challenge
           const: radar_challenge
+        message: *ref_29
+      required: *ref_30
+    RadarEmailChallengeErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code identifying the type of error.
+          example: radar_email_challenge
+          const: radar_email_challenge
         message: *ref_29
       required: *ref_30
     RadarSignUpChallengeErrorBody:
