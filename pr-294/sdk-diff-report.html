@@ -875107,17 +875107,7 @@
                     <tr>
     <td class="d2h-code-side-linenumber d2h-info"></td>
     <td class="d2h-info">
-        <div class="d2h-code-side-line">@@ -0,0 +1,68 @@</div>
-    </td>
-</tr><tr>
-    <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
-      
-    </td>
-    <td class="d2h-cntx d2h-emptyplaceholder">
-        <div class="d2h-code-side-line d2h-code-side-emptyplaceholder">
-            <span class="d2h-code-line-prefix">&nbsp;</span>
-            <span class="d2h-code-line-ctn"><br></span>
-        </div>
+        <div class="d2h-code-side-line">@@ -0,0 +1,67 @@</div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-code-side-emptyplaceholder d2h-cntx d2h-emptyplaceholder">
@@ -875890,7 +875880,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">use serde::Serialize;</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -875900,7 +875890,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">pub struct OrganizationsIssuerTrustsApi&lt;&#x27;a&gt; {</span>
         </div>
     </td>
 </tr><tr>
@@ -875910,7 +875900,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">pub struct OrganizationsIssuerTrustsApi&lt;&#x27;a&gt; {</span>
+            <span class="d2h-code-line-ctn">    pub(crate) client: &amp;&#x27;a Client,</span>
         </div>
     </td>
 </tr><tr>
@@ -875920,7 +875910,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub(crate) client: &amp;&#x27;a Client,</span>
+            <span class="d2h-code-line-ctn">}</span>
         </div>
     </td>
 </tr><tr>
@@ -875930,7 +875920,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">}</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -875940,7 +875930,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">impl&lt;&#x27;a&gt; OrganizationsIssuerTrustsApi&lt;&#x27;a&gt; {</span>
         </div>
     </td>
 </tr><tr>
@@ -875950,7 +875940,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">impl&lt;&#x27;a&gt; OrganizationsIssuerTrustsApi&lt;&#x27;a&gt; {</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; List issuer trusts</span>
         </div>
     </td>
 </tr><tr>
@@ -875960,7 +875950,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; List issuer trusts</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F;</span>
         </div>
     </td>
 </tr><tr>
@@ -875970,7 +875960,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F;</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Get the issuers an organization trusts.</span>
         </div>
     </td>
 </tr><tr>
@@ -875980,7 +875970,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Get the issuers an organization trusts.</span>
+            <span class="d2h-code-line-ctn">    pub async fn list_organization_issuer_trusts(</span>
         </div>
     </td>
 </tr><tr>
@@ -875990,7 +875980,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub async fn list_organization_issuer_trusts(</span>
+            <span class="d2h-code-line-ctn">        &amp;self,</span>
         </div>
     </td>
 </tr><tr>
@@ -876000,7 +875990,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &amp;self,</span>
+            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
         </div>
     </td>
 </tr><tr>
@@ -876010,7 +876000,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
+            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrustList, Error&gt; {</span>
         </div>
     </td>
 </tr><tr>
@@ -876020,7 +876010,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrustList, Error&gt; {</span>
+            <span class="d2h-code-line-ctn">        self.list_organization_issuer_trusts_with_options(organization_id, None)</span>
         </div>
     </td>
 </tr><tr>
@@ -876030,7 +876020,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        self.list_organization_issuer_trusts_with_options(organization_id, None)</span>
+            <span class="d2h-code-line-ctn">            .await</span>
         </div>
     </td>
 </tr><tr>
@@ -876040,7 +876030,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            .await</span>
+            <span class="d2h-code-line-ctn">    }</span>
         </div>
     </td>
 </tr><tr>
@@ -876050,7 +876040,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    }</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -876060,7 +876050,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Variant of [`Self::list_organization_issuer_trusts`] that accepts per-request [`crate::RequestOptions`].</span>
         </div>
     </td>
 </tr><tr>
@@ -876070,7 +876060,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Variant of [`Self::list_organization_issuer_trusts`] that accepts per-request [`crate::RequestOptions`].</span>
+            <span class="d2h-code-line-ctn">    pub async fn list_organization_issuer_trusts_with_options(</span>
         </div>
     </td>
 </tr><tr>
@@ -876080,7 +876070,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub async fn list_organization_issuer_trusts_with_options(</span>
+            <span class="d2h-code-line-ctn">        &amp;self,</span>
         </div>
     </td>
 </tr><tr>
@@ -876090,7 +876080,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &amp;self,</span>
+            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
         </div>
     </td>
 </tr><tr>
@@ -876100,7 +876090,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
+            <span class="d2h-code-line-ctn">        options: Option&lt;&amp;crate::RequestOptions&gt;,</span>
         </div>
     </td>
 </tr><tr>
@@ -876110,7 +876100,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        options: Option&lt;&amp;crate::RequestOptions&gt;,</span>
+            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrustList, Error&gt; {</span>
         </div>
     </td>
 </tr><tr>
@@ -876120,7 +876110,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrustList, Error&gt; {</span>
+            <span class="d2h-code-line-ctn">        let organization_id = crate::client::path_segment(organization_id);</span>
         </div>
     </td>
 </tr><tr>
@@ -876130,7 +876120,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        let organization_id = crate::client::path_segment(organization_id);</span>
+            <span class="d2h-code-line-ctn">        let path = format!(&quot;&#x2F;organizations&#x2F;{organization_id}&#x2F;issuer_trusts&quot;);</span>
         </div>
     </td>
 </tr><tr>
@@ -876140,7 +876130,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        let path = format!(&quot;&#x2F;organizations&#x2F;{organization_id}&#x2F;issuer_trusts&quot;);</span>
+            <span class="d2h-code-line-ctn">        let method = http::Method::GET;</span>
         </div>
     </td>
 </tr><tr>
@@ -876150,7 +876140,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        let method = http::Method::GET;</span>
+            <span class="d2h-code-line-ctn">        self.client</span>
         </div>
     </td>
 </tr><tr>
@@ -876160,7 +876150,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        self.client</span>
+            <span class="d2h-code-line-ctn">            .request_with_query_opts(method, &amp;path, &amp;(), options)</span>
         </div>
     </td>
 </tr><tr>
@@ -876170,7 +876160,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            .request_with_query_opts(method, &amp;path, &amp;(), options)</span>
+            <span class="d2h-code-line-ctn">            .await</span>
         </div>
     </td>
 </tr><tr>
@@ -876180,7 +876170,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            .await</span>
+            <span class="d2h-code-line-ctn">    }</span>
         </div>
     </td>
 </tr><tr>
@@ -876190,7 +876180,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    }</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -876200,7 +876190,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Get an issuer trust</span>
         </div>
     </td>
 </tr><tr>
@@ -876210,7 +876200,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Get an issuer trust</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F;</span>
         </div>
     </td>
 </tr><tr>
@@ -876220,7 +876210,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F;</span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Get an issuer trust by its ID.</span>
         </div>
     </td>
 </tr><tr>
@@ -876230,7 +876220,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Get an issuer trust by its ID.</span>
+            <span class="d2h-code-line-ctn">    pub async fn get_organization_issuer_trust(</span>
         </div>
     </td>
 </tr><tr>
@@ -876240,7 +876230,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub async fn get_organization_issuer_trust(</span>
+            <span class="d2h-code-line-ctn">        &amp;self,</span>
         </div>
     </td>
 </tr><tr>
@@ -876250,7 +876240,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &amp;self,</span>
+            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
         </div>
     </td>
 </tr><tr>
@@ -876260,7 +876250,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
+            <span class="d2h-code-line-ctn">        id: &amp;str,</span>
         </div>
     </td>
 </tr><tr>
@@ -876270,7 +876260,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        id: &amp;str,</span>
+            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrust, Error&gt; {</span>
         </div>
     </td>
 </tr><tr>
@@ -876280,7 +876270,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrust, Error&gt; {</span>
+            <span class="d2h-code-line-ctn">        self.get_organization_issuer_trust_with_options(organization_id, id, None)</span>
         </div>
     </td>
 </tr><tr>
@@ -876290,7 +876280,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        self.get_organization_issuer_trust_with_options(organization_id, id, None)</span>
+            <span class="d2h-code-line-ctn">            .await</span>
         </div>
     </td>
 </tr><tr>
@@ -876300,7 +876290,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            .await</span>
+            <span class="d2h-code-line-ctn">    }</span>
         </div>
     </td>
 </tr><tr>
@@ -876310,7 +876300,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    }</span>
+            <span class="d2h-code-line-ctn"><br></span>
         </div>
     </td>
 </tr><tr>
@@ -876320,7 +876310,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn"><br></span>
+            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Variant of [`Self::get_organization_issuer_trust`] that accepts per-request [`crate::RequestOptions`].</span>
         </div>
     </td>
 </tr><tr>
@@ -876330,7 +876320,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    &#x2F;&#x2F;&#x2F; Variant of [`Self::get_organization_issuer_trust`] that accepts per-request [`crate::RequestOptions`].</span>
+            <span class="d2h-code-line-ctn">    pub async fn get_organization_issuer_trust_with_options(</span>
         </div>
     </td>
 </tr><tr>
@@ -876340,7 +876330,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    pub async fn get_organization_issuer_trust_with_options(</span>
+            <span class="d2h-code-line-ctn">        &amp;self,</span>
         </div>
     </td>
 </tr><tr>
@@ -876350,7 +876340,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        &amp;self,</span>
+            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
         </div>
     </td>
 </tr><tr>
@@ -876360,7 +876350,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        organization_id: &amp;str,</span>
+            <span class="d2h-code-line-ctn">        id: &amp;str,</span>
         </div>
     </td>
 </tr><tr>
@@ -876370,7 +876360,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        id: &amp;str,</span>
+            <span class="d2h-code-line-ctn">        options: Option&lt;&amp;crate::RequestOptions&gt;,</span>
         </div>
     </td>
 </tr><tr>
@@ -876380,7 +876370,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        options: Option&lt;&amp;crate::RequestOptions&gt;,</span>
+            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrust, Error&gt; {</span>
         </div>
     </td>
 </tr><tr>
@@ -876390,7 +876380,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">    ) -&gt; Result&lt;IssuerTrust, Error&gt; {</span>
+            <span class="d2h-code-line-ctn">        let organization_id = crate::client::path_segment(organization_id);</span>
         </div>
     </td>
 </tr><tr>
@@ -876400,7 +876390,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        let organization_id = crate::client::path_segment(organization_id);</span>
+            <span class="d2h-code-line-ctn">        let id = crate::client::path_segment(id);</span>
         </div>
     </td>
 </tr><tr>
@@ -876410,7 +876400,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        let id = crate::client::path_segment(id);</span>
+            <span class="d2h-code-line-ctn">        let path = format!(&quot;&#x2F;organizations&#x2F;{organization_id}&#x2F;issuer_trusts&#x2F;{id}&quot;);</span>
         </div>
     </td>
 </tr><tr>
@@ -876420,7 +876410,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        let path = format!(&quot;&#x2F;organizations&#x2F;{organization_id}&#x2F;issuer_trusts&#x2F;{id}&quot;);</span>
+            <span class="d2h-code-line-ctn">        let method = http::Method::GET;</span>
         </div>
     </td>
 </tr><tr>
@@ -876430,7 +876420,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        let method = http::Method::GET;</span>
+            <span class="d2h-code-line-ctn">        self.client</span>
         </div>
     </td>
 </tr><tr>
@@ -876440,7 +876430,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">        self.client</span>
+            <span class="d2h-code-line-ctn">            .request_with_query_opts(method, &amp;path, &amp;(), options)</span>
         </div>
     </td>
 </tr><tr>
@@ -876450,7 +876440,7 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            .request_with_query_opts(method, &amp;path, &amp;(), options)</span>
+            <span class="d2h-code-line-ctn">            .await</span>
         </div>
     </td>
 </tr><tr>
@@ -876460,22 +876450,12 @@
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
             <span class="d2h-code-line-prefix">+</span>
-            <span class="d2h-code-line-ctn">            .await</span>
-        </div>
-    </td>
-</tr><tr>
-    <td class="d2h-code-side-linenumber d2h-ins">
-      67
-    </td>
-    <td class="d2h-ins">
-        <div class="d2h-code-side-line">
-            <span class="d2h-code-line-prefix">+</span>
             <span class="d2h-code-line-ctn">    }</span>
         </div>
     </td>
 </tr><tr>
     <td class="d2h-code-side-linenumber d2h-ins">
-      68
+      67
     </td>
     <td class="d2h-ins">
         <div class="d2h-code-side-line">
