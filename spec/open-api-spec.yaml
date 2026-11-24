@@ -17373,6 +17373,54 @@ paths:
       summary: Get a user by external ID
       tags:
         - user-management.users
+  /user_management/users/identities/{provider}/{idp_id}:
+    get:
+      description: >-
+        Get the user that holds an identity, by the identity's provider and its
+        ID in that provider, as returned by [Get user
+        identities](/reference/authkit/identity/list).
+      operationId: UserlandUserIdentitiesController_getByIdentity
+      parameters:
+        - name: provider
+          required: true
+          in: path
+          description: >-
+            The OAuth provider of the identity, the same value you pass as
+            `provider` to [Get authorization
+            URL](/reference/authkit/authentication/get-authorization-url)
+            (case-insensitive).
+          schema:
+            example: GitHubOAuth
+            type: string
+        - name: idp_id
+          required: true
+          in: path
+          description: The unique ID of the user in the external identity provider.
+          schema:
+            example: 4F42ABDE-1E44-4B66-824A-5F733C037A6D
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserlandUser'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCodeFieldErrors'
+      summary: Get a user by identity
+      tags:
+        - user-management.users
   /user_management/users/{id}:
     put:
       description: >-
