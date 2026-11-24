@@ -44985,6 +44985,7 @@ components:
               - tampered_signals
               - inconsistent_hardware
               - missing_signals
+              - missing_expected_signals
           description: Why the browser looks automated.
         ip_sign_ups:
           $ref: '#/components/schemas/RadarDetectionIpSignUps'
