@@ -24639,6 +24639,7 @@ components:
               - connection.deactivated
               - connection.saml_certificate_renewal_required
               - connection.saml_certificate_renewed
+              - connection.saml_certificate_replaced
               - connection.deleted
               - dsync.activated
               - dsync.deleted
@@ -34765,6 +34766,89 @@ components:
                     - connection
                     - certificate
                     - renewed_at
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: connection.saml_certificate_replaced
+                data:
+                  type: object
+                  properties:
+                    connection:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier of the connection.
+                          example: conn_01EHWNCE74X7JSDV0X3SZ3KJNY
+                        organization_id:
+                          type: string
+                          description: >-
+                            The ID of the organization the connection belongs
+                            to.
+                          example: org_01EHWNCE74X7JSDV0X3SZ3KJNY
+                      required:
+                        - id
+                      description: The connection with the replaced certificate.
+                    certificate:
+                      type: object
+                      properties:
+                        certificate_type:
+                          type: string
+                          enum:
+                            - ResponseSigning
+                            - RequestSigning
+                            - ResponseEncryption
+                          description: The type of the SAML certificate.
+                          example: RequestSigning
+                        expiry_date:
+                          format: date-time
+                          type: string
+                          description: An ISO 8601 timestamp.
+                          example: '2026-01-15T12:00:00.000Z'
+                        previous_expiry_date:
+                          format: date-time
+                          type: string
+                          description: >-
+                            The expiry date of the certificate that was
+                            replaced. Absent when the connection had no
+                            certificate of this type.
+                          example: '2026-01-15T12:00:00.000Z'
+                      required:
+                        - certificate_type
+                        - expiry_date
+                      description: The new SAML certificate details.
+                    replaced_at:
+                      format: date-time
+                      type: string
+                      description: An ISO 8601 timestamp.
+                      example: '2026-01-15T12:00:00.000Z'
+                  required:
+                    - connection
+                    - certificate
+                    - replaced_at
                   description: The event payload.
                 created_at:
                   format: date-time
@@ -44985,6 +45069,7 @@ components:
               - tampered_signals
               - inconsistent_hardware
               - missing_signals
+              - missing_expected_signals
           description: Why the browser looks automated.
         ip_sign_ups:
           $ref: '#/components/schemas/RadarDetectionIpSignUps'
