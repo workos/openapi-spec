@@ -12659,6 +12659,263 @@ paths:
       tags:
         - organizations.data-providers
       x-feature-flag: pipes-org-integrations
+  /organizations/{organization_id}/issuer_trusts:
+    get:
+      description: Get the issuers an organization trusts.
+      operationId: IssuerTrustsController_list
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuerTrustList'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      summary: List issuer trusts
+      tags:
+        - organizations.issuer-trusts
+      x-feature-flag: dashboard-claude-issuer-trusts
+    post:
+      description: >-
+        Trust an issuer for an organization. WorkOS checks the issuer's OpenID
+        configuration and that the organization has a verified domain. The trust
+        is created disabled; enable it to start accepting ID-JAGs from the
+        issuer.
+      operationId: IssuerTrustsController_create
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: The type of issuer, which identifies who operates it.
+                  example: claude
+                  const: claude
+                issuer:
+                  type: string
+                  minLength: 1
+                  description: >-
+                    The issuer URL. WorkOS fetches the issuer's OpenID
+                    configuration to confirm it before creating the trust.
+                  example: https://claude.ai/v1/ema/t/01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+              required:
+                - type
+                - issuer
+              additionalProperties: false
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuerTrust'
+              example:
+                object: issuer_trust
+                id: issuer_trust_01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+                organization_id: org_01EHZNVPK3SFK441A1RGBFSHRT
+                type: claude
+                issuer: https://claude.ai/v1/ema/t/01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+                enabled: false
+                created_at: '2026-01-15T12:00:00.000Z'
+                updated_at: '2026-01-15T12:00:00.000Z'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCode'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCodeErrors'
+      summary: Create an issuer trust
+      tags:
+        - organizations.issuer-trusts
+      x-feature-flag: dashboard-claude-issuer-trusts
+  /organizations/{organization_id}/issuer_trusts/{id}:
+    get:
+      description: Get an issuer trust by its ID.
+      operationId: IssuerTrustsController_get
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        - name: id
+          required: true
+          in: path
+          description: The ID of the issuer trust.
+          schema:
+            type: string
+            example: issuer_trust_01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuerTrust'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      summary: Get an issuer trust
+      tags:
+        - organizations.issuer-trusts
+      x-feature-flag: dashboard-claude-issuer-trusts
+    patch:
+      description: >-
+        Enable or disable an issuer trust. ID-JAGs from a disabled issuer are
+        rejected. `enabled` is the only field that can be changed, and an
+        omitted field is left unchanged.
+      operationId: IssuerTrustsController_update
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        - name: id
+          required: true
+          in: path
+          description: The ID of the issuer trust.
+          schema:
+            type: string
+            example: issuer_trust_01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  description: Whether ID-JAGs from the issuer are accepted.
+                  example: true
+              description: >-
+                Fields to update on the issuer trust. Omitted fields are left
+                unchanged.
+              additionalProperties: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuerTrust'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCode'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBodyWithCodeErrors'
+      summary: Update an issuer trust
+      tags:
+        - organizations.issuer-trusts
+      x-feature-flag: dashboard-claude-issuer-trusts
+    delete:
+      description: >-
+        Stop trusting an issuer. ID-JAGs from the issuer are rejected from then
+        on.
+      operationId: IssuerTrustsController_delete
+      parameters:
+        - name: organization_id
+          required: true
+          in: path
+          description: The ID of the organization.
+          schema:
+            type: string
+            example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        - name: id
+          required: true
+          in: path
+          description: The ID of the issuer trust.
+          schema:
+            type: string
+            example: issuer_trust_01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+      responses:
+        '204':
+          description: No Content
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      summary: Delete an issuer trust
+      tags:
+        - organizations.issuer-trusts
+      x-feature-flag: dashboard-claude-issuer-trusts
   /organizations/{organization_id}/it_contacts:
     get:
       description: Get the IT contacts for an organization.
@@ -20000,6 +20257,8 @@ tags:
     description: Manage organization-owned data providers and connected accounts.
   - name: organizations.feature-flags
     description: Manage organization-scoped feature flags.
+  - name: organizations.issuer-trusts
+    description: Manage the issuers an organization trusts.
   - name: organizations.it-contacts
     description: Manage IT contacts for organizations.
   - name: permissions
@@ -24413,6 +24672,9 @@ components:
               - invitation.created
               - invitation.resent
               - invitation.revoked
+              - issuer_trust.created
+              - issuer_trust.deleted
+              - issuer_trust.updated
               - magic_auth.created
               - organization.created
               - organization.deleted
@@ -24676,6 +24938,8 @@ components:
         - invalid_email
         - invalid_idp_sso_url
         - invalid_invite
+        - invalid_issuer_metadata
+        - invalid_issuer_url
         - invalid_locale
         - invalid_metadata
         - invalid_one_time_code
@@ -24697,6 +24961,7 @@ components:
         - invite_not_pending
         - invite_revoked
         - ip_address_required
+        - issuer_already_trusted
         - it_contact_already_exists
         - it_contact_invitation_already_active
         - key_pair_not_accepted
@@ -24709,16 +24974,20 @@ components:
         - multiple_roles_not_enabled
         - name_already_in_use
         - no_pending_email_change
+        - not_claude_issuer
         - oidc_options_required
         - one_time_code_expired
         - one_time_code_previously_used
         - one_time_code_too_many_attempts
+        - organization_already_has_trust
         - organization_blocked_from_sending_invites
+        - organization_has_idp_managed_ema
         - organization_membership_directory_managed
         - organization_not_found
         - organization_not_invocable
         - organization_role_slug_conflict
         - organization_selection_required
+        - organization_without_verified_domain
         - passkey_progressive_enrollment
         - password_and_password_hash_provided
         - password_and_password_hash_type_provided
@@ -24996,6 +25265,24 @@ components:
           type: number
           description: The HTTP status code.
           example: 400
+    ErrorBodyWithCodeErrors:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorBodyCode'
+        message: &ref_31
+          type: string
+          description: A human-readable description of the error.
+          example: Validation failed.
+        errors: &ref_32
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorBodyWithCode'
+          description: The list of validation errors.
+      required: &ref_33
+        - code
+        - message
+        - errors
     ConnectionFinishErrorBody:
       type: object
       properties:
@@ -25150,24 +25437,6 @@ components:
       required:
         - code
         - message
-    ErrorBodyWithCodeErrors:
-      type: object
-      properties:
-        code:
-          $ref: '#/components/schemas/ErrorBodyCode'
-        message: &ref_31
-          type: string
-          description: A human-readable description of the error.
-          example: Validation failed.
-        errors: &ref_32
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorBodyWithCode'
-          description: The list of validation errors.
-      required: &ref_33
-        - code
-        - message
-        - errors
     OrganizationConnectedAccountImportErrorBody:
       type: object
       properties:
@@ -30058,6 +30327,58 @@ components:
             - value
             - created_at
             - updated_at
+    IssuerTrust:
+      type: object
+      properties:
+        object:
+          type: string
+          description: The Issuer Trust object.
+          example: issuer_trust
+          const: issuer_trust
+        id:
+          type: string
+          description: The unique ID of the Issuer Trust.
+          example: issuer_trust_01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+        organization_id:
+          type: string
+          description: The ID of the Organization that trusts the issuer.
+          example: org_01EHZNVPK3SFK441A1RGBFSHRT
+        type:
+          type: string
+          description: The type of issuer, which identifies who operates it.
+          example: claude
+          const: claude
+        issuer:
+          type: string
+          description: >-
+            The issuer URL. ID-JAGs whose `iss` claim equals this URL are
+            exchanged for access tokens scoped to the Organization.
+          example: https://claude.ai/v1/ema/t/01JZ8X4N2R7Q9M3K5T6V8W0Y1A
+        enabled:
+          type: boolean
+          description: >-
+            Whether ID-JAGs from the issuer are accepted. A trust is created
+            disabled.
+          example: true
+        created_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+        updated_at:
+          format: date-time
+          type: string
+          description: An ISO 8601 timestamp.
+          example: '2026-01-15T12:00:00.000Z'
+      required:
+        - object
+        - id
+        - organization_id
+        - type
+        - issuer
+        - enabled
+        - created_at
+        - updated_at
     PipesConnectedAccount:
       type: object
       properties:
@@ -37754,6 +38075,93 @@ components:
                   example: event_01EHZNVPK3SFK441A1RGBFSHRT
                 event:
                   type: string
+                  const: issuer_trust.created
+                data:
+                  $ref: '#/components/schemas/IssuerTrust'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: issuer_trust.deleted
+                data:
+                  $ref: '#/components/schemas/IssuerTrust'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
+                  const: issuer_trust.updated
+                data:
+                  $ref: '#/components/schemas/IssuerTrust'
+                  description: The event payload.
+                created_at:
+                  format: date-time
+                  type: string
+                  description: An ISO 8601 timestamp.
+                  example: '2026-01-15T12:00:00.000Z'
+                context:
+                  $ref: '#/components/schemas/EventContextDto'
+                object:
+                  type: string
+                  description: Distinguishes the Event object.
+                  const: event
+              required:
+                - id
+                - event
+                - data
+                - created_at
+                - object
+            - type: object
+              properties:
+                id:
+                  type: string
+                  description: Unique identifier for the event.
+                  example: event_01EHZNVPK3SFK441A1RGBFSHRT
+                event:
+                  type: string
                   const: magic_auth.created
                 data:
                   type: object
@@ -42192,6 +42600,45 @@ components:
         - created_at
         - updated_at
         - value
+    IssuerTrustList:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Indicates this is a list response.
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssuerTrust'
+          description: The list of records for the current page.
+        list_metadata:
+          type: object
+          properties:
+            before:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the start of the list.
+              example: issuer_trust_01HXYZ123456789ABCDEFGHIJ
+            after:
+              type:
+                - string
+                - 'null'
+              description: >-
+                An object ID that defines your place in the list. When the ID is
+                not present, you are at the end of the list.
+              example: issuer_trust_01HXYZ987654321KJIHGFEDCBA
+          required:
+            - before
+            - after
+          description: Pagination cursors for navigating between pages of results.
+      required:
+        - object
+        - data
+        - list_metadata
     ItContact:
       type: object
       properties:
