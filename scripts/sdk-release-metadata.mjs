@@ -127,6 +127,11 @@ Inputs:
 Commit convenience:
   --spec-commit <sha>    Use the spec state at this openapi-spec commit, then diff
                          against the previous spec-changing commit.
+  --spec-base-commit <sha>
+                         With --spec-commit: diff from this openapi-spec commit
+                         instead. Pass the spec the SDK was generated from (see
+                         scripts/resolve-spec-baseline.mjs) to cover the same
+                         window generate-prs.yml does.
   --openapi-repo <path>  openapi-spec checkout for --spec-commit. Defaults to cwd.
   --spec-path <path>     Spec path in the repo. Defaults to spec/open-api-spec.yaml.
   --sdk-repo <path>      SDK checkout used to derive changed files and, when
@@ -229,7 +234,12 @@ function prepareSpecInputs(args) {
     if (!currentSpecCommit) {
       throw new Error(`No spec commit found at or before ${commit} for ${specPath}`);
     }
-    const previousCommit = git(repo, ['log', '--format=%H', '-n', '1', `${currentSpecCommit}^`, '--', specPath]);
+    // generate-prs.yml diffs from the spec the SDK was last generated from
+    // (scripts/resolve-spec-baseline.mjs), which is usually several spec
+    // commits back; --spec-base-commit reproduces that window by hand.
+    const previousCommit = args['spec-base-commit']
+      ? git(repo, ['rev-parse', '--verify', `${args['spec-base-commit']}^{commit}`])
+      : git(repo, ['log', '--format=%H', '-n', '1', `${currentSpecCommit}^`, '--', specPath]);
     if (!previousCommit) {
       throw new Error(`No previous spec commit found before ${currentSpecCommit} for ${specPath}`);
     }

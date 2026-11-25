@@ -119,7 +119,10 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           path: openapi-spec
-          fetch-depth: 50
+          # Full history: "Export previous spec snapshot" looks up the commit
+          # each SDK was last generated from, which can be any number of spec
+          # syncs (and their release commits) back.
+          fetch-depth: 0
 
       - name: Checkout live SDK
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -216,7 +219,13 @@ jobs:
         id: prev-spec
         working-directory: openapi-spec
         run: |
-          PREV_COMMIT=$(git log --skip=1 -1 --format=%H -- spec/open-api-spec.yaml)
+          # Diff from the spec this SDK was last generated from (its committed
+          # .last-synced-sha), not from the spec commit just before HEAD: a
+          # batch regenerates everything the SDK is behind on, so the changelog
+          # and PR title have to describe that whole window. Falls back to the
+          # previous spec commit, with a warning, when the SDK has no marker.
+          PREV_COMMIT=$(node scripts/resolve-spec-baseline.mjs \
+            --sdk-dir "$GITHUB_WORKSPACE/${{ env.SDK_CHECKOUT_PATH }}")
           if [ -z "$PREV_COMMIT" ]; then
             echo "No previous spec commit found"
             echo "available=false" >> "$GITHUB_OUTPUT"

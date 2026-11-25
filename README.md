@@ -89,7 +89,9 @@ Each entry includes `scope_sources` and `scope_candidates` so the chosen scope c
 
 In automation, `.github/workflows/generate-prs.yml` provides the structured `oagen diff`, parsed old/new IR, policy-resolved operations, compat report, and changed SDK files. The script outputs JSON entries; the workflow creates the PR and adds the PR link/number when writing the changelog fragment.
 
-For manual repair of existing fragments, pass the `openapi-spec` workflow commit that triggered the SDK PR. The script uses the spec state at that commit and diffs it against the previous spec-changing commit.
+The spec diff starts from the spec each SDK was last generated from, not from the latest spec commit. A batch regenerates everything an SDK is behind on, so [`scripts/resolve-spec-baseline.mjs`](scripts/resolve-spec-baseline.mjs) reads the SDK's committed `.last-synced-sha` (copied in by every batch PR) and maps it to the `openapi-spec` commit that introduced that marker. Every language in a batch therefore describes the same window; scopes still differ between languages only where one SDK's surface breaks and another's does not. If the SDK has no marker, the workflow warns and falls back to the previous spec-changing commit.
+
+For manual repair of existing fragments, pass the `openapi-spec` workflow commit that triggered the SDK PR. The script uses the spec state at that commit and diffs it against the previous spec-changing commit; add `--spec-base-commit <sha>` to diff from the spec the SDK was generated from instead, as the workflow does.
 
 ```bash
 # JSON entries, useful for inspection
