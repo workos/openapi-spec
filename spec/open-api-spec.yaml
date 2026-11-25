@@ -32592,10 +32592,26 @@ components:
                         - string
                         - 'null'
                       description: >-
-                        The issuer the presented token claims. It is not
-                        verified, and is `null` when the token could not be
-                        read.
+                        The issuer the presented token claims. It is verified
+                        only when `signature_verified` is `true`, and is `null`
+                        when the token could not be read.
                       example: https://example.okta.com
+                    unverified_email_domain:
+                      type:
+                        - string
+                        - 'null'
+                      description: >-
+                        The domain of the email address the presented token
+                        names. WorkOS has not verified the domain, and it is
+                        `null` when the token could not be read or names no
+                        email address.
+                      example: example.com
+                    signature_verified:
+                      type: boolean
+                      description: >-
+                        Whether the signature of the presented token was
+                        verified before the exchange failed.
+                      example: false
                     error:
                       type: object
                       properties:
