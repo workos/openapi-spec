@@ -119,6 +119,14 @@ Inputs:
                          --sdk-repo is given, one is derived from the checkout
                          (baseline ref vs current tree) without regenerating.
   --changed-files <file> Optional newline-delimited SDK file list for file attribution.
+  --sdk-manifest-before <file>
+  --sdk-manifest-after <file>
+                         Optional. The SDK's .oagen-manifest.json as committed
+                         and as regenerated. An operation only the regenerated
+                         one records is new to the SDK, and gets a feature
+                         entry when the spec diff does not already report it:
+                         a service staged for the first time whose operations
+                         reached the spec before the diff window opened.
   --services <csv>       Optional comma-separated post-mount service names (the
                          batch's staged scope). Restricts entries to those
                          services' scopes so the title/notes describe only what
@@ -127,6 +135,11 @@ Inputs:
 Commit convenience:
   --spec-commit <sha>    Use the spec state at this openapi-spec commit, then diff
                          against the previous spec-changing commit.
+  --spec-base-commit <sha>
+                         With --spec-commit: diff from this openapi-spec commit
+                         instead. Pass the spec the SDK was generated from (see
+                         scripts/resolve-spec-baseline.mjs) to cover the same
+                         window generate-prs.yml does.
   --openapi-repo <path>  openapi-spec checkout for --spec-commit. Defaults to cwd.
   --spec-path <path>     Spec path in the repo. Defaults to spec/open-api-spec.yaml.
   --sdk-repo <path>      SDK checkout used to derive changed files and, when
@@ -229,7 +242,12 @@ function prepareSpecInputs(args) {
     if (!currentSpecCommit) {
       throw new Error(`No spec commit found at or before ${commit} for ${specPath}`);
     }
-    const previousCommit = git(repo, ['log', '--format=%H', '-n', '1', `${currentSpecCommit}^`, '--', specPath]);
+    // generate-prs.yml diffs from the spec the SDK was last generated from
+    // (scripts/resolve-spec-baseline.mjs), which is usually several spec
+    // commits back; --spec-base-commit reproduces that window by hand.
+    const previousCommit = args['spec-base-commit']
+      ? git(repo, ['rev-parse', '--verify', `${args['spec-base-commit']}^{commit}`])
+      : git(repo, ['log', '--format=%H', '-n', '1', `${currentSpecCommit}^`, '--', specPath]);
     if (!previousCommit) {
       throw new Error(`No previous spec commit found before ${currentSpecCommit} for ${specPath}`);
     }
@@ -568,6 +586,12 @@ function primaryTypeName(type) {
   return primaryTypeName(type.inner) ?? primaryTypeName(type.items) ?? null;
 }
 
+// `METHOD /path` with the path-parameter names blanked. A parameter can be
+// renamed without the route changing, so routes are compared by shape.
+function routeIdentity(method, path) {
+  return `${String(method ?? '').toUpperCase()} ${String(path ?? '').replace(/\{[^}]*\}/g, '{}')}`;
+}
+
 // `resolvedOperations` is the JSON array from `oagen resolve --format json`
 // (see --resolved-ops): per operation, the policy-resolved post-mount service
 // (`mountOn`, else `service`) and method name (`derivedName`). It is keyed here
@@ -580,6 +604,10 @@ export function buildIndexes(specs, { resolvedOperations = [] } = {}) {
   const enumWireValues = new Map();
   const symbolScopes = new Map();
   const operationByKey = new Map();
+  // Route identity → the operation's IR names plus its post-mount service, so
+  // an SDK manifest (keyed by route) joins the IR. The new spec is indexed
+  // last and wins.
+  const operationByRoute = new Map();
   const serviceNames = new Set();
   // Per-side (old vs new) maps of operation → response/request type name, used
   // to describe *what* changed in a modified operation. specs is [oldIr, newIr].
@@ -676,6 +704,18 @@ export function buildIndexes(specs, { resolvedOperations = [] } = {}) {
       serviceNames.add(service.name);
       for (const operation of service.operations ?? []) {
         operationByKey.set(`${service.name}.${operation.name}`, operation);
+        // The resolution policy may rename the operation (`list` →
+        // `list_events`) and remount it on another service.
+        const resolved = resolvedByRoute.get(routeKey(operation.httpMethod, operation.path));
+        if (operation.httpMethod && operation.path) {
+          operationByRoute.set(routeIdentity(operation.httpMethod, operation.path), {
+            serviceName: service.name,
+            operationName: operation.name,
+            mountedService: resolved?.service ?? service.name,
+            httpMethod: operation.httpMethod,
+            path: operation.path,
+          });
+        }
 
         const direct = { models: new Set(), enums: new Set() };
         for (const param of [
@@ -700,13 +740,11 @@ export function buildIndexes(specs, { resolvedOperations = [] } = {}) {
           (operation.pathParams?.length ?? 0) > 0 ||
           Boolean(operation.requestBody);
         if (hasParams) {
-          // The resolution policy may rename the operation (`list` →
-          // `list_events`) and remount it on another service; the emitters
-          // name the param type from the resolved name and file it under the
-          // post-mount service. When that mapping is available it owns every
-          // synthesized name for the operation — the raw-named twin included,
-          // so a rename that keeps the same base never splits into two scopes.
-          const resolved = resolvedByRoute.get(routeKey(operation.httpMethod, operation.path));
+          // The emitters name the param type from the resolved name and file
+          // it under the post-mount service. When that mapping is available it
+          // owns every synthesized name for the operation — the raw-named twin
+          // included, so a rename that keeps the same base never splits into
+          // two scopes.
           const syntheticScope = resolved?.service ? publicScopeFromService(resolved.service) : scope;
           const bases = new Set([pascalCase(operation.name)]);
           if (resolved?.name) bases.add(pascalCase(resolved.name));
@@ -721,7 +759,17 @@ export function buildIndexes(specs, { resolvedOperations = [] } = {}) {
   }
 
   const typeNames = new Set([...modelByName.keys(), ...enumByName.keys()]);
-  return { enumWireValues, symbolScopes, syntheticSymbolScopes, operationByKey, responseTypeByKey, requestTypeByKey, serviceNames, typeNames };
+  return {
+    enumWireValues,
+    symbolScopes,
+    syntheticSymbolScopes,
+    operationByKey,
+    operationByRoute,
+    responseTypeByKey,
+    requestTypeByKey,
+    serviceNames,
+    typeNames,
+  };
 }
 
 function resolveServiceScope(serviceName) {
@@ -1449,6 +1497,68 @@ export function factsFromCompat(compatReport, _existingFacts, indexes) {
   return facts;
 }
 
+function manifestRoutes(manifest) {
+  return new Set(
+    Object.keys(manifest?.operations ?? {}).map((route) => {
+      const space = route.indexOf(' ');
+      return routeIdentity(route.slice(0, space), route.slice(space + 1));
+    }),
+  );
+}
+
+// Operations the SDK gains in this generation that the spec diff does not
+// already announce.
+//
+// The spec diff opens at the SDK's `.last-synced-sha`, and that marker is
+// SDK-wide: every batch advances it, including a scoped one that left some
+// services ungenerated. A service staged in a later batch can therefore have
+// every one of its operations on the far side of the marker (or, when both
+// batches run on the same spec, an empty diff), and a new service is purely
+// additive, so the compat report contributes nothing either. Its release notes
+// would be blank.
+//
+// The SDK's `.oagen-manifest.json` records each operation it holds, keyed by
+// route, and a scoped run keeps the unselected services' records. So a route
+// only the regenerated manifest has is new to this SDK whenever it reached the
+// spec. Routes the spec diff reports, alone or as part of an added service,
+// are left to that fact.
+//
+// No facts without a record of what the SDK held (no committed manifest, or
+// one predating the `operations` map), or across a manifest format change,
+// where every key would read as new.
+export function factsFromSdkManifest(manifestBefore, manifestAfter, specFacts, indexes) {
+  const facts = [];
+  const held = manifestRoutes(manifestBefore);
+  if (held.size === 0 || manifestBefore.version !== manifestAfter?.version) return facts;
+
+  const announcedRoutes = new Set();
+  const addedServices = new Set();
+  for (const fact of specFacts) {
+    if (fact.kind === 'service-added') addedServices.add(fact.symbols[0]);
+    if (fact.kind !== 'operation-added') continue;
+    const operation = indexes?.operationByKey?.get(`${fact.symbols[0]}.${fact.symbols[1]}`);
+    if (operation) announcedRoutes.add(routeIdentity(operation.httpMethod, operation.path));
+  }
+
+  for (const route of sortStable([...manifestRoutes(manifestAfter)])) {
+    if (held.has(route) || announcedRoutes.has(route)) continue;
+    // A route the spec does not define has no service to file it under.
+    const owner = indexes?.operationByRoute?.get(route);
+    if (!owner || addedServices.has(owner.serviceName)) continue;
+    const resolution = resolveServiceScope(owner.mountedService);
+    addFact(facts, {
+      severity: 'additive',
+      scope: resolution.scope,
+      scope_source: `manifest_${resolution.source}`,
+      scope_candidates: resolution.candidates,
+      kind: 'operation-added',
+      symbols: [owner.serviceName, owner.operationName],
+      detail: `Added endpoint \`${String(owner.httpMethod).toUpperCase()} ${owner.path}\`.`,
+    });
+  }
+  return facts;
+}
+
 export function groupFacts(facts) {
   const groups = new Map();
   for (const fact of facts) {
@@ -1729,11 +1839,17 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     const indexes = buildIndexes([oldIr, newIr], { resolvedOperations });
     const specFacts = factsFromDiff(diffReport, indexes);
     const compatFacts = factsFromCompat(compatReport, specFacts, indexes);
+    const manifestFacts = factsFromSdkManifest(
+      readJson(args['sdk-manifest-before'], null),
+      readJson(args['sdk-manifest-after'], null),
+      specFacts,
+      indexes,
+    );
     // Scope the changelog to the batch's staged services (when given), so the
     // title/notes never describe an out-of-scope change that drifted into the
     // spec diff between staging and generation.
     const allowedScopes = scopesForServices(args.services);
-    const allFacts = [...specFacts, ...compatFacts];
+    const allFacts = [...specFacts, ...manifestFacts, ...compatFacts];
     const scopedFacts = allowedScopes ? allFacts.filter((fact) => allowedScopes.has(fact.scope)) : allFacts;
     const entries = entriesFromGroups(groupFacts(scopedFacts), changedFiles);
     reportScopeValidation(entries, args);
