@@ -282,6 +282,14 @@ jobs:
           git add -A
           git diff --cached --name-only > /tmp/sdk-changed-files.txt
 
+          # The operations the SDK held before this run, to compare with the
+          # regenerated manifest. The spec diff opens at the SDK-wide
+          # .last-synced-sha, so a service staged for the first time whose
+          # operations landed before that marker has no spec change to announce
+          # it; the operations the SDK gained do.
+          git show HEAD:.oagen-manifest.json > /tmp/sdk-manifest-before.json 2>/dev/null \
+            || echo '{}' > /tmp/sdk-manifest-before.json
+
           # Pass the structured oagen diff as the release-note source of truth.
           SPEC_DIFF="{}"
           BEHAVIOR_CHANGES="[]"
@@ -389,6 +397,8 @@ jobs:
             --resolved-ops /tmp/resolved-ops.json \
             --compat-report "$COMPAT_REPORT_PATH" \
             --changed-files /tmp/sdk-changed-files.txt \
+            --sdk-manifest-before /tmp/sdk-manifest-before.json \
+            --sdk-manifest-after .oagen-manifest.json \
             --strict-scopes \
             ${SERVICES:+--services "$SERVICES"} \
             --output /tmp/classify-entries.json

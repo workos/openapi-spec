@@ -18,6 +18,13 @@
 // marker names the spec it holds. This maps that marker back to the
 // openapi-spec commit that introduced it.
 //
+// The marker is one sha for the whole SDK, and a scoped batch advances it
+// without generating every service. Each language reads its own SDK's marker,
+// so SDKs generated from different specs get different windows. A service
+// staged for the first time may have no change inside its SDK's window at all;
+// sdk-release-metadata.mjs announces it from the operations the SDK gains
+// (factsFromSdkManifest) rather than from this diff.
+//
 // Fails open to the previous spec-changing commit (the former behavior) when
 // the SDK carries no marker or names one this checkout cannot see, and says so
 // on stderr as a workflow annotation. stdout is the commit sha alone (empty

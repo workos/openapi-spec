@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   buildIndexes,
   entriesFromGroups,
   factsFromCompat,
   factsFromDiff,
+  factsFromSdkManifest,
   groupFacts,
   publicScopeFromService,
   renderChangelogMarkdown,
@@ -1009,4 +1015,199 @@ test('buildIndexes gives discriminator-mapped variant models their operation sco
   assert.deepEqual([...indexes.symbolScopes.get('model:BotDetection')], ['radar']);
   assert.deepEqual([...indexes.symbolScopes.get('model:SignUp')], ['radar']);
   assert.deepEqual([...indexes.symbolScopes.get('enum:SmsSignInTrigger')], ['radar']);
+});
+
+// ── SDK manifest: operations the SDK gains that the spec diff does not report ──
+// The spec diff opens at the SDK-wide `.last-synced-sha`, which a scoped batch
+// advances for services it did not generate. Staging Vault, then Pipes, on one
+// spec leaves the Pipes batch an empty diff, and a new service is all additive,
+// so compat reports nothing either: the Pipes PR had no release notes.
+const MANIFEST_IR = {
+  models: [],
+  enums: [],
+  services: [
+    {
+      name: 'Vault',
+      operations: [
+        { name: 'listObjects', httpMethod: 'get', path: '/vault/v1/kv' },
+        { name: 'readObject', httpMethod: 'get', path: '/vault/v1/kv/{id}' },
+      ],
+    },
+    {
+      name: 'Pipes',
+      operations: [
+        { name: 'listConnectedAccounts', httpMethod: 'get', path: '/pipes/connected_accounts' },
+        { name: 'deleteConnectedAccount', httpMethod: 'delete', path: '/pipes/connected_accounts/{id}' },
+      ],
+    },
+    {
+      name: 'Organizations',
+      operations: [{ name: 'getAuditLogsRetention', httpMethod: 'get', path: '/organizations/{id}/audit_logs_retention' }],
+    },
+  ],
+};
+const VAULT_ROUTES = ['GET /vault/v1/kv', 'GET /vault/v1/kv/{id}'];
+const PIPES_ROUTES = ['GET /pipes/connected_accounts', 'DELETE /pipes/connected_accounts/{id}'];
+const sdkManifest = (routes, version = 2) => ({
+  version,
+  language: 'python',
+  files: [],
+  operations: Object.fromEntries(routes.map((route) => [route, { sdkMethod: 'method', service: 'service' }])),
+});
+// Same spec on both sides: the marker already names the current spec.
+const manifestIndexes = (options) => buildIndexes([MANIFEST_IR, MANIFEST_IR], options);
+
+test('a service staged after the marker passed it still gets a feature entry', () => {
+  const indexes = manifestIndexes();
+  const specFacts = factsFromDiff({ changes: [] }, indexes);
+  assert.deepEqual(specFacts, []);
+  // The compat report sees the new service, but only as additive rows.
+  const compatFacts = factsFromCompat(
+    { changes: [{ severity: 'additive', category: 'symbol_added', symbol: 'Pipes.list_connected_accounts' }] },
+    specFacts,
+    indexes,
+  );
+  assert.deepEqual(compatFacts, []);
+
+  const facts = factsFromSdkManifest(
+    sdkManifest(VAULT_ROUTES),
+    sdkManifest([...VAULT_ROUTES, ...PIPES_ROUTES]),
+    specFacts,
+    indexes,
+  );
+  assert.deepEqual(
+    facts.map((fact) => [fact.prefix, fact.scope, fact.kind, fact.detail]),
+    [
+      ['feat', 'pipes', 'operation-added', 'Added endpoint `DELETE /pipes/connected_accounts/{id}`.'],
+      ['feat', 'pipes', 'operation-added', 'Added endpoint `GET /pipes/connected_accounts`.'],
+    ],
+  );
+  assert.deepEqual(facts[0].symbols, ['Pipes', 'deleteConnectedAccount']);
+  assert.equal(facts[0].scope_source, 'manifest_service_name');
+
+  const allowed = scopesForServices('Pipes');
+  const entries = entriesFromGroups(groupFacts(facts.filter((fact) => allowed.has(fact.scope))), []);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].prefix, 'feat');
+  assert.equal(entries[0].scope, 'pipes');
+  assert.equal(entries[0].docs_url, 'https://workos.com/docs/reference/pipes');
+});
+
+test('operations the spec diff already reports are not announced twice', () => {
+  const indexes = manifestIndexes();
+  const specFacts = factsFromDiff(
+    {
+      changes: [
+        { kind: 'operation-added', serviceName: 'Pipes', operationName: 'listConnectedAccounts', classification: 'additive' },
+        { kind: 'service-added', name: 'Vault', classification: 'additive' },
+      ],
+    },
+    indexes,
+  );
+  const facts = factsFromSdkManifest(
+    sdkManifest(['GET /organizations/{id}/audit_logs_retention']),
+    sdkManifest(['GET /organizations/{id}/audit_logs_retention', ...VAULT_ROUTES, ...PIPES_ROUTES]),
+    specFacts,
+    indexes,
+  );
+  // The added Pipes operation and the whole added Vault service stay with the
+  // spec facts; only the operation the diff missed is new here.
+  assert.deepEqual(
+    facts.map((fact) => fact.detail),
+    ['Added endpoint `DELETE /pipes/connected_accounts/{id}`.'],
+  );
+});
+
+test('a renamed path parameter is not a new operation', () => {
+  const facts = factsFromSdkManifest(
+    sdkManifest(['GET /vault/v1/kv', 'GET /vault/v1/kv/{object_id}']),
+    sdkManifest(VAULT_ROUTES),
+    [],
+    manifestIndexes(),
+  );
+  assert.deepEqual(facts, []);
+});
+
+test('nothing is announced without a record of what the SDK held', () => {
+  const indexes = manifestIndexes();
+  const after = sdkManifest([...VAULT_ROUTES, ...PIPES_ROUTES]);
+  // No committed manifest, the workflow's `{}` stand-in, and a manifest that
+  // predates the operations map: none of them say what the SDK had.
+  for (const before of [null, {}, { version: 2, files: [] }, sdkManifest([])]) {
+    assert.deepEqual(factsFromSdkManifest(before, after, [], indexes), []);
+  }
+  // No regenerated manifest to compare with.
+  assert.deepEqual(factsFromSdkManifest(sdkManifest(VAULT_ROUTES), null, [], indexes), []);
+  // A format change would make every key look new.
+  assert.deepEqual(factsFromSdkManifest(sdkManifest(VAULT_ROUTES, 2), sdkManifest([...VAULT_ROUTES, ...PIPES_ROUTES], 3), [], indexes), []);
+});
+
+test('a route the spec does not define is skipped rather than filed under sdk', () => {
+  const facts = factsFromSdkManifest(
+    sdkManifest(VAULT_ROUTES),
+    sdkManifest([...VAULT_ROUTES, 'GET /not/in/the/spec']),
+    [],
+    manifestIndexes(),
+  );
+  assert.deepEqual(facts, []);
+});
+
+test('a remounted operation is filed under its post-mount service', () => {
+  const before = sdkManifest(VAULT_ROUTES);
+  const after = sdkManifest([...VAULT_ROUTES, 'GET /organizations/{id}/audit_logs_retention']);
+  const raw = factsFromSdkManifest(before, after, [], manifestIndexes());
+  assert.equal(raw[0].scope, 'organizations');
+  const resolvedOperations = [
+    { service: 'Organizations', method: 'GET', path: '/organizations/{id}/audit_logs_retention', derivedName: 'get_audit_logs_retention', mountOn: 'AuditLogs' },
+  ];
+  const mounted = factsFromSdkManifest(before, after, [], manifestIndexes({ resolvedOperations }));
+  assert.equal(mounted[0].scope, 'audit_logs');
+  // The symbols stay the IR names the spec facts use.
+  assert.deepEqual(mounted[0].symbols, ['Organizations', 'getAuditLogsRetention']);
+});
+
+test('CLI reads the SDK manifests and scopes the new operations to the staged services', () => {
+  const script = fileURLToPath(new URL('../sdk-release-metadata.mjs', import.meta.url));
+  const dir = mkdtempSync(join(tmpdir(), 'srm-'));
+  try {
+    const file = (name, value) => {
+      const path = join(dir, name);
+      writeFileSync(path, JSON.stringify(value));
+      return path;
+    };
+    const base = [
+      '--diff-report', file('diff.json', { changes: [], behaviorChanges: [], summary: {} }),
+      '--old-ir', file('old-ir.json', MANIFEST_IR),
+      '--new-ir', file('new-ir.json', MANIFEST_IR),
+      '--strict-scopes',
+    ];
+    const manifests = [
+      '--sdk-manifest-before', file('before.json', sdkManifest(VAULT_ROUTES)),
+      '--sdk-manifest-after', file('after.json', sdkManifest([...VAULT_ROUTES, ...PIPES_ROUTES, 'GET /organizations/{id}/audit_logs_retention'])),
+    ];
+    const run = (args) => {
+      const result = spawnSync('node', [script, ...args], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+      return JSON.parse(result.stdout);
+    };
+
+    // The former behavior: an empty spec diff meant no entries at all.
+    assert.deepEqual(run([...base, '--services', 'Pipes']), []);
+
+    const entries = run([...base, ...manifests, '--services', 'Pipes']);
+    assert.deepEqual(
+      entries.map((entry) => [entry.prefix, entry.scope]),
+      [['feat', 'pipes']],
+    );
+    assert.match(entries[0].description, /GET \/pipes\/connected_accounts/);
+    assert.match(entries[0].description, /DELETE \/pipes\/connected_accounts\/\{id\}/);
+
+    // Full generation keeps every scope the SDK gained operations in.
+    assert.deepEqual(
+      run([...base, ...manifests]).map((entry) => entry.scope),
+      ['organizations', 'pipes'],
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
